@@ -2,7 +2,7 @@
 
 int main(){
 
-	TwInit(TW_OPENGL, NULL);
+	// TwInit(TW_OPENGL, NULL);
 
 	return 0;
 }
