@@ -6,6 +6,8 @@
 #include "Input/InputManager.h"
 #include "Resources/ResourceManager.h"
 #include "Scene/SceneManager.h"
+#include "WindowManager.h"
+#include "Utility/UtilityListeners.h"
 
 class Application {
 protected:
@@ -16,6 +18,7 @@ protected:
 	RenderManager 	m_renderManager;
 	ResourceManager m_resourceManager;
 	SceneManager 	m_sceneManager;
+	WindowManager 	m_windowManager;
 
 	/*Utility*/
 	DebugLog 		m_log;

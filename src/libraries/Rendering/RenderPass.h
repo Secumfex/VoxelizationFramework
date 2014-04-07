@@ -7,6 +7,7 @@ private:
 public:
 	RenderPass();
 	~RenderPass();
+	void render();
 };
 
-endif;
+#endif

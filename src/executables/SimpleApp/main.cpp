@@ -9,11 +9,6 @@ int main(){
 	myApp.configure();
 	myApp.initialize();
 	myApp.run();
-
-	myApp.getLog().print();
-
-	float end;
-	std::cin >> end;
 	
 	return 0;
 }

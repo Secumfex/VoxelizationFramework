@@ -1,16 +1,22 @@
 #ifndef SUBJECTLISTENERPATTERN_H
 #define SUBJECTLISTENERPATTERN_H
 
+#include <map>
+#include <list>
+#include <string>
+
+class Listener;
 class Subject {
 protected:
-	std::vector<Listener* > m_listeners; 
+	std::map< std::string, std::list<Listener* > > m_listeners;
 public:
 	Subject();
 	~Subject();
 
-	void attachListener( Listener* listener );
-	void detachListener( Listener* listener );
-	void callListeners();
+	void attach( Listener* listener, std::string interface );
+	void detach( Listener* listener, std::string interface );
+	void detach( Listener* listener);
+	void call( std::string interface );
 };
 
 class Listener{

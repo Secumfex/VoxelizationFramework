@@ -3,24 +3,48 @@
 DebugLog::DebugLog(bool autoPrint)
 {
 	m_autoPrint = autoPrint;
+	m_indent = 0;
 }
 
 
 DebugLog::~DebugLog()
 {
-
+	clear();
 }
 
 
 void DebugLog::log(std::string msg)
 {
-	m_log.push_back(msg);
+	m_log.push_back( createIndent() +  msg );
 	if (m_autoPrint)
 	{
 		printLast();
 	}
 }
 
+void DebugLog::indent()
+{
+	m_indent++;
+}
+
+void DebugLog::outdent()
+{
+	m_indent--;
+	if(m_indent < 0)
+	{
+		m_indent = 0;
+	}
+}
+
+std::string DebugLog::createIndent() const
+{
+	std::string indent;
+	for ( int j = 0; j < m_indent; j++)
+		{
+			indent.append( ".." );
+		}
+	return indent;
+}
 
 void DebugLog::print() const{
 	for (unsigned int i = 0; i < m_log.size(); i++)
@@ -30,7 +54,10 @@ void DebugLog::print() const{
 }
 
 void DebugLog::printLast() const{
-	std::cout << m_log.back() << std::endl;
+	if (!m_log.empty())
+	{
+		std::cout << m_log.back() << std::endl;
+	}
 }
 
 void DebugLog::clear()
