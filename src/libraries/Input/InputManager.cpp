@@ -1,5 +1,7 @@
 #include "InputManager.h"
 
+#include <sstream>
+
 InputManager::InputManager()
 {
 
@@ -26,7 +28,9 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
 
 void InputManager::key(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-
+	std::stringstream ss;
+	ss << key << "_PRESS";
+	call( ss.str() );
 }
 
 void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -40,4 +44,11 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
 void InputManager::mouseButton(GLFWwindow* window, int button, int action, int mods)
 {
 
+}
+
+void InputManager::attachListenerOnKeyPress(Listener* listener, int key)
+{
+	std::stringstream ss;
+	ss << key << "_PRESS";
+	attach(listener, ss.str() );
 }

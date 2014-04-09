@@ -4,7 +4,9 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-class InputManager {
+#include "Utility/SubjectListenerPattern.h"
+
+class InputManager : public Subject{
 protected:
 public:
 	InputManager();
@@ -12,6 +14,10 @@ public:
 	
 	void bindAsGlobalInputManager();
 
+	/* Listener Interfaces */
+	void attachListenerOnKeyPress(Listener* listener, int key);
+
+	/* Callback Functions */
 	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	void key(GLFWwindow* window, int key, int scancode, int action, int mods);
 

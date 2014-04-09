@@ -111,14 +111,20 @@ void Application::initialize()
 void Application::run()
 {
 	m_log.log("Entering Application main loop ");
-	Listener* terminateListener = new InvertBooleanListener(&m_terminate);
+	m_log.indent();
+	Listener* terminateListener  = new InvertBooleanListener(&m_terminate);
+	Listener* terminateListener2 = new InvertBooleanListener(&m_terminate);
 	m_windowManager.attachListenerOnWindowClose(terminateListener);
+	m_inputManager. attachListenerOnKeyPress(terminateListener2, GLFW_KEY_ESCAPE);
 
 	while (!m_terminate)
 	{
 		glfwSwapBuffers(m_windowManager.getActiveWindow());
         glfwPollEvents();
 	}
+
+	m_log.log("Quitting Application main loop ");
+	m_log.outdent();
 }
 
 const DebugLog& Application::getLog()
