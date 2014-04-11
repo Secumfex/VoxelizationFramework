@@ -13,6 +13,10 @@ public:
 	RenderManager();
 	~RenderManager();
 	void render();
+
+	void addRenderPass(RenderPass* renderPass);
+
+	std::vector<RenderPass* > getRenderPasses();
 };
 
 #endif
