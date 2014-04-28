@@ -15,7 +15,8 @@ public:
 	void bindAsGlobalInputManager();
 
 	/* Listener Interfaces */
-	void attachListenerOnKeyPress(Listener* listener, int key);
+	void attachListenerOnKeyPress(Listener* listener, int key, int action = GLFW_PRESS);
+	void attachListenerOnMouseButtonPress(Listener* listener, int button, int action = GLFW_PRESS);
 
 	/* Callback Functions */
 	static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

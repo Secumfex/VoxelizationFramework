@@ -34,6 +34,12 @@ public:
 
 	/*Getter & Setter*/
 	const DebugLog& getLog();
+
+	RenderManager& getRenderManager();
+	ResourceManager& getResourceManager();
+	SceneManager& getSceneManager();
+	WindowManager& getWindowManager();
+	InputManager& getInputManager();
 };
 
 #endif

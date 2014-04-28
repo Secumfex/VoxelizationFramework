@@ -9,7 +9,12 @@ Texture::~Texture() {
 	// TODO Auto-generated destructor stub
 }
 
-GLint Texture::getTextureHandle()
+GLuint Texture::getTextureHandle()
 {
 	return m_texturehandle;
+}
+
+void Texture::setTextureHandle(GLuint textureHandle)
+{
+	m_texturehandle = textureHandle;
 }

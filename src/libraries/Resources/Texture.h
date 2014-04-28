@@ -7,12 +7,13 @@
 
 class Texture : public Resource{
 protected:
-	GLint m_texturehandle;
+	GLuint m_texturehandle;
 public:
 	Texture(std::string path = "");
 	virtual ~Texture();
 
-	GLint getTextureHandle();
+	GLuint getTextureHandle();
+	void setTextureHandle(GLuint textureHandle);
 };
 
 #endif

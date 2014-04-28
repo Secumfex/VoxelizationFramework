@@ -29,7 +29,7 @@ void InputManager::keyCallback(GLFWwindow* window, int key, int scancode, int ac
 void InputManager::key(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	std::stringstream ss;
-	ss << key << "_PRESS";
+	ss << key << "_KEY_" << action;
 	call( ss.str() );
 }
 
@@ -43,12 +43,21 @@ void InputManager::mouseButtonCallback(GLFWwindow* window, int button, int actio
 
 void InputManager::mouseButton(GLFWwindow* window, int button, int action, int mods)
 {
-
+	std::stringstream ss;
+	ss << button << "_BUTTON_" << action;
+	call (ss.str());
 }
 
-void InputManager::attachListenerOnKeyPress(Listener* listener, int key)
+void InputManager::attachListenerOnKeyPress(Listener* listener, int key, int action)
 {
 	std::stringstream ss;
-	ss << key << "_PRESS";
+	ss << key << "_KEY_" << action;
+	attach(listener, ss.str() );
+}
+
+void InputManager::attachListenerOnMouseButtonPress(Listener* listener, int button, int action)
+{
+	std::stringstream ss;
+	ss << button << "_BUTTON_" << action;
 	attach(listener, ss.str() );
 }

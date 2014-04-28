@@ -115,10 +115,13 @@ void Application::run()
 	Listener* terminateListener  = new InvertBooleanListener(&m_terminate);
 	Listener* terminateListener2 = new InvertBooleanListener(&m_terminate);
 	m_windowManager.attachListenerOnWindowClose(terminateListener);
-	m_inputManager. attachListenerOnKeyPress(terminateListener2, GLFW_KEY_ESCAPE);
+	m_inputManager. attachListenerOnKeyPress(terminateListener2, GLFW_KEY_ESCAPE, GLFW_PRESS);
 
 	while (!m_terminate)
 	{
+
+		m_renderManager.render();
+
 		glfwSwapBuffers(m_windowManager.getActiveWindow());
         glfwPollEvents();
 	}
@@ -130,4 +133,29 @@ void Application::run()
 const DebugLog& Application::getLog()
 {
 	return &m_log;
+}
+
+RenderManager& Application::getRenderManager()
+{
+	return m_renderManager;
+}
+
+InputManager& Application::getInputManager()
+{
+	return m_inputManager;
+}
+
+WindowManager& Application::getWindowManager()
+{
+	return m_windowManager;
+}
+
+ResourceManager& Application::getResourceManager()
+{
+	return m_resourceManager;
+}
+
+SceneManager& Application::getSceneManager()
+{
+	return m_sceneManager;
 }
