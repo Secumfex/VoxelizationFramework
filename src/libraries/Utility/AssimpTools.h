@@ -7,6 +7,9 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
+#include <iostream>
+#include <vector>
+
 namespace AssimpTools
 {
 	using namespace std;
@@ -25,6 +28,7 @@ namespace AssimpTools
 		if(!fin.fail()) {
 			fin.close();
 		}
+
 		else{
 
 			cout<<"ERROR : Couldn't open file: " << path.c_str()<<endl;
@@ -44,33 +48,28 @@ namespace AssimpTools
 
 		if( !pScene)
 		{
-			cout << "ERROR : import of scene failed."
+			cout << "ERROR : import of scene failed." << endl;
 			cout<<Importer.GetErrorString()<<endl;
 			return 0;
 		}
 		else{
-			cout<<"Import of scene " <<path.c_str()<<" succeeded."<<endl;
-			return aiScene;
+			cout<< "Import of scene " << path.c_str()<< " succeeded." <<endl;
+			return pScene;
 		}
 	}
 
-	Model* loadModel(std::string path)
+	std::vector<const aiMesh* > extractMeshesFromScene( aiScene* scene )
 	{
-		pScene = loadScene(path);
-		if (!pScene)
+		std::vector <const aiMesh* > meshes;
+		for (unsigned int n = 0; n < scene->mNumMeshes; ++n)
 		{
-			return 0;
+			meshes.push_back ( scene->mMeshes[n] );
 		}
 
-		glm::vec3 aabb_min = glm::vec3(FLT_MAX,FLT_MAX,FLT_MAX);
-		glm::vec3 aabb_max = glm::vec3(-FLT_MAX,-FLT_MAX,-FLT_MAX);
+	}
 
-		// For each mesh
-		for (unsigned int n = 0; n < pScene->mNumMeshes; ++n)
-		{
-			const aiMesh* mesh = pScene->mMeshes[n];
-
-			//material and mesh to be filled
+	Model* createModelFromMesh(const aiMesh* mesh)
+	{
 			Model* aModel = new Model(path);
 			Material* aMat = new Material(path);
 
@@ -193,7 +192,37 @@ namespace AssimpTools
 			// unbind buffers
 			glBindVertexArray(0);
 
+	}
+
+	std::vector<Model* > loadModels(std::string path)
+	{
+		std::vector<Model* > loadedModels;
+
+		pScene = loadScene(path);
+
+		if (!pScene)
+		{
+			return loadedModels;
+		}
+
+		glm::vec3 aabb_min = glm::vec3(FLT_MAX,FLT_MAX,FLT_MAX);
+		glm::vec3 aabb_max = glm::vec3(-FLT_MAX,-FLT_MAX,-FLT_MAX);
+
+		std::vector< aiMesh* > meshes = extractMeshesFromScene( pScene );
+
+		// For each mesh
+		for (unsigned int i = 0; i < meshes.size(); i++)
+		{
+			const aiMesh* mesh = meshes[i];
+			//material and mesh to be filled
+			
+			Model* model = createModelFromMesh(mesh);
+
+			loadedModels.push_back(model);
+			
 			// create material uniform buffer
+			Material* material = createMaterial
+
 			aiMaterial *mtl = pScene->mMaterials[mesh->mMaterialIndex];
 	    
 
