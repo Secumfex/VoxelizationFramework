@@ -29,14 +29,14 @@ Texture* Material::getTexture(std::string name)
 
 void Material::setAttribute(std::string name, float value)
 {
-	m_attribute[name] = value;
+	m_attributes[name] = value;
 }
 
 float Material::getAttribute(std::string name)
 {
-	if (m_attribute.find(name) != m_attribute.end())
+	if (m_attributes.find(name) != m_attributes.end())
 	{
-		return m_attribute[name];
+		return m_attributes[name];
 	}
 	else{
 		std::cout << "ERROR: Attribute '" << name << "' did not exist in this material."<<std::endl;
@@ -44,12 +44,12 @@ float Material::getAttribute(std::string name)
 	}
 }
 
-std::map <std::string, Texture*> getTextures()
+std::map <std::string, Texture*> Material::getTextures()
 {
 	return m_textures;
 }
 
-std::map <std::string, float> getAttributes()
+std::map <std::string, float> Material::getAttributes()
 {
-	return m_attribute;
+	return m_attributes;
 }

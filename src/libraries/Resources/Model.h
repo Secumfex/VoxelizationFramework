@@ -3,9 +3,9 @@
 
 #include <GL/glew.h>
 
-#include "Resource/Resource.h"
+#include "Resources/Resource.h"
 
-class Model : Resource
+class Model : public Resource
 {
 private:
 	GLuint m_VAOHandle;
@@ -14,7 +14,7 @@ private:
 	int m_numVertices;
 	int m_numIndices;
 public:
-	Model(std::string path = "");
+	Model();
 	virtual ~Model();
 
 	GLuint getVAOHandle();
@@ -23,6 +23,10 @@ public:
 	void setNumFaces(int numFaces);
 	void setNumIndices(int numIndices);
 	void setNumVertices(int numVertices);
+
+	int getNumFaces();
+	int getNumIndices();
+	int getNumVertices();
 };
 
 #endif

@@ -1,8 +1,11 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
+#include "Texture.h"
+
 #include <map>
 #include <iostream>
+
 
 class Material 
 {
