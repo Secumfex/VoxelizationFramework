@@ -2,9 +2,17 @@
 
 #include <iostream>
 
+class ObjectLoadingApp : public Application
+{
+	void postInitialize()
+	{
+		DEBUGLOG->log("Loading some objects...");
+	}
+};
+
 int main(){
 
-	Application myApp;
+	ObjectLoadingApp myApp;
 
 	myApp.configure();
 	myApp.initialize();

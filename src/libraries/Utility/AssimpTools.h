@@ -33,7 +33,7 @@ namespace AssimpTools
 	/**
 	 * load an assimp material object from an assimp mesh object and scene
 	 */	
-	aiMaterial* loadMaterialFromMeshAndScene(const aiScene* scene, const aiMesh* mesh);
+	aiMaterial* loadMaterial(const aiScene* scene, const aiMesh* mesh);
 
 
 	/**

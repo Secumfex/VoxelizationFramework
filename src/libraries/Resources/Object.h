@@ -7,6 +7,8 @@
 class Object
 {
 private:
+	Model* m_model;
+	Material* m_material;
 public:
 	Object( Model* model = 0, Material* material = 0);
 	~Object();

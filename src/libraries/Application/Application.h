@@ -21,7 +21,6 @@ protected:
 	WindowManager 	m_windowManager;
 
 	/*Utility*/
-	DebugLog 		m_log;
 	bool 			m_terminate;
 public:
 	Application();
@@ -29,8 +28,12 @@ public:
 
 	/*Public Methods*/
 	void configure();
+	virtual void postConfigure();
+
 	void initialize();
-	void run();	
+	virtual void postInitialize();
+
+	void run();
 
 	/*Getter & Setter*/
 	const DebugLog& getLog();

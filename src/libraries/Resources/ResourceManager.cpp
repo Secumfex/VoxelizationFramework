@@ -10,6 +10,36 @@ ResourceManager::~ResourceManager()
 	
 }
 
+std::vector<Object* > ResourceManager::loadObjectsFromFile(std::string path)
+{
+	std::vector<Object* > loadedObjects;
+
+	if ( checkFile(path) )
+	{
+		return loadedObjects;
+	}
+	else{
+		const aiScene* scene = AssimpTools::loadScene(path);
+
+		if (!scene)
+ 		{
+ 			return loadedObjects;
+		}
+
+		std::vector< const aiMesh* > meshes = AssimpTools::extractMeshesFromScene( scene );
+
+		for (unsigned int i = 0; i < meshes.size(); i++)
+		{
+			Model* model = loadModel( scene, meshes[i] );
+			Material* mat= loadMaterial(scene, meshes[i]);
+
+			Object* object= new Object(model, mat);
+			loadedObjects.push_back(object);
+		}
+		return loadedObjects;
+	}
+}
+
 Texture* ResourceManager::loadTexture(std::string path)
 {
 	if ( checkTexture(path) )
@@ -29,7 +59,7 @@ Texture* ResourceManager::loadTexture(std::string path)
 
 Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh)
 {
-	aiMaterial* mtl = AssimpTools::loadMaterialFromMeshAndScene(scene, mesh);
+	aiMaterial* mtl = AssimpTools::loadMaterial(scene, mesh);
 
 	aiString texPath;   // temporary variable to save path of texture
 
@@ -47,7 +77,7 @@ Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh
 }
 
 /* load a single model object from an assimp mesh*/
-Model* ResourceManager::loadModel( const aiScene* scene, aiMesh* mesh )
+Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 {
 	if ( checkModel(mesh) )
 	{

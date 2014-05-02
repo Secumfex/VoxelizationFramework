@@ -5,8 +5,11 @@
 #include <string>
 #include <vector>
 
-class DebugLog
+#include <Utility/Singleton.h>
+
+class DebugLog : public Singleton<DebugLog>
 {
+friend class Singleton< DebugLog >;
 private:
 	std::vector< std::string > m_log;
 	int  m_indent;
@@ -24,4 +27,9 @@ public:
 
 	void setAutoPrint(bool to);
 };
+
+// for convenient access
+#define DEBUGLOG DebugLog::getInstance()
+
 #endif
+

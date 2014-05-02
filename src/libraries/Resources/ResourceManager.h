@@ -6,7 +6,7 @@
 
 #include <string>
 #include <map>
-#include <list>
+#include <vector>
 
 #include "Utility/AssimpTools.h"
 #include "Utility/TextureTools.h"
@@ -21,7 +21,8 @@ public:
 	ResourceManager();
 	~ResourceManager();
 
-	Model* loadModel(const aiScene* scene, aiMesh* mesh);
+	std::vector< Object* > loadObjectsFromFile(std::string path);
+	Model* loadModel(const aiScene* scene, const aiMesh* mesh);
 	Material* loadMaterial(const aiScene* scene, const aiMesh* mesh);
 	Texture* loadTexture(std::string path);
 
