@@ -3,6 +3,8 @@
 
 #include "Scene/Node.h"
 
+class Object;
+
 class SceneGraph
 {
 private:
@@ -10,6 +12,9 @@ private:
 public:
 	SceneGraph();
 	~SceneGraph();
+
+	Node* getRootNode();
+	Node* findObjectNode( Object* object);
 };
 
 #endif

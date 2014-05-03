@@ -23,7 +23,7 @@ void Scene::addObjects(std::vector < Object* > objects)
 	}
 }
 
-std::vector<Object* > getObjects()
+std::vector<Object* > Scene::getObjects()
 {
 	return m_Objects;
 }
