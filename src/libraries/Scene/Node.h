@@ -11,8 +11,15 @@ private:
 	std::vector< Node* > m_children;
 	glm::mat4 m_modelMatrix;
 public:
-	Node();
+	Node(Node* parent = 0);
 	~Node();
+
+	Node* getParent();
+	void addChild(Node* node);
+
+	std::vector< Node* > getChildren();
+	glm::mat4 getModelMatrix();
+	void setModelMatrix(glm::mat4 modelMatrix);
 };
 
 #endif

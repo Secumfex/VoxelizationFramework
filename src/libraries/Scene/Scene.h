@@ -15,6 +15,8 @@ public:
 	Scene();
 	~Scene();
 
+	void addObject(Object* object);
+	void addObjects(std::vector< Object* > objects);
 	std::vector<Object* > getObjects();
 };
 

@@ -23,8 +23,8 @@ public:
 
 	std::vector< Object* > loadObjectsFromFile(std::string path);
 	Model* loadModel(const aiScene* scene, const aiMesh* mesh);
-	Material* loadMaterial(const aiScene* scene, const aiMesh* mesh);
-	Texture* loadTexture(std::string path);
+	Material* loadMaterial(const aiScene* scene, const aiMesh* mesh, std::string directory);
+	Texture* loadTexture(std::string file, std::string directory);
 
 	bool checkModel(const aiMesh* mesh);
 	bool checkTexture(std::string path);

@@ -15,6 +15,8 @@ namespace AssimpTools
 {
 	using namespace std;
 
+	std::string getDirectoryPath( std::string file );
+
 	/**
 	 *	load an assimp scene from a file
 	 */

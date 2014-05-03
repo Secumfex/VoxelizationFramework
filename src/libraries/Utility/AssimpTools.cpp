@@ -15,6 +15,14 @@ namespace AssimpTools
 
 	std::string directory;
 
+	std::string getDirectoryPath( std::string file )
+	{
+		// load the desired file
+		std::string directory = file.substr( file.find_last_of( '/' ) + 1 );
+		directory = file.substr(0, file.length() - directory.length());
+		return directory;
+	}
+
 	/**
 	 *	load an assimp scene from a file
 	 *  @param path to the file
@@ -24,8 +32,7 @@ namespace AssimpTools
 	{
 		
 		// load the desired file
-		directory = path.substr( path.find_last_of( '/' ) + 1 );
-		directory = path.substr(0, path.length() - directory.length());
+		directory = getDirectoryPath(path);
 
 
 		std::ifstream fin(path.c_str());

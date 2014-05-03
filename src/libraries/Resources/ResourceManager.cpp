@@ -41,7 +41,9 @@ std::vector<Object* > ResourceManager::loadObjectsFromFile(std::string path)
 			DEBUGLOG->log(std::string("Constructing model    from mesh" ));
 			Model* model = loadModel( scene, meshes[i] );
 			DEBUGLOG->log(std::string("Constructing material from mesh" ));
-			Material* mat= loadMaterial(scene, meshes[i]);
+		
+			std::string directory = AssimpTools::getDirectoryPath( path );
+			Material* mat= loadMaterial(scene, meshes[i], directory);
 
 			Object* object= new Object(model, mat);
 		
@@ -56,24 +58,24 @@ std::vector<Object* > ResourceManager::loadObjectsFromFile(std::string path)
 	}
 }
 
-Texture* ResourceManager::loadTexture(std::string path)
+Texture* ResourceManager::loadTexture(std::string file, std::string directory)
 {
-	if ( checkTexture(path) )
+	if ( checkTexture(file) )
 	{
 		// texture exists already
-		return m_loadedTextures[path];
+		return m_loadedTextures[file];
 	}
 	else{
 		// texture does not yet exist and must be buffered
-		Texture* texture = new Texture(path);
-		GLuint texturehandle = TextureTools::loadTexture(path);
+		Texture* texture = new Texture(file);
+		GLuint texturehandle = TextureTools::loadTexture( directory + file );
 		texture->setTextureHandle(texturehandle);
-		m_loadedTextures[path] = texture;
+		m_loadedTextures[file] = texture;
 		return texture;
 	}
 }
 
-Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh)
+Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh, std::string directory)
 {
 	aiMaterial* mtl = AssimpTools::loadMaterial(scene, mesh);
 
@@ -82,12 +84,12 @@ Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh
 	Material* mat = new Material();
 
 	if(AssimpTools::materialHasTexture( mtl,aiTextureType_DIFFUSE, &texPath ) ){
-		Texture* diffuseTex = loadTexture( texPath.C_Str() );
+		Texture* diffuseTex = loadTexture( texPath.C_Str(), directory );
         mat->setTexture( "diffuseTexture", diffuseTex );
 	}
 
 	if(AssimpTools::materialHasTexture( mtl, aiTextureType_NORMALS, &texPath ) ){
-		Texture* normalTex = new Texture( texPath.C_Str() );
+		Texture* normalTex = loadTexture( texPath.C_Str() , directory);
         mat->setTexture( "normalTexture", normalTex );
 	}
 
@@ -97,19 +99,20 @@ Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh
 /* load a single model object from an assimp mesh*/
 Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 {
-	DEBUGLOG->indent();
 	if ( checkModel(mesh) )
 	{
+		DEBUGLOG->indent();
 		DEBUGLOG->log("Mesh already exists... ");
 		return m_loadedModels[mesh];
 	}
 	else{
+		DEBUGLOG->indent();
 		DEBUGLOG->log("Mesh does NOT exist and will be buffered... ");
 		Model* model = AssimpTools::createModelFromMesh( mesh );
 		m_loadedModels[mesh] = model;
+		DEBUGLOG->outdent();
 		return model;
 	}
-	DEBUGLOG->outdent();
 }
 
 void ResourceManager::deleteAll()
