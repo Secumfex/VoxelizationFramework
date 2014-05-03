@@ -41,6 +41,7 @@ int main(){
 	myApp.configure();
 	myApp.initialize();
 	myApp.run();
+
 	
 	return 0;
 }
