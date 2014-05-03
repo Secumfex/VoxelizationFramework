@@ -7,6 +7,8 @@
 #include "Resources/Material.h"
 #include "Resources/Model.h"
 
+#include "Utility/DebugLog.h"
+
 namespace AssimpTools
 {
 	using namespace std;
@@ -15,14 +17,14 @@ namespace AssimpTools
 
 	/**
 	 *	load an assimp scene from a file
+	 *  @param path to the file
+	 *  @param importer reference to be used to import scene ( due to scope issues )
 	 */
-	const aiScene* loadScene(std::string path)
+	const aiScene* loadScene(std::string path, Assimp::Importer& Importer)
 	{
-		// create an importer
-		Assimp::Importer Importer;
 		
 		// load the desired file
-//		directory = path.substr( path.find_last_of( '/' ) + 1 );
+		directory = path.substr( path.find_last_of( '/' ) + 1 );
 		directory = path.substr(0, path.length() - directory.length());
 
 
@@ -33,7 +35,7 @@ namespace AssimpTools
 
 		else{
 
-			cout<<"ERROR : Couldn't open file: " << path.c_str()<<endl;
+			DEBUGLOG->log(std::string ("ERROR : Couldn't open file: ") + path.c_str() );
 			cout<<Importer.GetErrorString()<<endl;
 			return 0;
 		}
@@ -50,12 +52,21 @@ namespace AssimpTools
 
 		if( !pScene)
 		{
-			cout << "ERROR : import of scene failed." << endl;
+			DEBUGLOG->log( "ERROR : import of scene failed." );
 			cout<<Importer.GetErrorString()<<endl;
 			return 0;
 		}
+
 		else{
-			cout<< "Import of scene " << path.c_str()<< " succeeded." <<endl;
+			DEBUGLOG->log( std::string( "import of scene " ) + path.c_str() + std::string( " succeeded." ) );
+			// DEBUGLOG->indent();
+			// {
+			// 	DEBUGLOG->log("Scene HasMeshes: ", pScene->HasMeshes());
+			// 	DEBUGLOG->log("Scene Meshes   : ", pScene->mNumMeshes);
+			// 	DEBUGLOG->log("Scene Textures : ", pScene->mNumTextures);
+			// }
+			// DEBUGLOG->outdent();
+			
 			return pScene;
 		}
 	}
@@ -66,10 +77,12 @@ namespace AssimpTools
 	std::vector<const aiMesh* > extractMeshesFromScene( const aiScene* scene )
 	{
 		std::vector <const aiMesh* > meshes;
+
 		for (unsigned int n = 0; n < scene->mNumMeshes; ++n)
 		{
 			meshes.push_back ( scene->mMeshes[n] );
 		}
+		return meshes;
 	}
 
 	/**
@@ -150,7 +163,7 @@ namespace AssimpTools
 
 			// generate texture coordinates buffer
 			vector <float>texCoords;
-			float uv_steps = 1.0 / mesh->mNumVertices;
+			float uv_steps = 1.0f / mesh->mNumVertices;
 
 			if (mesh->HasTextureCoords(0)){
 				for (unsigned int k = 0; k < mesh->mNumVertices; ++k) {
@@ -199,6 +212,8 @@ namespace AssimpTools
 
 			// unbind buffers
 			glBindVertexArray(0);
+
+			return model;
 	}
 
 	/**
@@ -206,7 +221,7 @@ namespace AssimpTools
 	 */
 	std::vector<Object* > loadObjects(std::string path)
 	{
-// 		std::vector<Object* > loadedObjects;
+ 		std::vector<Object* > loadedObjects;
 
 // 		const aiScene* pScene = loadScene(path);
 
@@ -242,6 +257,6 @@ namespace AssimpTools
 // //			std::cout << "BLENDER FILE... rotating Object..." << std::endl;
 // //		}
 // 		/******************************************************/
-// 		return loadedObjects;
+		return loadedObjects;
 	}
 }

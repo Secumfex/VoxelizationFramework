@@ -1,5 +1,7 @@
 #include "ResourceManager.h"
 
+#include "Utility/DebugLog.h"
+
 ResourceManager::ResourceManager()
 {
 
@@ -19,23 +21,37 @@ std::vector<Object* > ResourceManager::loadObjectsFromFile(std::string path)
 		return loadedObjects;
 	}
 	else{
-		const aiScene* scene = AssimpTools::loadScene(path);
+		DEBUGLOG->log("Importing scene");
+		Assimp::Importer importer;
+		const aiScene* scene = AssimpTools::loadScene(path, importer);
 
 		if (!scene)
  		{
  			return loadedObjects;
 		}
 
-		std::vector< const aiMesh* > meshes = AssimpTools::extractMeshesFromScene( scene );
+		DEBUGLOG->log("Extracting assimp meshes");
 
+		std::vector< const aiMesh* > meshes = AssimpTools::extractMeshesFromScene( scene);
+
+		DEBUGLOG->log("Constructing objects from found meshes : ", meshes.size());
+		DEBUGLOG->indent();
 		for (unsigned int i = 0; i < meshes.size(); i++)
 		{
+			DEBUGLOG->log(std::string("Constructing model    from mesh" ));
 			Model* model = loadModel( scene, meshes[i] );
+			DEBUGLOG->log(std::string("Constructing material from mesh" ));
 			Material* mat= loadMaterial(scene, meshes[i]);
 
 			Object* object= new Object(model, mat);
+		
 			loadedObjects.push_back(object);
+			DEBUGLOG->log(std::string("Constructing object complete."));
 		}
+
+		DEBUGLOG->outdent();
+		DEBUGLOG->log("Importing scene complete");
+		
 		return loadedObjects;
 	}
 }
@@ -74,20 +90,26 @@ Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh
 		Texture* normalTex = new Texture( texPath.C_Str() );
         mat->setTexture( "normalTexture", normalTex );
 	}
+
+	return mat;
 }
 
 /* load a single model object from an assimp mesh*/
 Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 {
+	DEBUGLOG->indent();
 	if ( checkModel(mesh) )
 	{
+		DEBUGLOG->log("Mesh already exists... ");
 		return m_loadedModels[mesh];
 	}
 	else{
+		DEBUGLOG->log("Mesh does NOT exist and will be buffered... ");
 		Model* model = AssimpTools::createModelFromMesh( mesh );
 		m_loadedModels[mesh] = model;
 		return model;
 	}
+	DEBUGLOG->outdent();
 }
 
 void ResourceManager::deleteAll()

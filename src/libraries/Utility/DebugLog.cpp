@@ -22,6 +22,34 @@ void DebugLog::log(std::string msg)
 	}
 }
 
+void DebugLog::log(std::string msg, int value)
+{
+	std::stringstream ss;
+	ss << value;
+	log(msg + ss.str());
+}
+
+void DebugLog::log(std::string msg, unsigned int value)
+{
+	std::stringstream ss;
+	ss << value;
+	log(msg + ss.str());
+}
+
+void DebugLog::log(std::string msg, float value)
+{
+	std::stringstream ss;
+	ss << value;
+	log(msg + ss.str());
+}
+
+void DebugLog::log(std::string msg, double value)
+{
+	std::stringstream ss;
+	ss << value;
+	log(msg + ss.str());
+}
+
 void DebugLog::indent()
 {
 	m_indent++;

@@ -18,7 +18,7 @@ namespace AssimpTools
 	/**
 	 *	load an assimp scene from a file
 	 */
-	const aiScene* loadScene(std::string path);
+	const aiScene* loadScene(std::string path, Assimp::Importer& Importer);
 
 	/**
 	 * extract all assimp mesh objects from an assimp scene object

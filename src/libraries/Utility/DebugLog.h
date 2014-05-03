@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include <Utility/Singleton.h>
@@ -19,6 +20,10 @@ public:
 	DebugLog(bool autoPrint = false);
 	~DebugLog();
 	void log(std::string msg);
+	void log(std::string msg, int value);
+	void log(std::string msg, unsigned int value);
+	void log(std::string msg, float value);
+	void log(std::string msg, double value);
 	void indent();
 	void outdent();
 	void print() const;
