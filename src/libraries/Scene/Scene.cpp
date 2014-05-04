@@ -12,7 +12,7 @@ Scene::~Scene()
 
 void Scene::addObject(Object* object)
 {
-	m_Objects.push_back(object);
+	m_objects.push_back(object);
 }
 
 void Scene::addObjects(std::vector < Object* > objects)
@@ -25,5 +25,10 @@ void Scene::addObjects(std::vector < Object* > objects)
 
 std::vector<Object* > Scene::getObjects()
 {
-	return m_Objects;
+	return m_objects;
+}
+
+SceneGraph* Scene::getSceneGraph()
+{
+	return &m_sceneGraph;
 }

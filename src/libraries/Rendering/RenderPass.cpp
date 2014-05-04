@@ -1,8 +1,9 @@
 #include "RenderPass.h"
 
-RenderPass::RenderPass()
+RenderPass::RenderPass(Shader* shader, FramebufferObject* fbo)
 {
-
+	m_shader = shader;
+	m_fbo = fbo;
 }
 
 RenderPass::~RenderPass()

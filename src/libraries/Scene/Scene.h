@@ -10,10 +10,12 @@ class Scene
 {
 private:
 	SceneGraph m_sceneGraph;
-	std::vector<Object* > m_Objects;
+	std::vector<Object* > m_objects;
 public:
 	Scene();
 	~Scene();
+
+	SceneGraph* getSceneGraph();
 
 	void addObject(Object* object);
 	void addObjects(std::vector< Object* > objects);
