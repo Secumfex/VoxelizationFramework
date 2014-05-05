@@ -1,7 +1,7 @@
 #ifndef RENDERABLE_H
 #define RENDERABLE_H
 
-class Shader;
+#include <Rendering/Shader.h>
 
 class Renderable
 {

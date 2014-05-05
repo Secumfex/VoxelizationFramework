@@ -32,3 +32,16 @@ SceneGraph* Scene::getSceneGraph()
 {
 	return &m_sceneGraph;
 }
+
+void Scene::update(float d_t)
+{
+	for (unsigned int i = 0; i < m_updatables.size(); i++)
+	{
+		m_updatables[i]->update(d_t);
+	}
+}
+
+void Scene::addUpdatable( Updatable* updatable)
+{
+	m_updatables.push_back(updatable);
+}

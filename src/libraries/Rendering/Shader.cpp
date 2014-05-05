@@ -79,8 +79,3 @@ bool Shader::uploadUniform(GLint uniformVariable, std::string uniformName){
 	}else
 		return false;
 }
-
-void Shader::render(Object* object){
-	glBindVertexArray(object->getModel()->getVAOHandle());
-	glDrawElements(GL_TRIANGLES, object->getModel()->getNumIndices(), GL_UNSIGNED_INT, 0);
-}

@@ -3,7 +3,6 @@
 
 #include "Utility/ShaderTools.h"
 #include "Utility\SubjectListenerPattern.h"
-#include <Resources\Object.h>
 #include <string>
 #include <vector>
 #include <map>
@@ -94,11 +93,6 @@ public:
 	 *
 	 */
 	void useProgram();
-
-	/** \brief renders an object
-	 * @param object
-	 */
-	void render(Object* object);
 
 										
 };

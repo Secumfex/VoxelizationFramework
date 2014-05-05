@@ -139,7 +139,7 @@ void Application::run()
 
 	while (!m_terminate)
 	{
-
+		m_sceneManager.update( 0.1f );
 		m_renderManager.render();
 
 		glfwSwapBuffers(m_windowManager.getActiveWindow());

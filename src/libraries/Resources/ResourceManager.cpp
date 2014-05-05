@@ -63,10 +63,12 @@ Texture* ResourceManager::loadTexture(std::string file, std::string directory)
 	if ( checkTexture(file) )
 	{
 		// texture exists already
+		DEBUGLOG->log("File has already been loaded: " + file);
 		return m_loadedTextures[file];
 	}
 	else{
 		// texture does not yet exist and must be buffered
+		DEBUGLOG->log("File has NOT been loaded and will be buffered: " + file);
 		Texture* texture = new Texture(file);
 		GLuint texturehandle = TextureTools::loadTexture( directory + file );
 		texture->setTextureHandle(texturehandle);

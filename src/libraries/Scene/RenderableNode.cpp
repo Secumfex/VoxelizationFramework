@@ -17,8 +17,7 @@ void RenderableNode::render()
 {
 	if(m_object)
 	{
-		glBindVertexArray(m_object->getModel()->getVAOHandle());
-		glDrawElements(GL_TRIANGLES, m_object->getModel()->getNumIndices(), GL_UNSIGNED_INT, 0);
+		m_object->render();
 	}
 }
 
@@ -28,6 +27,10 @@ void RenderableNode::uploadUniforms(Shader* shader)
 {
 	if (shader)
 	{
-		shader->uploadUniform(m_modelMatrix, "uniformModel");
+		shader->uploadUniform( getAccumulatedModelMatrix() , "uniformModel");
+		if (m_object)
+		{
+			m_object->uploadUniforms(shader);
+		}
 	}
 }

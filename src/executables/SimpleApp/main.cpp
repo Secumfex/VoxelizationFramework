@@ -11,10 +11,28 @@
 
 class RotatingNode : public Updatable, public RenderableNode
 {
-	void update(float d_t = 0.1)
+	private:
+	glm::vec3 m_rotationAxis;
+	float m_angle;
+
+	public:
+	RotatingNode(Node* parent = 0)
 	{
-		rotate( glm::rotate (glm::mat4(1.0f), 0.01f, glm::vec3(0.0f,1.0f,0.0f) ) );
+		setParent(parent);
 	}
+	void update(float d_t = 0.1f)
+	{
+		rotate( glm::rotate (glm::mat4(1.0f), m_angle, m_rotationAxis ) );
+	}
+	void setRotationAxis(glm::vec3 rotationAxis)
+	{
+		m_rotationAxis = rotationAxis;
+	}
+	void setAngle(float angle)
+	{
+		m_angle = angle;
+	}
+
 };
 
 class TestRenderPass : public RenderPass
@@ -34,9 +52,9 @@ public:
 			m_viewport.w = fbo->getHeight();
 		}
 		m_camera = new Camera();
-		m_camera->setPosition(glm::vec3(0.0f,0.0f,-5.0f));
-		m_camera->setCenter(glm::vec3(0.0f,0.0f,0.0f));
-		m_camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
+		m_camera->setPosition(glm::vec3(1.0f,3.0f,7.0f));
+		m_camera->setCenter(glm::vec3(0.0f,2.0f,0.0f));
+		m_camera->setProjectionMatrix(glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f));
 	}
 
 	void preRender()
@@ -62,12 +80,19 @@ class ObjectLoadingApp : public Application
 		
 			DEBUGLOG->log("Loading cube dae file");
 			DEBUGLOG->indent();
-			std::vector< Object* > daeCube = m_resourceManager.loadObjectsFromFile(RESOURCES_PATH "/cube.dae");
+				std::vector< Object* > daeCube = m_resourceManager.loadObjectsFromFile(RESOURCES_PATH "/cube.dae");
+				DEBUGLOG->log("Loading custom Texture for dae Cube");
+				daeCube[0]->getMaterial()->setTexture("diffuseTexture", m_resourceManager.loadTexture("cvlogo.png", RESOURCES_PATH "/"));
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Loading cube obj file");
 			DEBUGLOG->indent();
-			std::vector< Object* > objCube =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/cube.obj" );
+				std::vector< Object* > objCube =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/cube.obj" );
+			DEBUGLOG->outdent();
+
+			DEBUGLOG->log("Loading background dae file");
+			DEBUGLOG->indent();
+				std::vector< Object* > daeBackground=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/background.dae" );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Loading some objects complete");
@@ -78,19 +103,39 @@ class ObjectLoadingApp : public Application
 			Scene* scene = new Scene();
 			scene->addObjects( daeCube );
 			scene->addObjects( objCube );
+			scene->addObjects( daeBackground );
 
 			DEBUGLOG->log("Creating scene graph nodes");
-			RenderableNode* cubeNode1 = new RenderableNode();
-			cubeNode1->setObject(daeCube[0]);
-			RenderableNode* cubeNode2 = new RenderableNode();
+			DEBUGLOG->indent();
 
-			cubeNode2->setObject(objCube[0]);
-			glm::vec3 translate(1.2f,0.0f,1.0f);
-			cubeNode2->setModelMatrix( glm::translate(cubeNode2->getModelMatrix(), translate) );
+				DEBUGLOG->log("Creating renderable node for cube 1");
+				RenderableNode* cubeNode1 = new RenderableNode( scene->getSceneGraph()->getRootNode( ) );
+				cubeNode1->rotate( glm::rotate (glm::mat4(1.0f), 60.0f, glm::vec3(0.0f,1.0f,0.0f) ) );
+				cubeNode1->translate( glm::translate( glm::mat4(1.0f), glm::vec3(1.2f, 1.0f,-1.0f) ) );
+				cubeNode1->setObject(daeCube[0]);
 
-			DEBUGLOG->log("Attaching Nodes to Root Node");
-			cubeNode1->setParent( scene->getSceneGraph()->getRootNode() );
-			cubeNode2->setParent( scene->getSceneGraph()->getRootNode() );
+				DEBUGLOG->log("Creating node tree for cube 2");
+				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
+				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(0.0f, 3.0f, 1.0f) ) );
+
+				RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
+				yAxisRotationNode->setAngle(0.005f);
+				yAxisRotationNode->setRotationAxis( glm::vec3( 0.0f, 1.0f, 0.0f ) );
+
+				RotatingNode* rotatingCubeNode = new RotatingNode(yAxisRotationNode);
+				rotatingCubeNode->setRotationAxis(glm::vec3 ( 1.0f, 1.0f, 0.1f));
+				rotatingCubeNode->setAngle(0.01f);
+				rotatingCubeNode->setObject(objCube[0]);
+
+				DEBUGLOG->log("Adding updatable rotation nodes of cube 2 to scene");
+				scene->addUpdatable(yAxisRotationNode);
+				scene->addUpdatable(rotatingCubeNode);
+
+				DEBUGLOG->log("Creating renderable node for background");
+				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+				backgroundNode->setObject(daeBackground[0]);
+
+			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
 		
@@ -112,7 +157,8 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Adding Objects to Renderpass");
 			renderPass->addRenderable(cubeNode1);
-			renderPass->addRenderable(cubeNode2);
+			renderPass->addRenderable(rotatingCubeNode);
+			renderPass->addRenderable(backgroundNode);
 
 			DEBUGLOG->log("Adding Renderpass to Application");
 			m_renderManager.addRenderPass(renderPass);

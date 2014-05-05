@@ -3,8 +3,9 @@
 
 #include <Resources/Model.h>
 #include <Resources/Material.h>
+#include <Rendering/Renderable.h>
 
-class Object
+class Object : public Renderable
 {
 private:
 	Model* m_model;
@@ -18,6 +19,9 @@ public:
 
 	Model* getModel();
 	Material* getMaterial();
+
+	void render();
+	void uploadUniforms(Shader* shader);
 };
 
 #endif
