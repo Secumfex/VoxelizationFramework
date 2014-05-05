@@ -7,6 +7,15 @@
 #include <Rendering/FramebufferObject.h>
 #include <Scene/Camera.h>
 #include <Scene/RenderableNode.h>
+#include <Utility/Updatable.h>
+
+class RotatingNode : public Updatable, public RenderableNode
+{
+	void update(float d_t = 0.1)
+	{
+		rotate( glm::rotate (glm::mat4(1.0f), 0.01f, glm::vec3(0.0f,1.0f,0.0f) ) );
+	}
+};
 
 class TestRenderPass : public RenderPass
 {
@@ -32,7 +41,7 @@ public:
 
 	void preRender()
 	{
-		glClearColor(0.5f,1.0f,0.4f,0.0f);
+		glClearColor(0.1f,0.1f,0.1f,1.0f);
 		glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
@@ -40,6 +49,7 @@ public:
 	void uploadUniforms()
 	{
 		m_shader->uploadUniform(m_camera->getViewMatrix(),"uniformView");
+		m_shader->uploadUniform(m_camera->getProjectionMatrix(), "uniformProjection");
 	}
 };
 
@@ -75,7 +85,7 @@ class ObjectLoadingApp : public Application
 			RenderableNode* cubeNode2 = new RenderableNode();
 
 			cubeNode2->setObject(objCube[0]);
-			glm::vec3 translate(0.0f,0.0f,-1.0f);
+			glm::vec3 translate(1.2f,0.0f,1.0f);
 			cubeNode2->setModelMatrix( glm::translate(cubeNode2->getModelMatrix(), translate) );
 
 			DEBUGLOG->log("Attaching Nodes to Root Node");
