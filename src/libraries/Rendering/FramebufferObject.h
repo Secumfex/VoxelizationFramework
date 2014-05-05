@@ -31,6 +31,8 @@ public:
 
 	GLuint getColorAttachmentTextureHandle(GLenum attachment);
 
+	GLuint getFramebufferHandle();
+
 	int getWidth();
 	int getHeight();
 };

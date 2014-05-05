@@ -35,6 +35,11 @@ GLuint Shader::getProgramHandle()
 	return m_programHandle;
 }
 
+void Shader::useProgram()
+{
+	glUseProgram(m_programHandle);
+}
+
 bool Shader :: uploadUniform(glm::mat4 uniformMatrix, std::string uniformName){
 
 	if(m_uniformHandles.find(uniformName)!=m_uniformHandles.end()){

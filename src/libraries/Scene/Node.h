@@ -3,12 +3,11 @@
 
 #include <glm/glm.hpp>
 #include <vector>
-
-class Object;
+#include <Resources/Object.h>
 
 class Node
 {
-private:
+protected:
 	Node* m_parent;
 	std::vector< Node* > m_children;
 	glm::mat4 m_modelMatrix;
@@ -25,6 +24,7 @@ public:
 
 	std::vector< Node* > getChildren();
 	glm::mat4 getModelMatrix();
+	glm::mat4 getAccumulatedModelMatrix();
 	void setModelMatrix(glm::mat4 modelMatrix);
 
 	void translate(glm::mat4 translate);
@@ -33,5 +33,4 @@ public:
 
 	Node* findObjectNode(Object* object);
 };
-
 #endif

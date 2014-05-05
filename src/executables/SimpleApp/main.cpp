@@ -5,6 +5,43 @@
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
+#include <Scene/Camera.h>
+#include <Scene/RenderableNode.h>
+
+class TestRenderPass : public RenderPass
+{
+protected:
+	Camera* m_camera;
+public:
+	TestRenderPass(Shader* shader, FramebufferObject* fbo)
+	{
+		m_shader = shader;
+		m_fbo = fbo;
+		m_viewport = glm::vec4(0,0,800,600);
+
+		if (fbo)
+		{
+			m_viewport.z = fbo->getWidth();
+			m_viewport.w = fbo->getHeight();
+		}
+		m_camera = new Camera();
+		m_camera->setPosition(glm::vec3(0.0f,0.0f,-5.0f));
+		m_camera->setCenter(glm::vec3(0.0f,0.0f,0.0f));
+		m_camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
+	}
+
+	void preRender()
+	{
+		glClearColor(0.5f,1.0f,0.4f,0.0f);
+		glEnable(GL_DEPTH_TEST);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+
+	void uploadUniforms()
+	{
+		m_shader->uploadUniform(m_camera->getViewMatrix(),"uniformView");
+	}
+};
 
 class ObjectLoadingApp : public Application
 {
@@ -33,17 +70,17 @@ class ObjectLoadingApp : public Application
 			scene->addObjects( objCube );
 
 			DEBUGLOG->log("Creating scene graph nodes");
-			Node* cubeNode1 = new Node();
+			RenderableNode* cubeNode1 = new RenderableNode();
 			cubeNode1->setObject(daeCube[0]);
-			Node* cubeNode2 = new Node();
+			RenderableNode* cubeNode2 = new RenderableNode();
 
 			cubeNode2->setObject(objCube[0]);
 			glm::vec3 translate(0.0f,0.0f,-1.0f);
 			cubeNode2->setModelMatrix( glm::translate(cubeNode2->getModelMatrix(), translate) );
 
 			DEBUGLOG->log("Attaching Nodes to Root Node");
-			scene->getSceneGraph()->getRootNode()->addChild(cubeNode2);
-			scene->getSceneGraph()->getRootNode()->addChild(cubeNode1);
+			cubeNode1->setParent( scene->getSceneGraph()->getRootNode() );
+			cubeNode2->setParent( scene->getSceneGraph()->getRootNode() );
 
 		DEBUGLOG->outdent();
 		
@@ -60,9 +97,15 @@ class ObjectLoadingApp : public Application
 			fbo->addColorAttachments(1);
 
 			DEBUGLOG->log("Creating Renderpass");
-			RenderPass* renderPass = new RenderPass(shader, fbo);
+			TestRenderPass* renderPass = new TestRenderPass(shader, 0);
+			renderPass->setViewport(0,0,800,600);
+
+			DEBUGLOG->log("Adding Objects to Renderpass");
+			renderPass->addRenderable(cubeNode1);
+			renderPass->addRenderable(cubeNode2);
 
 			DEBUGLOG->log("Adding Renderpass to Application");
+			m_renderManager.addRenderPass(renderPass);
 		DEBUGLOG->outdent();
 	}
 };

@@ -27,3 +27,8 @@ std::vector<RenderPass* > RenderManager::getRenderPasses()
 {
 	return m_renderpasses;
 }
+
+void RenderManager::setActiveWindow(GLFWwindow* window)
+{
+	m_activeWindow = window;
+}

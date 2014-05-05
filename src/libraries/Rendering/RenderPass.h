@@ -8,14 +8,21 @@
 
 class RenderPass
 {
-private: 
+protected:
+	glm::vec4 m_viewport;
 	FramebufferObject* m_fbo;
 	Shader* m_shader;
 	std::vector< Renderable* > m_renderables;
 public:
-	RenderPass(Shader* shader, FramebufferObject* fbo = 0);
+	RenderPass(Shader* shader = 0, FramebufferObject* fbo = 0);
 	~RenderPass();
+
+	virtual void preRender();
+	virtual void uploadUniforms();
 	void render();
+	virtual void postRender();
+
+	void setViewport(int x, int y, int width, int height);
 
 	void addRenderable(Renderable* renderable);
 

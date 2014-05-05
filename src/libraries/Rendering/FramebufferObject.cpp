@@ -75,6 +75,11 @@ GLuint FramebufferObject::getColorAttachmentTextureHandle(GLenum attachment)
 	}
 }
 
+GLuint FramebufferObject::getFramebufferHandle()
+{
+	return m_framebufferHandle;
+}
+
 int FramebufferObject::getWidth()
 {
 	return m_width;

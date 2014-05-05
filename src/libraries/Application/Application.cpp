@@ -97,6 +97,9 @@ void Application::configure()
 
 	DEBUGLOG->outdent();
 
+	DEBUGLOG->log("Binding GLFW window to RenderManager");
+	m_renderManager.setActiveWindow(window);
+
 	postConfigure();
 
 	DEBUGLOG->log("Configuring Application complete");

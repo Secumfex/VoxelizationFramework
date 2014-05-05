@@ -38,6 +38,18 @@ glm::mat4 Node::getModelMatrix()
 	return m_modelMatrix;
 }
 
+glm::mat4 Node::getAccumulatedModelMatrix()
+{
+	if ( m_parent && m_parent != this)
+	{
+		return m_parent->getAccumulatedModelMatrix() * m_modelMatrix;
+	}
+	else
+	{
+		return m_modelMatrix;
+	}
+}
+
 void Node::setModelMatrix(glm::mat4 modelMatrix)
 {
 	m_modelMatrix = modelMatrix;
@@ -88,3 +100,4 @@ void Node::setObject(Object* object)
 {
 	m_object = object;
 }
+

@@ -9,6 +9,7 @@ class RenderManager
 {
 protected:
 	std::vector<RenderPass* > m_renderpasses;
+	GLFWwindow* m_activeWindow;
 public:
 	RenderManager();
 	~RenderManager();
@@ -17,6 +18,8 @@ public:
 	void addRenderPass(RenderPass* renderPass);
 
 	std::vector<RenderPass* > getRenderPasses();
+
+	void setActiveWindow(GLFWwindow* window);
 };
 
 #endif
