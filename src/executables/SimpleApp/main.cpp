@@ -3,9 +3,10 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "CustomRenderPasses.h"
+
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
-#include <Scene/Camera.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
 
@@ -33,42 +34,6 @@ class RotatingNode : public Updatable, public RenderableNode
 		m_angle = angle;
 	}
 
-};
-
-class TestRenderPass : public RenderPass
-{
-protected:
-	Camera* m_camera;
-public:
-	TestRenderPass(Shader* shader, FramebufferObject* fbo)
-	{
-		m_shader = shader;
-		m_fbo = fbo;
-		m_viewport = glm::vec4(0,0,800,600);
-
-		if (fbo)
-		{
-			m_viewport.z = fbo->getWidth();
-			m_viewport.w = fbo->getHeight();
-		}
-		m_camera = new Camera();
-		m_camera->setPosition(glm::vec3(1.0f,3.0f,7.0f));
-		m_camera->setCenter(glm::vec3(0.0f,2.0f,0.0f));
-		m_camera->setProjectionMatrix(glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f));
-	}
-
-	void preRender()
-	{
-		glClearColor(0.1f,0.1f,0.1f,1.0f);
-		glEnable(GL_DEPTH_TEST);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	}
-
-	void uploadUniforms()
-	{
-		m_shader->uploadUniform(m_camera->getViewMatrix(),"uniformView");
-		m_shader->uploadUniform(m_camera->getProjectionMatrix(), "uniformProjection");
-	}
 };
 
 class ObjectLoadingApp : public Application
@@ -154,13 +119,26 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->log("Creating Renderpass");
 			TestRenderPass* renderPass = new TestRenderPass(shader, 0);
 			renderPass->setViewport(0,0,800,600);
+			renderPass->setCamera( new Camera() );
+			renderPass->getCamera()->setPosition(glm::vec3(1.0f,3.0f,7.0f));
+			renderPass->getCamera()->setCenter(glm::vec3(0.0f,2.0f,0.0f));
+			renderPass->getCamera()->setProjectionMatrix(glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f));
 
-			DEBUGLOG->log("Adding Objects to Renderpass");
+			DEBUGLOG->log("Creating SliceMapRenderpass");
+			DEBUGLOG->indent();
+			TestRenderPass* sliceMapRenderPass = new SliceMap::getSliceMapRenderPass();
+			DEBUGLOG->outdent();
+
+			DEBUGLOG->log("Adding Objects to Renderpasses");
+			sliceMapRenderPass->addRenderable(cubeNode1);
+			sliceMapRenderPass->addRenderable(rotatingCubeNode);
+			sliceMapRenderPass->addRenderable(backgroundNode);
 			renderPass->addRenderable(cubeNode1);
 			renderPass->addRenderable(rotatingCubeNode);
 			renderPass->addRenderable(backgroundNode);
 
-			DEBUGLOG->log("Adding Renderpass to Application");
+			DEBUGLOG->log("Adding Renderpasses to Application");
+			m_renderManager.addRenderPass(sliceMapRenderPass);
 			m_renderManager.addRenderPass(renderPass);
 		DEBUGLOG->outdent();
 	}
