@@ -1,20 +1,25 @@
+#ifndef CUSTOMRENDERPASSES_H
+#define CUSTOMRENDERPASSES_H
+
 #include <Rendering/RenderPass.h>
 #include <Scene/Camera.h>
 
-class TestRenderPass : public RenderPass
+/// a Renderpass from a Camera object, uploading a view and perspective matrix
+/// aswell as a bunch of other Camera uniforms : position, direction
+class CameraRenderPass : public RenderPass
 {
 protected:
 	Camera* m_camera;
 public:
-	TestRenderPass(Shader* shader, FramebufferObject* fbo);
-	~TestRenderPass();
+	CameraRenderPass();
+	CameraRenderPass(Shader* shader, FramebufferObject* fbo = 0);
+	~CameraRenderPass();
 
 	void setCamera(Camera* camera);
 
 	Camera* getCamera();
 
-	void preRender();
-
-	void uploadUniforms();
-
+	virtual void uploadUniforms();
 };
+
+#endif

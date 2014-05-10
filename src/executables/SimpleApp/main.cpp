@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "CustomRenderPasses.h"
+#include "SliceMapRendering.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
@@ -117,16 +118,31 @@ class ObjectLoadingApp : public Application
 			fbo->addColorAttachments(1);
 
 			DEBUGLOG->log("Creating Renderpass");
-			TestRenderPass* renderPass = new TestRenderPass(shader, 0);
+			CameraRenderPass* renderPass = new CameraRenderPass(shader, 0);
 			renderPass->setViewport(0,0,800,600);
+			renderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
+			renderPass->addEnable(GL_DEPTH_TEST);
+			renderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+			renderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+
 			renderPass->setCamera( new Camera() );
 			renderPass->getCamera()->setPosition(glm::vec3(1.0f,3.0f,7.0f));
 			renderPass->getCamera()->setCenter(glm::vec3(0.0f,2.0f,0.0f));
 			renderPass->getCamera()->setProjectionMatrix(glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f));
 
+			DEBUGLOG->indent();
+				DEBUGLOG->log("Setting an Orthographic Camera for fun...");
+				Camera* orthocam = new Camera();
+				glm::mat4 ortho = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, -5.0f, 5.0f);
+				orthocam->setProjectionMatrix(ortho);
+				orthocam->setPosition(2.5f,2.5f,-2.5f);
+				renderPass->setCamera(orthocam);
+			DEBUGLOG->outdent();
+
 			DEBUGLOG->log("Creating SliceMapRenderpass");
 			DEBUGLOG->indent();
-			TestRenderPass* sliceMapRenderPass = new SliceMap::getSliceMapRenderPass();
+			RenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass();
+						sliceMapRenderPass->setFramebufferObject(0);
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding Objects to Renderpasses");
@@ -139,7 +155,7 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Adding Renderpasses to Application");
 			m_renderManager.addRenderPass(sliceMapRenderPass);
-			m_renderManager.addRenderPass(renderPass);
+//			m_renderManager.addRenderPass(renderPass);
 		DEBUGLOG->outdent();
 	}
 };

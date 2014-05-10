@@ -1,5 +1,7 @@
 #include "Rendering/FramebufferObject.h"
 
+#include "Utility/DebugLog.h"
+
 FramebufferObject::FramebufferObject(int width, int height)
 {
 	glGenFramebuffers(1, &m_framebufferHandle);
@@ -40,12 +42,14 @@ GLuint FramebufferObject::createFramebufferTexture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glBindTexture(GL_TEXTURE_2D, 0);
+	return textureHandle;
 }
 
 void FramebufferObject::addColorAttachments(int amount)
 {
 	if ( m_numColorAttachments + amount <= GL_MAX_COLOR_ATTACHMENTS )
 	{
+		DEBUGLOG->log("Creating Color Attachments: ", amount);
 		for (int i = 0; i < amount; i ++)
 		{
 			GLuint textureHandle = createFramebufferTexture();

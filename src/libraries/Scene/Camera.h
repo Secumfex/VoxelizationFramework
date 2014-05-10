@@ -10,15 +10,15 @@ using namespace std;
 /** @brief a first person Camera */
 class Camera{
 protected:
-	glm::vec3 m_position;		/**< current world position */
-	glm::vec3 m_direction;	/**< current world normalized view direction */
-	glm::mat4 m_viewMatrix;   /**< current view matrix */
-	glm::mat4 m_projectionMatrix; /**< current projection matrix */
+	glm::vec3 m_position;			/**< current world position */
+	glm::vec3 m_direction;			/**< current world normalized view direction */
+	glm::mat4 m_viewMatrix;   		/**< current view matrix */
+	glm::mat4 m_projectionMatrix; 	/**< current projection matrix */
 
-	float m_phi;				/**< rotation, horizontal */
+	float m_phi;			/**< rotation, horizontal */
 	float m_theta;			/**< inclination, vertical */
 	float m_speedRight;		/**< horizontal velocity */
-	float m_speedForward;		/**< forward velocity */
+	float m_speedForward;	/**< forward velocity */
 
 	bool m_topDown;			/**< bool to decide whether up vector should be inverted */
 
