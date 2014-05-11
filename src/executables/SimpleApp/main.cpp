@@ -21,6 +21,7 @@ class RotatingNode : public Updatable, public RenderableNode
 	RotatingNode(Node* parent = 0)
 	{
 		setParent(parent);
+		m_angle = 0.0f;
 	}
 	void update(float d_t = 0.1f)
 	{
@@ -39,6 +40,11 @@ class RotatingNode : public Updatable, public RenderableNode
 
 class ObjectLoadingApp : public Application
 {
+	public:
+	virtual ~ObjectLoadingApp()
+	{
+
+	}
 	void postInitialize()
 	{
 		DEBUGLOG->log("Loading some objects");
