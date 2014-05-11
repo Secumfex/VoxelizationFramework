@@ -77,12 +77,12 @@ class ObjectLoadingApp : public Application
 				DEBUGLOG->log("Creating renderable node for cube 1");
 				RenderableNode* cubeNode1 = new RenderableNode( scene->getSceneGraph()->getRootNode( ) );
 				cubeNode1->rotate( glm::rotate (glm::mat4(1.0f), 60.0f, glm::vec3(0.0f,1.0f,0.0f) ) );
-				cubeNode1->translate( glm::translate( glm::mat4(1.0f), glm::vec3(1.2f, 1.0f,-1.0f) ) );
+				cubeNode1->translate( glm::translate( glm::mat4(1.0f), glm::vec3(1.5f, 0.5f,-1.0f) ) );
 				cubeNode1->setObject(daeCube[0]);
 
 				DEBUGLOG->log("Creating node tree for cube 2");
 				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
-				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(0.0f, 3.0f, 1.0f) ) );
+				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(-1.0f, 2.0f, -1.0f) ) );
 
 				RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
 				yAxisRotationNode->setAngle(0.005f);
@@ -133,16 +133,18 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->indent();
 				DEBUGLOG->log("Setting an Orthographic Camera for fun...");
 				Camera* orthocam = new Camera();
-				glm::mat4 ortho = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, -5.0f, 5.0f);
+				glm::mat4 ortho = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f);
 				orthocam->setProjectionMatrix(ortho);
-				orthocam->setPosition(2.5f,2.5f,-2.5f);
+				orthocam->setPosition(2.5f,2.5f,5.0f);
 				renderPass->setCamera(orthocam);
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Creating SliceMapRenderpass");
 			DEBUGLOG->indent();
-			RenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass();
-						sliceMapRenderPass->setFramebufferObject(0);
+			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass();
+				sliceMapRenderPass->getCamera()->setPosition(2.4f,5.4f,2.4f);
+				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( -3.0f, 0.0f, -3.0f ));
+				sliceMapRenderPass->setFramebufferObject(0);
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding Objects to Renderpasses");

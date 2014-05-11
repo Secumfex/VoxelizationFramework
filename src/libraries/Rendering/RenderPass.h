@@ -21,9 +21,10 @@ protected:
 	std::vector< GLenum > m_disable;
 	std::vector< bool > m_enableTEMP;
 	std::vector< bool > m_disableTEMP;
+
 public:
 	RenderPass(Shader* shader = 0, FramebufferObject* fbo = 0);
-	~RenderPass();
+	virtual ~RenderPass();
 
 	virtual void clearBits();
 	virtual void enableStates();

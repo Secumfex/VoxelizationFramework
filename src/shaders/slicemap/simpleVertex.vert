@@ -5,8 +5,6 @@
 uniform mat4 uniformModel;
 uniform mat4 uniformView;
 uniform mat4 uniformProjection;
-uniform vec3 uniformCameraPosition;
-uniform vec3 uniformCameraDirection;
 
 layout (location = 0) in vec4 positionAttribute;
 
@@ -14,10 +12,10 @@ out float passDistanceToCam;
 
 void main() {
 	// vertex position
-	vec4 viewPosition = uniformView * uniformModel * positionAttribute;
+	vec4 position = uniformProjection * uniformView * uniformModel * positionAttribute;
     
-	// distance to cam : z value of position in camera coordinates
-	passDistanceToCam = ( viewPosition ).z ;	
+	// distance to cam : z value of position after projection
+	passDistanceToCam = ( position ).z ;	
 	
-    gl_Position = uniformProjection * viewPosition;
+    gl_Position = position;
 }

@@ -13,7 +13,7 @@ protected:
 public:
 	CameraRenderPass();
 	CameraRenderPass(Shader* shader, FramebufferObject* fbo = 0);
-	~CameraRenderPass();
+	virtual ~CameraRenderPass();
 
 	void setCamera(Camera* camera);
 
