@@ -75,6 +75,11 @@ class ObjectLoadingApp : public Application
 				std::vector< Object* > testRoom=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/testRoom.dae" );
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Loading overlapping geometry file");
+			DEBUGLOG->indent();
+				std::vector< Object* > overlappingGeometry =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/overlappingGeometry.dae" );
+			DEBUGLOG->outdent();
+
 		DEBUGLOG->log("Loading some objects complete");
 		DEBUGLOG->outdent();
 
@@ -85,6 +90,7 @@ class ObjectLoadingApp : public Application
 			scene->addObjects( objCube );
 			scene->addObjects( daeBackground );
 			scene->addObjects( testRoom );
+			scene->addObjects( overlappingGeometry );
 
 			DEBUGLOG->log("Creating scene graph nodes");
 			DEBUGLOG->indent();
@@ -97,23 +103,27 @@ class ObjectLoadingApp : public Application
 
 				DEBUGLOG->log("Creating node tree for cube 2");
 				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
-				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(-1.0f, 2.0f, -1.0f) ) );
+				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(0.0f, 0.0f, 0.0f) ) );
 
 				RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
 				yAxisRotationNode->setAngle(0.005f);
 				yAxisRotationNode->setRotationAxis( glm::vec3( 0.0f, 1.0f, 0.0f ) );
 
-				RotatingNode* rotatingCubeNode = new RotatingNode(yAxisRotationNode);
-				rotatingCubeNode->setRotationAxis(glm::vec3 ( 1.0f, 1.0f, 0.1f));
-				rotatingCubeNode->setAngle(0.01f);
-				rotatingCubeNode->setObject(objCube[0]);
+				RotatingNode* rotatingNode = new RotatingNode(yAxisRotationNode);
+				rotatingNode->setRotationAxis(glm::vec3 ( 1.0f, 1.0f, 0.1f));
+				rotatingNode->setAngle(0.01f);
+				//rotatingCubeNode->setObject(objCube[0]);
+
+				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
+				overlappingGeometryNode->setObject(overlappingGeometry[0]);
 
 				DEBUGLOG->log("Adding updatable rotation nodes of cube 2 to scene");
 				scene->addUpdatable(yAxisRotationNode);
-				scene->addUpdatable(rotatingCubeNode);
+				scene->addUpdatable(rotatingNode);
 
 				DEBUGLOG->log("Creating renderable node for background");
 				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+				backgroundNode->translate( glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, -1.0f ,0.0f) ) );
 				backgroundNode->setObject(daeBackground[0]);
 
 				DEBUGLOG->log("Creating renderable node for test room");
@@ -131,11 +141,11 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Creating phong renderpass");
 			Shader* shader = new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong.frag");
-			FramebufferObject* fbo = new FramebufferObject(800,600);
+			FramebufferObject* fbo = new FramebufferObject(512,512);
 			fbo->addColorAttachments(1);
 
 			CameraRenderPass* renderPass = new CameraRenderPass(shader, fbo);
-			renderPass->setViewport(0,0,800,600);
+			renderPass->setViewport(0,0,512,512);
 			renderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
 			renderPass->addEnable(GL_DEPTH_TEST);
 			renderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
@@ -143,37 +153,42 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
-			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass();
+			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(512, 512);
 				sliceMapRenderPass->getCamera()->setPosition(0.0f,4.99f,0.0f);
 				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding objects to phong render pass");
-			sliceMapRenderPass->addRenderable(cubeNode1);
-			sliceMapRenderPass->addRenderable(rotatingCubeNode);
-			sliceMapRenderPass->addRenderable(backgroundNode);
+//			sliceMapRenderPass->addRenderable(cubeNode1);
+//			sliceMapRenderPass->addRenderable(backgroundNode);
+			sliceMapRenderPass->addRenderable(overlappingGeometryNode);
 			sliceMapRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding objects to slice map render pass");
-			renderPass->addRenderable(cubeNode1);
-			renderPass->addRenderable(rotatingCubeNode);
-			renderPass->addRenderable(backgroundNode);
+//			renderPass->addRenderable(cubeNode1);
+//			renderPass->addRenderable(backgroundNode);
+			renderPass->addRenderable(overlappingGeometryNode);
 			renderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Creating screen filling triangle render pass");
 			DEBUGLOG->indent();
 				Shader* showTexture = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/screenspace/simpleTexture.frag");
-				TriangleRenderPass* triangleRenderPass = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
-				triangleRenderPass->setViewport(0,0,512,512);
-				triangleRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 
-//				Texture* renderPassTexture = new Texture();
-//				renderPassTexture->setTextureHandle(renderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-//				triangleRenderPass->addUniformTexture(renderPassTexture, "uniformTexture");
+				TriangleRenderPass* showRenderPass = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+				showRenderPass->setViewport(0,0,512,512);
+				showRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+				Texture* renderPassTexture = new Texture();
+				renderPassTexture->setTextureHandle(renderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+				showRenderPass->addUniformTexture(renderPassTexture, "uniformTexture");
+
+				Shader* showOverlaySliceMap = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/slicemap/sliceMapOverlay.frag");
+				TriangleRenderPass* showSliceMapRenderPass = new TriangleRenderPass(showOverlaySliceMap, 0, m_resourceManager.getScreenFillingTriangle());
+				showSliceMapRenderPass->setViewport(0,0,512,512);
 
 				Texture* sliceMapRenderPassTexture = new Texture();
 				sliceMapRenderPassTexture->setTextureHandle(sliceMapRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-				triangleRenderPass->addUniformTexture(sliceMapRenderPassTexture, "uniformTexture");
+				showSliceMapRenderPass->addUniformTexture(renderPassTexture, 		 "uniformBaseTexture");
+				showSliceMapRenderPass->addUniformTexture(sliceMapRenderPassTexture, "uniformSliceMapTexture");
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->indent();
@@ -184,7 +199,8 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->log("Adding renderpasses to application");
 			m_renderManager.addRenderPass(sliceMapRenderPass);
 			m_renderManager.addRenderPass(renderPass);
-			m_renderManager.addRenderPass(triangleRenderPass);
+		//	m_renderManager.addRenderPass(showRenderPass);
+			m_renderManager.addRenderPass(showSliceMapRenderPass);
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Configuring Input");

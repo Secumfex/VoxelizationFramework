@@ -9,11 +9,15 @@ uniform sampler2D diffuseTexture;
 out vec4 fragColor;
 
 void main() { 
+	if ( dot( passPosition, passNormal) > 0.0 )
+	{
+		discard;	// back face culling
+	}
+
 	vec4 lightPos = vec4(5,5,-2,1);
 	
 	// vec4 diffuseColor = vec4( 1.0, 0.0 , 0.0, 1.0 );
 	vec4 diffuseColor = texture( diffuseTexture, passUV );
-	
 	
     vec3 posToLight = normalize( vec3( lightPos.xyz - passPosition.xyz ) );
 	vec3 reflection = normalize(reflect(-posToLight,passNormal.xyz));

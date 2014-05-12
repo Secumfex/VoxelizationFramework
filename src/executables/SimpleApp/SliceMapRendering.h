@@ -99,19 +99,19 @@ namespace SliceMap
 		return bitMask;
 	}
 
-	SliceMapRenderPass* getSliceMapRenderPass()
+	SliceMapRenderPass* getSliceMapRenderPass(int width, int height)
 	{
 		/*Init shader & FBO*/
 		DEBUGLOG->log("Creating Shader to construct Slice Map");
 		Shader* sliceMapShader = new Shader(SHADERS_PATH "/slicemap/simpleVertex.vert", SHADERS_PATH "/slicemap/sliceMap.frag");
 
 		DEBUGLOG->log("Creating Framebuffer with 3 Render Targets");
-		FramebufferObject* fbo  = new FramebufferObject(512,512);
+		FramebufferObject* fbo  = new FramebufferObject(width,height);
 		fbo->addColorAttachments(3);	// to enable slice mapping into render targets
 
 		/*Init Renderpass*/
 		SliceMapRenderPass* sliceMapRenderPass = new SliceMapRenderPass(sliceMapShader, fbo);
-		sliceMapRenderPass->setViewport(0,0,512,512);
+		sliceMapRenderPass->setViewport(0,0,width,height);
 
 		sliceMapRenderPass->setClearColor(0.0f, 0.0f, 0.0f, 0.0f);	// clear every channel to 0
 		sliceMapRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);		// enable clearing of color bits
