@@ -126,6 +126,7 @@ namespace SliceMap
 		/*Init Camera*/
 		Camera* orthocam = new Camera();
 		glm::mat4 ortho = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f);
+//		glm::mat4 persp = glm::perspective(45.0f, 1.0f, 0.1f, 100.f);
 		orthocam->setProjectionMatrix(ortho);
 		sliceMapRenderPass->setCamera(orthocam);
 

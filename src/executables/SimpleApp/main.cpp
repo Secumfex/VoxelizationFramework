@@ -6,12 +6,12 @@
 #include "CustomRenderPasses.h"
 #include "SliceMapRendering.h"
 #include "Listeners.h"
+#include "Turntable.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
-
 
 
 class RotatingNode : public Updatable, public RenderableNode
@@ -128,6 +128,7 @@ class ObjectLoadingApp : public Application
 
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+				testRoomNode->scale(glm::scale(glm::mat4(1.0f), glm::vec3(0.75f, 0.75f, 0.75f)));
 				testRoomNode->setObject(testRoom[0]);
 
 			DEBUGLOG->outdent();
@@ -153,7 +154,7 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
-			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(512, 512);
+			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(128, 128);
 				sliceMapRenderPass->getCamera()->setPosition(0.0f,4.99f,0.0f);
 				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
@@ -217,6 +218,12 @@ class ObjectLoadingApp : public Application
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
 			DEBUGLOG->log("Adding updatable camera to scene");
 			scene->addUpdatable(movableCam);
+
+			DEBUGLOG->log("Configuring Turntable for root node");
+			Turntable* turntable = new Turntable(scene->getSceneGraph()->getRootNode(), &m_inputManager);
+			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
+			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+			scene->addUpdatable(turntable);
 		DEBUGLOG->outdent();
 
 	}

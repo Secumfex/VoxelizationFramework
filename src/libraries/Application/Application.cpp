@@ -95,6 +95,9 @@ void Application::configure()
 		DEBUGLOG->log("Binding MouseButtonCallback...");
 		glfwSetMouseButtonCallback(window, InputManager::mouseButtonCallback);
 
+		DEBUGLOG->log("Binding CursorPosCallback...");
+		glfwSetCursorPosCallback(window, InputManager::cursorPosCallback);
+
 	DEBUGLOG->outdent();
 
 	DEBUGLOG->log("Binding GLFW window to RenderManager");

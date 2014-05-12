@@ -9,7 +9,7 @@ uniform sampler2D diffuseTexture;
 out vec4 fragColor;
 
 void main() { 
-	if ( dot( passPosition, passNormal) > 0.0 )
+	if ( dot( vec3(0.0,0.0,-1.0), normalize ( passNormal ) ) > 0.0f )
 	{
 		discard;	// back face culling
 	}

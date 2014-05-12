@@ -8,6 +8,11 @@
 
 class InputManager : public Subject{
 protected:
+	double m_cursorX;
+	double m_cursorY;
+
+	double m_cursorDiffX;
+	double m_cursorDiffY;
 public:
 	InputManager();
 	~InputManager();
@@ -25,6 +30,17 @@ public:
 	static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 	void mouseButton(GLFWwindow* window, int button, int action, int mods);
 
+	static void cursorPosCallback(GLFWwindow* window, double x, double y);
+	void cursorPos(GLFWwindow* window, double x, double y);
+
+	double getCursorDiffY() const;
+	void setCursorDiffY(double cursorDiffY);
+	double getCursorDiffX() const;
+	void setCursorDiffX(double cursorDiffX);
+	double getCursorX() const;
+	void setCursorX(double cursorX);
+	double getCursorY() const;
+	void setCursorY(double cursorY);
 };
 
 static InputManager* global_im = 0;

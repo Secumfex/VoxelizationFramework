@@ -4,7 +4,10 @@
 
 InputManager::InputManager()
 {
-
+	m_cursorX = 0.0;
+	m_cursorY = 0.0;
+	m_cursorDiffX = 0.0;
+	m_cursorDiffY = 0.0;
 }
 
 InputManager::~InputManager()
@@ -46,6 +49,55 @@ void InputManager::mouseButton(GLFWwindow* window, int button, int action, int m
 	std::stringstream ss;
 	ss << button << "_BUTTON_" << action;
 	call (ss.str());
+}
+
+double InputManager::getCursorDiffY() const {
+	return m_cursorDiffY;
+}
+
+double InputManager::getCursorDiffX() const {
+	return m_cursorDiffX;
+}
+
+void InputManager::setCursorDiffX(double cursorDiffX) {
+	m_cursorDiffX = cursorDiffX;
+}
+
+double InputManager::getCursorX() const {
+	return m_cursorX;
+}
+
+void InputManager::setCursorX(double cursorX) {
+	m_cursorX = cursorX;
+}
+
+double InputManager::getCursorY() const {
+	return m_cursorY;
+}
+
+void InputManager::setCursorY(double cursorY) {
+	m_cursorY = cursorY;
+}
+
+void InputManager::setCursorDiffY(double cursorDiffY) {
+	m_cursorDiffY = cursorDiffY;
+}
+
+void InputManager::cursorPos(GLFWwindow* window, double x, double y)
+{
+	m_cursorDiffX = x - m_cursorX;
+	m_cursorDiffY = y - m_cursorY;
+
+	m_cursorX = x;
+	m_cursorY = y;
+}
+
+void InputManager::cursorPosCallback(GLFWwindow* window, double x, double y)
+{
+	if(global_im)
+		{
+			global_im->cursorPos(window, x, y);
+		}
 }
 
 void InputManager::attachListenerOnKeyPress(Listener* listener, int key, int action)
