@@ -33,6 +33,16 @@ void RenderPass::setFramebufferObject( FramebufferObject* fbo)
 	m_fbo = fbo;
 }
 
+FramebufferObject* RenderPass::getFramebufferObject()
+{
+	return m_fbo;
+}
+
+Shader* RenderPass::getShader()
+{
+	return m_shader;
+}
+
 void RenderPass::clearBits()
 {
 	call("PRECLEARBITS");

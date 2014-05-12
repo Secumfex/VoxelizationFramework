@@ -4,7 +4,7 @@
 
 ResourceManager::ResourceManager()
 {
-
+	m_screenFillingTriangle = 0;
 }
 
 ResourceManager::~ResourceManager()
@@ -174,5 +174,46 @@ bool ResourceManager::checkFile(std::string file)
 	else{
 		return false;
 	}
+}
+
+/**
+ *	get a screen Filling Triangle Renderable
+ */
+Renderable* ResourceManager::getScreenFillingTriangle(){
+	if(m_screenFillingTriangle == 0){
+
+		Model *triangle = new Model;
+		Material *mat = new Material();
+
+		GLuint screenFillVertexArrayHandle;
+
+		glGenVertexArrays(1, &screenFillVertexArrayHandle);
+		glBindVertexArray(screenFillVertexArrayHandle);
+
+		GLuint indexBufferHandle;
+		glGenBuffers(1, &indexBufferHandle);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+
+		GLint indices[] = {0, 1, 2};
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+		GLuint vertexBufferHandle;
+		glGenBuffers(1, &vertexBufferHandle);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
+
+		GLfloat vertices[] = {-1, -1,   3, -1,   -1,  3};
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+		triangle->setVAOHandle(screenFillVertexArrayHandle);
+		triangle->setNumIndices(3);
+		triangle->setNumVertices(3);
+		triangle->setNumFaces(1);
+
+		m_screenFillingTriangle = new Object(triangle,mat);
+
+	} return m_screenFillingTriangle;
 }
 

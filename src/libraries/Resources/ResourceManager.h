@@ -17,6 +17,8 @@ protected:
 	std::map<const aiMesh*, Model* > m_loadedModels;
 	std::map<std::string, Texture* > m_loadedTextures;
 	std::map<std::string, std::string > m_loadedFiles;
+
+	Renderable* m_screenFillingTriangle;
 public:
 	ResourceManager();
 	~ResourceManager();
@@ -29,6 +31,8 @@ public:
 	bool checkModel(const aiMesh* mesh);
 	bool checkTexture(std::string path);
 	bool checkFile(std::string file);
+
+	Renderable* getScreenFillingTriangle();
 
 	void deleteAll();
 };

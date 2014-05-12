@@ -45,3 +45,27 @@ void CameraRenderPass::uploadUniforms()
 	m_shader->uploadUniform(m_camera->getViewDirection(), "uniformCameraDirection");
 	RenderPass::uploadUniforms();
 }
+
+TriangleRenderPass::TriangleRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* screenFillingTriangle)
+{
+	m_shader = shader;
+	m_fbo = fbo;
+	m_screenFillingTriangle = screenFillingTriangle;
+	addRenderable(screenFillingTriangle);
+	addDisable(GL_DEPTH_TEST);
+}
+
+void TriangleRenderPass::addUniformTexture(Texture* texture, std::string uniformTarget)
+{
+	m_uniformTextures.push_back( pair<Texture*, std::string> (texture, uniformTarget) );
+}
+
+void TriangleRenderPass::uploadUniforms()
+{
+	for (unsigned int i = 0; i < m_uniformTextures.size(); i++)
+	{
+		m_uniformTextures[i].first->bindToTextureUnit(i);
+		m_shader->uploadUniform( (int) i,  m_uniformTextures[i].second);
+	}
+	RenderPass::uploadUniforms();
+}

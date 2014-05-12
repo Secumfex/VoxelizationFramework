@@ -34,7 +34,13 @@ void Texture::unbindFromActiveUnit()
 	if (m_activeUnit != -1)
 	{
 		glActiveTexture(GL_TEXTURE0 + m_activeUnit);
-		glBindTexture(GL_TEXTURE_2D, 0);
+		// test whether this is really this texture
+		GLint handle;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &handle);
+		if ( handle == m_texturehandle)
+		{
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
 		glActiveTexture(GL_TEXTURE0);
 		m_activeUnit = -1;
 	}

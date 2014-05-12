@@ -70,6 +70,11 @@ class ObjectLoadingApp : public Application
 				std::vector< Object* > daeBackground=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/background.dae" );
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Loading test room dae file");
+			DEBUGLOG->indent();
+				std::vector< Object* > testRoom=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/testRoom.dae" );
+			DEBUGLOG->outdent();
+
 		DEBUGLOG->log("Loading some objects complete");
 		DEBUGLOG->outdent();
 
@@ -79,6 +84,7 @@ class ObjectLoadingApp : public Application
 			scene->addObjects( daeCube );
 			scene->addObjects( objCube );
 			scene->addObjects( daeBackground );
+			scene->addObjects( testRoom );
 
 			DEBUGLOG->log("Creating scene graph nodes");
 			DEBUGLOG->indent();
@@ -110,8 +116,11 @@ class ObjectLoadingApp : public Application
 				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
 				backgroundNode->setObject(daeBackground[0]);
 
-			DEBUGLOG->outdent();
+				DEBUGLOG->log("Creating renderable node for test room");
+				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+				testRoomNode->setObject(testRoom[0]);
 
+			DEBUGLOG->outdent();
 		DEBUGLOG->outdent();
 		
 		DEBUGLOG->log("Setting scene instance as active scene ");
@@ -119,54 +128,63 @@ class ObjectLoadingApp : public Application
 
 		DEBUGLOG->log("Configuring Rendering");
 		DEBUGLOG->indent();
-			DEBUGLOG->log("Compiling simple Shader");
-			Shader* shader = new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong.frag");
 
-			DEBUGLOG->log("Creating framebuffer object");
+			DEBUGLOG->log("Creating phong renderpass");
+			Shader* shader = new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong.frag");
 			FramebufferObject* fbo = new FramebufferObject(800,600);
 			fbo->addColorAttachments(1);
 
-			DEBUGLOG->log("Creating renderpass");
-			CameraRenderPass* renderPass = new CameraRenderPass(shader, 0);
+			CameraRenderPass* renderPass = new CameraRenderPass(shader, fbo);
 			renderPass->setViewport(0,0,800,600);
 			renderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
 			renderPass->addEnable(GL_DEPTH_TEST);
 			renderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 			renderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 
-			renderPass->setCamera( new Camera() );
-			renderPass->getCamera()->setPosition(glm::vec3(1.0f,3.0f,7.0f));
-			renderPass->getCamera()->setCenter(glm::vec3(0.0f,2.0f,0.0f));
-			renderPass->getCamera()->setProjectionMatrix(glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f));
-
-			DEBUGLOG->indent();
-				DEBUGLOG->log("Setting an Orthographic Camera for fun...");
-				Camera* orthocam = new Camera();
-				glm::mat4 ortho = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f);
-				orthocam->setProjectionMatrix(ortho);
-				orthocam->setPosition(2.5f,2.5f,5.0f);
-				renderPass->setCamera(orthocam);
-			DEBUGLOG->outdent();
-
-			DEBUGLOG->log("Creating SliceMapRenderpass");
+			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
 			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass();
-				sliceMapRenderPass->getCamera()->setPosition(2.4f,5.4f,2.4f);
-				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( -3.0f, 0.0f, -3.0f ));
-				sliceMapRenderPass->setFramebufferObject(0);
+				sliceMapRenderPass->getCamera()->setPosition(0.0f,4.99f,0.0f);
+				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Adding Objects to Renderpasses");
+			DEBUGLOG->log("Adding objects to phong render pass");
 			sliceMapRenderPass->addRenderable(cubeNode1);
 			sliceMapRenderPass->addRenderable(rotatingCubeNode);
 			sliceMapRenderPass->addRenderable(backgroundNode);
+			sliceMapRenderPass->addRenderable(testRoomNode);
+
+			DEBUGLOG->log("Adding objects to slice map render pass");
 			renderPass->addRenderable(cubeNode1);
 			renderPass->addRenderable(rotatingCubeNode);
 			renderPass->addRenderable(backgroundNode);
+			renderPass->addRenderable(testRoomNode);
+
+			DEBUGLOG->log("Creating screen filling triangle render pass");
+			DEBUGLOG->indent();
+				Shader* showTexture = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/screenspace/simpleTexture.frag");
+				TriangleRenderPass* triangleRenderPass = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+				triangleRenderPass->setViewport(0,0,512,512);
+				triangleRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+
+//				Texture* renderPassTexture = new Texture();
+//				renderPassTexture->setTextureHandle(renderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+//				triangleRenderPass->addUniformTexture(renderPassTexture, "uniformTexture");
+
+				Texture* sliceMapRenderPassTexture = new Texture();
+				sliceMapRenderPassTexture->setTextureHandle(sliceMapRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+				triangleRenderPass->addUniformTexture(sliceMapRenderPassTexture, "uniformTexture");
+			DEBUGLOG->outdent();
+
+			DEBUGLOG->indent();
+				DEBUGLOG->log("Setting the slicemap's camera in renderpass 1 for fun...");
+				renderPass->setCamera(sliceMapRenderPass->getCamera());
+			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding renderpasses to application");
 			m_renderManager.addRenderPass(sliceMapRenderPass);
-//			m_renderManager.addRenderPass(renderPass);
+			m_renderManager.addRenderPass(renderPass);
+			m_renderManager.addRenderPass(triangleRenderPass);
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Configuring Input");

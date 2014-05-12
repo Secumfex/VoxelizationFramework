@@ -46,6 +46,9 @@ public:
 
 	std::vector< Renderable* > getRenderables();
 
+	FramebufferObject* getFramebufferObject();
+	Shader* getShader();
+
 	void addClearBit(GLbitfield clearBit);
 	void addEnable(GLenum state);
 	void addDisable(GLenum state);
