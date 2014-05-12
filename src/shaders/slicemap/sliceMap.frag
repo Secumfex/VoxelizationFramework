@@ -51,6 +51,6 @@ void main() {
 	slice0_31 = new_value;
 	
 	//TODO use a bit mask lookup instead
-	vec4 bit_value = texture( uniformBitMask, z );
-	slice0_31 = bit_value;
+//	vec4 bit_value = texture( uniformBitMask, z );
+//	slice0_31 = bit_value;
 }

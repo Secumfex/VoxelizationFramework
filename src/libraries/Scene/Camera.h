@@ -4,11 +4,12 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
+#include <Utility/Updatable.h>
 
 using namespace std;
 
 /** @brief a first person Camera */
-class Camera{
+class Camera : public Updatable{
 protected:
 	glm::vec3 m_position;			/**< current world position */
 	glm::vec3 m_direction;			/**< current world normalized view direction */
@@ -94,6 +95,11 @@ public:
 	 * @param deltaTime : time step in seconds
 	 */
 	virtual void updatePosition(float deltaTime);
+
+	/** \brief update position by evaluating current velocity over provided time step
+	* @param d_t : time step in seconds
+	*/
+	virtual void update(float d_t = 0.1f);
 
 	/** \brief getter
 	 *

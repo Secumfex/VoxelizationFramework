@@ -5,11 +5,14 @@
 
 #include "CustomRenderPasses.h"
 #include "SliceMapRendering.h"
+#include "Listeners.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
+
+
 
 class RotatingNode : public Updatable, public RenderableNode
 {
@@ -119,11 +122,11 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->log("Compiling simple Shader");
 			Shader* shader = new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong.frag");
 
-			DEBUGLOG->log("Creating FramebufferObject");
+			DEBUGLOG->log("Creating framebuffer object");
 			FramebufferObject* fbo = new FramebufferObject(800,600);
 			fbo->addColorAttachments(1);
 
-			DEBUGLOG->log("Creating Renderpass");
+			DEBUGLOG->log("Creating renderpass");
 			CameraRenderPass* renderPass = new CameraRenderPass(shader, 0);
 			renderPass->setViewport(0,0,800,600);
 			renderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
@@ -161,10 +164,27 @@ class ObjectLoadingApp : public Application
 			renderPass->addRenderable(rotatingCubeNode);
 			renderPass->addRenderable(backgroundNode);
 
-			DEBUGLOG->log("Adding Renderpasses to Application");
+			DEBUGLOG->log("Adding renderpasses to application");
 			m_renderManager.addRenderPass(sliceMapRenderPass);
 //			m_renderManager.addRenderPass(renderPass);
 		DEBUGLOG->outdent();
+
+		DEBUGLOG->log("Configuring Input");
+		DEBUGLOG->indent();
+			DEBUGLOG->log("Configuring camera movement");
+			Camera* movableCam = sliceMapRenderPass->getCamera();
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 1.0f),GLFW_KEY_W, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_W, GLFW_RELEASE);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 1.0f),GLFW_KEY_D, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_D, GLFW_RELEASE);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, -1.0f),GLFW_KEY_S, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_S, GLFW_RELEASE);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, -1.0f),GLFW_KEY_A, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
+			DEBUGLOG->log("Adding updatable camera to scene");
+			scene->addUpdatable(movableCam);
+		DEBUGLOG->outdent();
+
 	}
 };
 

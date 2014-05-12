@@ -66,6 +66,11 @@ void Camera::updatePosition(float deltaTime){
 	setPosition(gotPosition);
 }
 
+void Camera::update(float d_t)
+{
+	updatePosition(d_t);
+}
+
 glm::vec3 Camera::getViewDirection(){
 	return m_direction;
 }
