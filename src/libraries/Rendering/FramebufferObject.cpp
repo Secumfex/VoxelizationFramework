@@ -89,6 +89,51 @@ int FramebufferObject::getWidth()
 	return m_width;
 }
 
+const std::map<GLenum, GLuint>& FramebufferObject::getColorAttachments() const {
+	return m_colorAttachments;
+}
+
+void FramebufferObject::setColorAttachments(
+		const std::map<GLenum, GLuint>& colorAttachments) {
+	m_colorAttachments = colorAttachments;
+}
+
+GLuint FramebufferObject::getDepthTextureHandle() const {
+	return m_depthTextureHandle;
+}
+
+void FramebufferObject::setDepthTextureHandle(GLuint depthTextureHandle) {
+	m_depthTextureHandle = depthTextureHandle;
+}
+
+const std::vector<GLenum>& FramebufferObject::getDrawBuffers() const {
+	return m_drawBuffers;
+}
+
+void FramebufferObject::setDrawBuffers(const std::vector<GLenum>& drawBuffers) {
+	m_drawBuffers = drawBuffers;
+}
+
+void FramebufferObject::setFramebufferHandle(GLuint framebufferHandle) {
+	m_framebufferHandle = framebufferHandle;
+}
+
+void FramebufferObject::setHeight(int height) {
+	m_height = height;
+}
+
+int FramebufferObject::getNumColorAttachments() const {
+	return m_numColorAttachments;
+}
+
+void FramebufferObject::setNumColorAttachments(int numColorAttachments) {
+	m_numColorAttachments = numColorAttachments;
+}
+
+void FramebufferObject::setWidth(int width) {
+	m_width = width;
+}
+
 int FramebufferObject::getHeight()
 {
 	return m_height;

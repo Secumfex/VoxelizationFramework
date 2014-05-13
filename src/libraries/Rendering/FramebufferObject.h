@@ -35,6 +35,18 @@ public:
 
 	int getWidth();
 	int getHeight();
+
+	const std::map<GLenum, GLuint>& getColorAttachments() const;
+	void setColorAttachments(const std::map<GLenum, GLuint>& colorAttachments);
+	GLuint getDepthTextureHandle() const;
+	void setDepthTextureHandle(GLuint depthTextureHandle);
+	const std::vector<GLenum>& getDrawBuffers() const;
+	void setDrawBuffers(const std::vector<GLenum>& drawBuffers);
+	void setFramebufferHandle(GLuint framebufferHandle);
+	void setHeight(int height);
+	int getNumColorAttachments() const;
+	void setNumColorAttachments(int numColorAttachments);
+	void setWidth(int width);
 };
 
 #endif

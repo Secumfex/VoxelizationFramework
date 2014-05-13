@@ -8,19 +8,23 @@ namespace SliceMap
 	{
 	private:
 		Texture* m_bitMask;
+		int m_numSliceMaps; 	// number of slice maps ( render targets to be used as slice maps )
 	public:
 		SliceMapRenderPass(Shader* shader, FramebufferObject* fbo)
 		{
 			m_shader = shader;
 			m_fbo = fbo;
 			m_viewport = glm::vec4(0,0,800,600);
+			m_numSliceMaps = 1;
 			if (fbo)
 			{
 				m_viewport.z = fbo->getWidth();
 				m_viewport.w = fbo->getHeight();
+				m_numSliceMaps = fbo->getNumColorAttachments();
 			}
 			m_camera = 0;
 			m_bitMask = 0;
+
 		}
 
 		~SliceMapRenderPass()
@@ -66,6 +70,8 @@ namespace SliceMap
 		{
 			m_shader->uploadUniform(5, "uniformBitMask");
 			CameraRenderPass::uploadUniforms();
+
+			m_shader->uploadUniform(m_numSliceMaps, "uniformNumSliceMaps");
 		}
 		void setBitMask(Texture* bitMask)
 		{
@@ -99,15 +105,44 @@ namespace SliceMap
 		return bitMask;
 	}
 
-	SliceMapRenderPass* getSliceMapRenderPass(int width, int height)
+	enum ShaderType{ BITMASK_MULTIPLETARGETS, BITMASK_SINGLETARGET, COMPUTATION };
+
+	/**
+	 *
+	 * @param width grid width
+	 * @param height grid height
+	 * @param depth grid depth
+	 * @param resX grid resolution in X dimension
+	 * @param resY grid resolution in Y dimension
+	 * @param numSliceMaps grid resolution in Z dimension ( interpreted as factor of 32 )
+	 * @return a slice map render pass consisting of a framebuffer object of given dimensions, voxelizing the given grid volume
+	 */
+	SliceMapRenderPass* getSliceMapRenderPass(float width, float height, float depth, int resX, int resY, int numSliceMaps = 1, ShaderType shaderType = BITMASK_MULTIPLETARGETS)
 	{
 		/*Init shader & FBO*/
 		DEBUGLOG->log("Creating Shader to construct Slice Map");
-		Shader* sliceMapShader = new Shader(SHADERS_PATH "/slicemap/simpleVertex.vert", SHADERS_PATH "/slicemap/sliceMap.frag");
 
-		DEBUGLOG->log("Creating Framebuffer with 3 Render Targets");
+		std::string vertexShader = std::string ( SHADERS_PATH "/slicemap/simpleVertex.vert" );
+		std::string fragmentShader;
+
+		switch (shaderType)
+		{
+		case BITMASK_SINGLETARGET:
+			fragmentShader = std::string ( SHADERS_PATH "/slicemap/sliceMap.frag" );
+			break;
+		case BITMASK_MULTIPLETARGETS:
+			fragmentShader = std::string ( SHADERS_PATH "/slicemap/sliceMapMultipleTargets.frag" );
+			break;
+		case COMPUTATION:
+			fragmentShader = std::string ( SHADERS_PATH "/slicemap/sliceMapWithComputation.frag" );
+			break;
+		}
+
+		Shader* sliceMapShader = new Shader( vertexShader, fragmentShader);
+
+		DEBUGLOG->log("Creating Framebuffer with render target amount:", numSliceMaps);
 		FramebufferObject* fbo  = new FramebufferObject(width,height);
-		fbo->addColorAttachments(3);	// to enable slice mapping into render targets
+		fbo->addColorAttachments(numSliceMaps);	// to enable slice mapping into render targets
 
 		/*Init Renderpass*/
 		SliceMapRenderPass* sliceMapRenderPass = new SliceMapRenderPass(sliceMapShader, fbo);
