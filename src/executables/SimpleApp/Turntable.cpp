@@ -50,7 +50,7 @@ void Turntable::setInputManager(InputManager* inputManager)
 
 void Turntable::dragBy(float phi, float theta)
 {
-	p_node->rotate(glm::rotate(glm::mat4(1.0f), phi   * m_sensitivity ,glm::vec3(0.0f,0.0f,1.0f)));
+	p_node->rotate(glm::rotate(glm::mat4(1.0f), phi   * m_sensitivity ,glm::vec3(0.0f,1.0f,0.0f)));
 	p_node->rotate(glm::rotate(glm::mat4(1.0f), theta * m_sensitivity ,glm::vec3(1.0f,0.0f,0.0f)));
 }
 

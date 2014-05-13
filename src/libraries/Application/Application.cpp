@@ -20,7 +20,7 @@ Application::Application()
 
 	DEBUGLOG->log("Creating GLFW window");
 
-	GLFWwindow* window = m_windowManager.createWindow(800,600);
+	GLFWwindow* window = m_windowManager.createWindow(1024,512);
 	if(!window){
 		DEBUGLOG->log ("ERROR : GLFW Window failed to initialize");
 	}
