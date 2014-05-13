@@ -47,9 +47,11 @@ GLuint FramebufferObject::createFramebufferTexture()
 
 void FramebufferObject::addColorAttachments(int amount)
 {
-	if ( m_numColorAttachments + amount <= GL_MAX_COLOR_ATTACHMENTS )
+	int maxColorAttachments;
+	glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &maxColorAttachments);
+	if ( m_numColorAttachments + amount <=  maxColorAttachments)
 	{
-		DEBUGLOG->log("max color attachments: ", GL_MAX_COLOR_ATTACHMENTS);
+		DEBUGLOG->log("max color attachments: ", maxColorAttachments);
 		glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferHandle);
 
 		DEBUGLOG->log("Creating Color Attachments: ", amount);

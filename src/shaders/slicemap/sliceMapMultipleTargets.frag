@@ -15,12 +15,13 @@ layout(location = 0) out vec4 slice0_31;
 // use multiple render targets
 layout(location = 1) out vec4 slice32_63;
 layout(location = 2) out vec4 slice64_93;
+layout(location = 3) out vec4 slice94_127;
  
 void main() { 
 	// determine depth from distance to camera 
 	float z = ( passDistanceToCam + 1.0 ) * 0.5;
 	
-	int sliceMapTarget = uniformNumSliceMaps * int ( z );	// slice map to write into
+	int sliceMapTarget = int ( float(uniformNumSliceMaps) * z );	// slice map to write into
 	z = ( z * float( uniformNumSliceMaps ) ) - float( sliceMapTarget); // map from z to [0..1] in slice map target
 	
 	// bit mask lookup determines bit value
@@ -37,5 +38,9 @@ void main() {
 	if (sliceMapTarget == 2)
 	{
 		slice64_93 = bit_value;
+	}
+	if (sliceMapTarget == 3)
+	{
+		slice94_127 = bit_value;
 	}
 }
