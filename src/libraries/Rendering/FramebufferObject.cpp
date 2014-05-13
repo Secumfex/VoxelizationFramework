@@ -49,22 +49,27 @@ void FramebufferObject::addColorAttachments(int amount)
 {
 	if ( m_numColorAttachments + amount <= GL_MAX_COLOR_ATTACHMENTS )
 	{
+		DEBUGLOG->log("max color attachments: ", GL_MAX_COLOR_ATTACHMENTS);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferHandle);
+
 		DEBUGLOG->log("Creating Color Attachments: ", amount);
+		DEBUGLOG->indent();
 		for (int i = 0; i < amount; i ++)
 		{
 			GLuint textureHandle = createFramebufferTexture();
 			
-			glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferHandle);
 			glBindTexture(GL_TEXTURE_2D, textureHandle);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + m_numColorAttachments + i, GL_TEXTURE_2D, textureHandle, 0);
 			glBindTexture(GL_TEXTURE_2D, 0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			
 			m_colorAttachments[GL_COLOR_ATTACHMENT0 + m_numColorAttachments + i] = textureHandle;
-			m_drawBuffers.push_back(GL_COLOR_ATTACHMENT0+ m_numColorAttachments + i);
+			m_drawBuffers.push_back(GL_COLOR_ATTACHMENT0 + m_numColorAttachments + i);
 		}
+		DEBUGLOG->outdent();
+
 		m_numColorAttachments = m_colorAttachments.size();
 		glDrawBuffers(m_drawBuffers.size(), &m_drawBuffers[0]);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 }
 

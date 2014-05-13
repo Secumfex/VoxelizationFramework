@@ -77,7 +77,7 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Loading overlapping geometry file");
 			DEBUGLOG->indent();
-				std::vector< Object* > overlappingGeometry =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/overlappingGeometry.dae" );
+//				std::vector< Object* > overlappingGeometry =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/overlappingGeometry.dae" );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Loading some objects complete");
@@ -90,7 +90,7 @@ class ObjectLoadingApp : public Application
 			scene->addObjects( objCube );
 			scene->addObjects( daeBackground );
 			scene->addObjects( testRoom );
-			scene->addObjects( overlappingGeometry );
+//			scene->addObjects( overlappingGeometry );
 
 			DEBUGLOG->log("Creating scene graph nodes");
 			DEBUGLOG->indent();
@@ -115,7 +115,10 @@ class ObjectLoadingApp : public Application
 				//rotatingCubeNode->setObject(objCube[0]);
 
 				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
-				overlappingGeometryNode->setObject(overlappingGeometry[0]);
+//				overlappingGeometryNode->setObject(overlappingGeometry[0]);
+
+				RenderableNode* cubeNode_2 = new RenderableNode(rotatingNode);
+				cubeNode_2->setObject(objCube[0]);
 
 				DEBUGLOG->log("Adding updatable rotation nodes of cube 2 to scene");
 				scene->addUpdatable(yAxisRotationNode);
@@ -175,7 +178,7 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
-				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(128, 128);
+				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(10.0f,10.0f,10.0f, 512, 512, 3, SliceMap::BITMASK_MULTIPLETARGETS);
 				sliceMapRenderPass->getCamera()->setPosition(0.0f,0.0f,5.00f);
 				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
@@ -183,17 +186,19 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->log("Adding objects to perspective phong render pass");
 			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
 			phongPerspectiveRenderPass->addRenderable(testRoomNode);
+			phongPerspectiveRenderPass->addRenderable(cubeNode_2);
 
 			DEBUGLOG->log("Adding objects to ortho phong render pass");
 //			phongOrthoRenderPass->addRenderable(cubeNode1);
 //			phongOrthoRenderPass->addRenderable(backgroundNode);
-
+			phongOrthoRenderPass->addRenderable(cubeNode_2);
 			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
 			phongOrthoRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding objects to slice map render pass");
 //			sliceMapRenderPass->addRenderable(cubeNode1);
 //			sliceMapRenderPass->addRenderable(backgroundNode);
+			sliceMapRenderPass->addRenderable(cubeNode_2);
 			sliceMapRenderPass->addRenderable(overlappingGeometryNode);
 			sliceMapRenderPass->addRenderable(testRoomNode);
 

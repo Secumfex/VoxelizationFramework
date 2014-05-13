@@ -117,7 +117,7 @@ namespace SliceMap
 	 * @param numSliceMaps grid resolution in Z dimension ( interpreted as factor of 32 )
 	 * @return a slice map render pass consisting of a framebuffer object of given dimensions, voxelizing the given grid volume
 	 */
-	SliceMapRenderPass* getSliceMapRenderPass(float width, float height, float depth, int resX, int resY, int numSliceMaps = 1, ShaderType shaderType = BITMASK_MULTIPLETARGETS)
+	SliceMapRenderPass* getSliceMapRenderPass(float width, float height, float depth, int resX, int resY, int numSliceMaps = 3, ShaderType shaderType = BITMASK_MULTIPLETARGETS)
 	{
 		/*Init shader & FBO*/
 		DEBUGLOG->log("Creating Shader to construct Slice Map");
@@ -141,12 +141,12 @@ namespace SliceMap
 		Shader* sliceMapShader = new Shader( vertexShader, fragmentShader);
 
 		DEBUGLOG->log("Creating Framebuffer with render target amount:", numSliceMaps);
-		FramebufferObject* fbo  = new FramebufferObject(width,height);
+		FramebufferObject* fbo  = new FramebufferObject(resX,resY);
 		fbo->addColorAttachments(numSliceMaps);	// to enable slice mapping into render targets
 
 		/*Init Renderpass*/
 		SliceMapRenderPass* sliceMapRenderPass = new SliceMapRenderPass(sliceMapShader, fbo);
-		sliceMapRenderPass->setViewport(0,0,width,height);
+		sliceMapRenderPass->setViewport(0,0,resX,resY);
 
 		sliceMapRenderPass->setClearColor(0.0f, 0.0f, 0.0f, 0.0f);	// clear every channel to 0
 		sliceMapRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);		// enable clearing of color bits
@@ -160,7 +160,7 @@ namespace SliceMap
 
 		/*Init Camera*/
 		Camera* orthocam = new Camera();
-		glm::mat4 ortho = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f);
+		glm::mat4 ortho = glm::ortho( - width * 0.5f , width * 0.5f , - height * 0.5f , height * 0.5f , 0.0f, depth);
 //		glm::mat4 persp = glm::perspective(45.0f, 1.0f, 0.1f, 100.f);
 		orthocam->setProjectionMatrix(ortho);
 		sliceMapRenderPass->setCamera(orthocam);
