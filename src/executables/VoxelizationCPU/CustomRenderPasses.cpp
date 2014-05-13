@@ -37,16 +37,13 @@ Camera* CameraRenderPass::getCamera()
 
 void CameraRenderPass::uploadUniforms()
 {
-	if(m_camera)
-	{
-		m_shader->uploadUniform(m_camera->getViewMatrix(),"uniformView");
-		m_shader->uploadUniform(m_camera->getProjectionMatrix(), "uniformProjection");
+	m_shader->uploadUniform(m_camera->getViewMatrix(),"uniformView");
+	m_shader->uploadUniform(m_camera->getProjectionMatrix(), "uniformProjection");
 
-		// some other information
-		m_shader->uploadUniform(m_camera->getPosition(), "uniformCameraPosition");
-		m_shader->uploadUniform(m_camera->getViewDirection(), "uniformCameraDirection");
-	}
-		RenderPass::uploadUniforms();
+	// some other information
+	m_shader->uploadUniform(m_camera->getPosition(), "uniformCameraPosition");
+	m_shader->uploadUniform(m_camera->getViewDirection(), "uniformCameraDirection");
+	RenderPass::uploadUniforms();
 }
 
 TriangleRenderPass::TriangleRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* screenFillingTriangle)

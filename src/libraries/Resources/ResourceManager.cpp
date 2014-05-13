@@ -112,9 +112,62 @@ Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 		DEBUGLOG->log("Mesh does NOT exist and will be buffered... ");
 		Model* model = AssimpTools::createModelFromMesh( mesh );
 		m_loadedModels[mesh] = model;
+		m_loadedMeshes[model] = mesh;
 		DEBUGLOG->outdent();
 		return model;
 	}
+}
+
+const aiMesh* ResourceManager::getAssimpMeshForModel(Model* model)
+{
+	if( m_loadedMeshes.find(model) != m_loadedMeshes.end())
+		{
+			return m_loadedMeshes[model];
+		}
+	else{
+		return 0;
+	}
+}
+
+const std::map<std::string, std::string>& ResourceManager::getLoadedFiles() const {
+	return m_loadedFiles;
+}
+
+void ResourceManager::setLoadedFiles(
+		const std::map<std::string, std::string>& loadedFiles) {
+	m_loadedFiles = loadedFiles;
+}
+
+const std::map<Model*, const aiMesh*>& ResourceManager::getLoadedMeshes() const {
+	return m_loadedMeshes;
+}
+
+void ResourceManager::setLoadedMeshes(
+		const std::map<Model*, const aiMesh*>& loadedMeshes) {
+	m_loadedMeshes = loadedMeshes;
+}
+
+const std::map<const aiMesh*, Model*>& ResourceManager::getLoadedModels() const {
+	return m_loadedModels;
+}
+
+void ResourceManager::setLoadedModels(
+		const std::map<const aiMesh*, Model*>& loadedModels) {
+	m_loadedModels = loadedModels;
+}
+
+const std::map<std::string, Texture*>& ResourceManager::getLoadedTextures() const {
+	return m_loadedTextures;
+}
+
+void ResourceManager::setLoadedTextures(
+		const std::map<std::string, Texture*>& loadedTextures) {
+	m_loadedTextures = loadedTextures;
+}
+
+void ResourceManager::setScreenFillingTriangle(
+		const Renderable*& screenFillingTriangle) {
+	m_screenFillingTriangle = screenFillingTriangle;
 }
 
 void ResourceManager::deleteAll()
