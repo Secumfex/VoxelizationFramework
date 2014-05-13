@@ -141,78 +141,85 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->indent();
 
 			DEBUGLOG->log("Creating phong renderpass");
-			Shader* shader = new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong.frag");
-			FramebufferObject* fbo = new FramebufferObject(512,512);
-			fbo->addColorAttachments(1);
+			DEBUGLOG->indent();
+				Shader* phongOrtho = new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_ortho.frag");
+				FramebufferObject* fbo = new FramebufferObject(512,512);
+				fbo->addColorAttachments(1);
 
-			CameraRenderPass* renderPass = new CameraRenderPass(shader, fbo);
-			renderPass->setViewport(0,0,512,512);
-			renderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
-			renderPass->addEnable(GL_DEPTH_TEST);
-			renderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
-			renderPass->addClearBit(GL_COLOR_BUFFER_BIT);
-
+				CameraRenderPass* phongOrthoRenderPass = new CameraRenderPass(phongOrtho, fbo);
+				phongOrthoRenderPass->setViewport(0,0,512,512);
+				phongOrthoRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
+				phongOrthoRenderPass->addEnable(GL_DEPTH_TEST);
+				phongOrthoRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+				phongOrthoRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Creating perspective phong renderpass");
-			FramebufferObject* fbo2 = new FramebufferObject(512,512);
-			fbo2->addColorAttachments(1);
+			DEBUGLOG->indent();
+				Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_persp.frag");
+				FramebufferObject* fbo2 = new FramebufferObject(512,512);
+				fbo2->addColorAttachments(1);
 
-			CameraRenderPass* renderPassPerspective = new CameraRenderPass(shader, fbo2);
-			renderPassPerspective->setViewport(0,0,512,512);
-			renderPassPerspective->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
-			renderPassPerspective->addEnable(GL_DEPTH_TEST);
-			renderPassPerspective->addClearBit(GL_DEPTH_BUFFER_BIT);
-			renderPassPerspective->addClearBit(GL_COLOR_BUFFER_BIT);
-			Camera* perspectiveCamera = new Camera();
-			perspectiveCamera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
-			perspectiveCamera->setPosition(0.0f,0.0f,5.0f);
-			renderPassPerspective->setCamera(perspectiveCamera);
+				CameraRenderPass* phongPerspectiveRenderPass = new CameraRenderPass(phongPersp, fbo2);
+				phongPerspectiveRenderPass->setViewport(0,0,512,512);
+				phongPerspectiveRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
+				phongPerspectiveRenderPass->addEnable(GL_DEPTH_TEST);
+				phongPerspectiveRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+				phongPerspectiveRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+
+				Camera* perspectiveCamera = new Camera();
+				perspectiveCamera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
+				perspectiveCamera->setPosition(0.0f,0.0f,5.0f);
+				phongPerspectiveRenderPass->setCamera(perspectiveCamera);
+			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
-			SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(128, 128);
+				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(128, 128);
 				sliceMapRenderPass->getCamera()->setPosition(0.0f,0.0f,5.00f);
 				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding objects to perspective phong render pass");
+			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
+			phongPerspectiveRenderPass->addRenderable(testRoomNode);
 
-			renderPassPerspective->addRenderable(overlappingGeometryNode);
-			renderPassPerspective->addRenderable(testRoomNode);
+			DEBUGLOG->log("Adding objects to ortho phong render pass");
+//			phongOrthoRenderPass->addRenderable(cubeNode1);
+//			phongOrthoRenderPass->addRenderable(backgroundNode);
 
-			DEBUGLOG->log("Adding objects to phong render pass");
-//			sliceMapRenderPass->addRenderable(cubeNode1);
-//			sliceMapRenderPass->addRenderable(backgroundNode);
-
-			renderPass->addRenderable(overlappingGeometryNode);
-			renderPass->addRenderable(testRoomNode);
+			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
+			phongOrthoRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding objects to slice map render pass");
-//			renderPass->addRenderable(cubeNode1);
-//			renderPass->addRenderable(backgroundNode);
-
+//			sliceMapRenderPass->addRenderable(cubeNode1);
+//			sliceMapRenderPass->addRenderable(backgroundNode);
 			sliceMapRenderPass->addRenderable(overlappingGeometryNode);
 			sliceMapRenderPass->addRenderable(testRoomNode);
 
-			DEBUGLOG->log("Creating screen filling triangle render pass");
+			DEBUGLOG->log("Creating screen filling triangle render passes");
 			DEBUGLOG->indent();
 				Shader* showTexture = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/screenspace/simpleTexture.frag");
 
+				DEBUGLOG->log("Creating screen filling triangle rendering for ortho phong render pass");
 				TriangleRenderPass* showRenderPass = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 				showRenderPass->setViewport(0,0,512,512);
 				showRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 
 				Texture* renderPassTexture = new Texture();
-				renderPassTexture->setTextureHandle(renderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+				renderPassTexture->setTextureHandle(phongOrthoRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 				showRenderPass->addUniformTexture(renderPassTexture, "uniformTexture");
 
+				DEBUGLOG->log("Creating screen filling triangle rendering for perspective phong render pass");
 				TriangleRenderPass* showRenderPassPerspective = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 				showRenderPassPerspective->setViewport(512,0,512,512);
 
 				Texture* renderPassPerspectiveTexture = new Texture();
-				renderPassPerspectiveTexture->setTextureHandle(renderPassPerspective->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+				renderPassPerspectiveTexture->setTextureHandle(phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 				showRenderPassPerspective->addUniformTexture(renderPassPerspectiveTexture, "uniformTexture");
 
+
+				DEBUGLOG->log("Creating screen filling triangle rendering for overlay of slice map on ortho phong render pass");
 				Shader* showOverlaySliceMap = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/slicemap/sliceMapOverlay.frag");
 				TriangleRenderPass* showSliceMapRenderPass = new TriangleRenderPass(showOverlaySliceMap, 0, m_resourceManager.getScreenFillingTriangle());
 				showSliceMapRenderPass->setViewport(0,0,512,512);
@@ -224,14 +231,14 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->indent();
-				DEBUGLOG->log("Setting the slicemap's camera in renderpass 1 for fun...");
-				renderPass->setCamera(sliceMapRenderPass->getCamera());
+				DEBUGLOG->log("Setting the slicemap's camera in ortho phong renderpass");
+				phongOrthoRenderPass->setCamera(sliceMapRenderPass->getCamera());
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding renderpasses to application");
 			m_renderManager.addRenderPass(sliceMapRenderPass);
-			m_renderManager.addRenderPass(renderPassPerspective);
-			m_renderManager.addRenderPass(renderPass);
+			m_renderManager.addRenderPass(phongPerspectiveRenderPass);
+			m_renderManager.addRenderPass(phongOrthoRenderPass);
 		//	m_renderManager.addRenderPass(showRenderPass);
 			m_renderManager.addRenderPass(showSliceMapRenderPass);
 			m_renderManager.addRenderPass(showRenderPassPerspective);
@@ -241,7 +248,7 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = sliceMapRenderPass->getCamera();
-			Camera* movableCamClone = renderPassPerspective->getCamera();
+			Camera* movableCamClone = phongPerspectiveRenderPass->getCamera();
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 1.0f),GLFW_KEY_W, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_W, GLFW_RELEASE);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 1.0f),GLFW_KEY_D, GLFW_PRESS);
@@ -250,6 +257,7 @@ class ObjectLoadingApp : public Application
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_S, GLFW_RELEASE);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, -1.0f),GLFW_KEY_A, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
+
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, 1.0f),GLFW_KEY_W, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_W, GLFW_RELEASE);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, 1.0f),GLFW_KEY_D, GLFW_PRESS);
@@ -258,6 +266,7 @@ class ObjectLoadingApp : public Application
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_S, GLFW_RELEASE);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, -1.0f),GLFW_KEY_A, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
+
 			DEBUGLOG->log("Adding updatable camera to scene");
 			scene->addUpdatable(movableCam);
 			scene->addUpdatable(movableCamClone);
@@ -266,6 +275,7 @@ class ObjectLoadingApp : public Application
 			Turntable* turntable = new Turntable(scene->getSceneGraph()->getRootNode(), &m_inputManager);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+
 			scene->addUpdatable(turntable);
 		DEBUGLOG->outdent();
 
