@@ -5,6 +5,7 @@
 
 #include "CustomRenderPasses.h"
 #include "Listeners.h"
+#include "VoxelGrid.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
@@ -202,6 +203,33 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->indent();
 				DEBUGLOG->log("Setting the slicemap's camera in ortho phong renderpass");
+			DEBUGLOG->outdent();
+
+		DEBUGLOG->outdent();
+
+		DEBUGLOG->log("Configuring voxel grid");
+		DEBUGLOG->indent();
+			DEBUGLOG->log("Creating voxel grid object");
+			DEBUGLOG->indent();
+				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f,-5.0f,5.0f,100,100,100,0.1f);
+				DEBUGLOG->log("Grid width    : ", axisAlignedVoxelGrid->getWidth());
+				DEBUGLOG->log("Grid height   : ", axisAlignedVoxelGrid->getHeight());
+				DEBUGLOG->log("Grid depth    : ", axisAlignedVoxelGrid->getDepth());
+				DEBUGLOG->log("Grid cell size: ", axisAlignedVoxelGrid->getCellSize());
+			DEBUGLOG->outdent();
+
+			DEBUGLOG->log("Filling voxel grid");
+			DEBUGLOG->indent();
+				std::vector< Object* > objects = scene->getObjects();
+				for (unsigned int i = 0; i < objects.size(); i++)
+				{
+					Model* model = objects[i]->getModel();
+					const aiMesh* assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
+					if (assimpMesh)
+					{
+						// TODO fill voxel grid by checking vertices against grid volume
+					}
+				}
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();

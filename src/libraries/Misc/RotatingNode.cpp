@@ -1,11 +1,13 @@
 #include <Misc/RotatingNode.h>
 
-RotatingNode::RotatingNode(Node* parent = 0)
+#include <glm/gtc/matrix_transform.hpp>
+
+RotatingNode::RotatingNode(Node* parent)
 {
 	setParent(parent);
 	m_angle = 0.0f;
 }
-void RotatingNode::update(float d_t = 0.1f)
+void RotatingNode::update(float d_t)
 {
 	rotate( glm::rotate (glm::mat4(1.0f), m_angle, m_rotationAxis ) );
 }

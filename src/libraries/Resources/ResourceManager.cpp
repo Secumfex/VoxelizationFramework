@@ -133,40 +133,20 @@ const std::map<std::string, std::string>& ResourceManager::getLoadedFiles() cons
 	return m_loadedFiles;
 }
 
-void ResourceManager::setLoadedFiles(
-		const std::map<std::string, std::string>& loadedFiles) {
-	m_loadedFiles = loadedFiles;
-}
-
 const std::map<Model*, const aiMesh*>& ResourceManager::getLoadedMeshes() const {
 	return m_loadedMeshes;
-}
-
-void ResourceManager::setLoadedMeshes(
-		const std::map<Model*, const aiMesh*>& loadedMeshes) {
-	m_loadedMeshes = loadedMeshes;
 }
 
 const std::map<const aiMesh*, Model*>& ResourceManager::getLoadedModels() const {
 	return m_loadedModels;
 }
 
-void ResourceManager::setLoadedModels(
-		const std::map<const aiMesh*, Model*>& loadedModels) {
-	m_loadedModels = loadedModels;
-}
-
 const std::map<std::string, Texture*>& ResourceManager::getLoadedTextures() const {
 	return m_loadedTextures;
 }
 
-void ResourceManager::setLoadedTextures(
-		const std::map<std::string, Texture*>& loadedTextures) {
-	m_loadedTextures = loadedTextures;
-}
-
 void ResourceManager::setScreenFillingTriangle(
-		const Renderable*& screenFillingTriangle) {
+		 Renderable* screenFillingTriangle) {
 	m_screenFillingTriangle = screenFillingTriangle;
 }
 

@@ -39,15 +39,11 @@ public:
 
 	void deleteAll();
 	const std::map<std::string, std::string>& getLoadedFiles() const;
-	void setLoadedFiles(const std::map<std::string, std::string>& loadedFiles);
 	const std::map<Model*, const aiMesh*>& getLoadedMeshes() const;
-	void setLoadedMeshes(const std::map<Model*, const aiMesh*>& loadedMeshes);
 	const std::map<const aiMesh*, Model*>& getLoadedModels() const;
-	void setLoadedModels(const std::map<const aiMesh*, Model*>& loadedModels);
 	const std::map<std::string, Texture*>& getLoadedTextures() const;
-	void setLoadedTextures(
-			const std::map<std::string, Texture*>& loadedTextures);
-	void setScreenFillingTriangle(const Renderable*& screenFillingTriangle);
+
+	void setScreenFillingTriangle(Renderable* screenFillingTriangle);
 };
 
 #endif
