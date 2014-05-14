@@ -13,7 +13,11 @@ namespace Grid
 	public:
 		GridCell(bool occupied = false, float size = 1.0f);
 		virtual ~GridCell();
-	};
+	bool isOccupied() const;
+	void setOccupied(bool occupied);
+	float getSize() const;
+	void setSize(float size);
+};
 
 
 	class VoxelGrid {

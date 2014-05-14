@@ -1,5 +1,7 @@
 #include "VoxelGrid.h"
 
+#include <Utility/DebugLog.h>
+
 using namespace Grid;
 
 VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
@@ -15,11 +17,26 @@ VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
 		m_voxelGrid[i].resize(height);
 		for (unsigned j = 0; j < m_voxelGrid[i].size(); j++)
 		{
-			m_voxelGrid[i][j].resize(depth,0);		}
+			m_voxelGrid[i][j].resize(depth);
+			for (unsigned int k = 0; k < m_voxelGrid[i][j].size(); k++)
+			{
+				m_voxelGrid[i][j][k] = new GridCell(false, m_cellSize);
+			}
+		}
 	}
 }
 
 VoxelGrid::~VoxelGrid() {
+	for (unsigned int i = 0; i < m_voxelGrid.size(); i++)
+	{
+		for (unsigned j = 0; j < m_voxelGrid[i].size(); j++)
+		{
+			for (unsigned int k = 0; k < m_voxelGrid[i][j].size(); k++)
+			{
+				delete m_voxelGrid[i][j][k];
+			}
+		}
+	}
 }
 
 AxisAlignedVoxelGrid::AxisAlignedVoxelGrid(float x, float y, float z,int width, int height, int depth, float cellSize)
@@ -94,6 +111,33 @@ bool VoxelGrid::checkCoordinates(int x, int y, int z)
 
 GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
 {
-	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) * 1.0f / m_cellSize;
+	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
 	return VoxelGrid::getGridCell(gridPos.x, gridPos.y, gridPos.z);
+}
+
+GridCell::GridCell(bool occupied, float size)
+{
+	m_occupied = occupied;
+	m_size = size;
+}
+
+bool GridCell::isOccupied() const {
+	return m_occupied;
+}
+
+void GridCell::setOccupied(bool occupied) {
+	m_occupied = occupied;
+}
+
+float GridCell::getSize() const {
+	return m_size;
+}
+
+void GridCell::setSize(float size) {
+	m_size = size;
+}
+
+GridCell::~GridCell()
+{
+
 }

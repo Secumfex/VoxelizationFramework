@@ -224,10 +224,28 @@ class ObjectLoadingApp : public Application
 				for (unsigned int i = 0; i < objects.size(); i++)
 				{
 					Model* model = objects[i]->getModel();
+					Node* objectNode = scene->getSceneGraph()->findObjectNode(objects[i]);
+					glm::mat4 modelMatrix;
+					if (objectNode)
+					{
+						modelMatrix = objectNode->getAccumulatedModelMatrix();
+						DEBUGLOG->log("found object Node:", (int) objectNode);
+					}
 					const aiMesh* assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
 					if (assimpMesh)
 					{
+						DEBUGLOG->log("found assimp mesh :", (int) assimpMesh);
 						// TODO fill voxel grid by checking vertices against grid volume
+						for (unsigned int j = 0; j < assimpMesh->mNumVertices; j++)
+						{
+							glm::vec4 transformedVertex = modelMatrix * glm::vec4 ( assimpMesh->mVertices[j].x, assimpMesh->mVertices[j].y, assimpMesh->mVertices[j].z, 1.0f);
+							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(transformedVertex.x,transformedVertex.y,transformedVertex.z) );
+							if (gridCell && !gridCell->isOccupied())
+							{
+								gridCell->setOccupied(true);
+								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
+							}
+						}
 					}
 				}
 			DEBUGLOG->outdent();
