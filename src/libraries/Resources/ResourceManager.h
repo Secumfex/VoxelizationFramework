@@ -15,7 +15,7 @@ class ResourceManager
 {
 protected:
 	std::map<const aiMesh*, Model* > m_loadedModels;
-	std::map<Model*, const aiMesh*> m_loadedMeshes;
+	std::map<Model*, std::vector< glm::vec4 > > m_loadedMeshes;
 	std::map<std::string, Texture* > m_loadedTextures;
 	std::map<std::string, std::string > m_loadedFiles;
 
@@ -28,18 +28,19 @@ public:
 	Model* loadModel(const aiScene* scene, const aiMesh* mesh);
 	Material* loadMaterial(const aiScene* scene, const aiMesh* mesh, std::string directory);
 	Texture* loadTexture(std::string file, std::string directory);
+	void saveVertexList(Model* model, const aiMesh* mesh);
 
 	bool checkModel(const aiMesh* mesh);
 	bool checkTexture(std::string path);
 	bool checkFile(std::string file);
 
-	const aiMesh* getAssimpMeshForModel(Model* model);
+	std::vector<glm::vec4> getAssimpMeshForModel(Model* model);
 
 	Renderable* getScreenFillingTriangle();
 
 	void deleteAll();
 	const std::map<std::string, std::string>& getLoadedFiles() const;
-	const std::map<Model*, const aiMesh*>& getLoadedMeshes() const;
+	const std::map<Model*, std::vector <glm::vec4> >& getLoadedMeshes() const;
 	const std::map<const aiMesh*, Model*>& getLoadedModels() const;
 	const std::map<std::string, Texture*>& getLoadedTextures() const;
 

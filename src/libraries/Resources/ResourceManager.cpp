@@ -98,6 +98,15 @@ Material* ResourceManager::loadMaterial(const aiScene* scene, const aiMesh* mesh
 	return mat;
 }
 
+/*save the vertex list of a mesh in the map as a corresponding vector to the model*/
+void ResourceManager::saveVertexList(Model* model, const aiMesh* mesh)
+{
+	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+	{
+		m_loadedMeshes[model].push_back(glm::vec4 ( mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z, 1.0f));
+	}
+}
+
 /* load a single model object from an assimp mesh*/
 Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 {
@@ -112,20 +121,20 @@ Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 		DEBUGLOG->log("Mesh does NOT exist and will be buffered... ");
 		Model* model = AssimpTools::createModelFromMesh( mesh );
 		m_loadedModels[mesh] = model;
-		m_loadedMeshes[model] = mesh;
+		saveVertexList ( model, mesh );
 		DEBUGLOG->outdent();
 		return model;
 	}
 }
 
-const aiMesh* ResourceManager::getAssimpMeshForModel(Model* model)
+std::vector<glm::vec4> ResourceManager::getAssimpMeshForModel(Model* model)
 {
 	if( m_loadedMeshes.find(model) != m_loadedMeshes.end())
 		{
 			return m_loadedMeshes[model];
 		}
 	else{
-		return 0;
+		return std::vector<glm::vec4>();
 	}
 }
 
@@ -133,7 +142,7 @@ const std::map<std::string, std::string>& ResourceManager::getLoadedFiles() cons
 	return m_loadedFiles;
 }
 
-const std::map<Model*, const aiMesh*>& ResourceManager::getLoadedMeshes() const {
+const std::map<Model*, std::vector <glm::vec4> >& ResourceManager::getLoadedMeshes() const {
 	return m_loadedMeshes;
 }
 

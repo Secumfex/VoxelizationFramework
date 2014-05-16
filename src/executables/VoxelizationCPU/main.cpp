@@ -231,22 +231,20 @@ class ObjectLoadingApp : public Application
 						modelMatrix = objectNode->getAccumulatedModelMatrix();
 						DEBUGLOG->log("found object Node:", (int) objectNode);
 					}
-					const aiMesh* assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
-					if (assimpMesh)
-					{
-						DEBUGLOG->log("found assimp mesh :", (int) assimpMesh);
+					std::vector < glm::vec4 > assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
+						DEBUGLOG->log("found assimp mesh with vertices :", (int) assimpMesh.size());
 						// TODO fill voxel grid by checking vertices against grid volume
-						for (unsigned int j = 0; j < assimpMesh->mNumVertices; j++)
+						for (unsigned int j = 0; j < assimpMesh.size(); j++)
 						{
-							glm::vec4 transformedVertex = modelMatrix * glm::vec4 ( assimpMesh->mVertices[j].x, assimpMesh->mVertices[j].y, assimpMesh->mVertices[j].z, 1.0f);
+							glm::vec4 transformedVertex = modelMatrix * assimpMesh[j];
+							DEBUGLOG->log("transformed vertex: ", transformedVertex);
 							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(transformedVertex.x,transformedVertex.y,transformedVertex.z) );
-							if (gridCell && !gridCell->isOccupied())
+							if (gridCell != 0 && !gridCell->isOccupied())
 							{
 								gridCell->setOccupied(true);
 								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
 							}
 						}
-					}
 				}
 			DEBUGLOG->outdent();
 

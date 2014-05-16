@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <Utility/Singleton.h>
+#include <glm/glm.hpp>
 
 class DebugLog : public Singleton<DebugLog>
 {
@@ -24,6 +25,7 @@ public:
 	void log(std::string msg, unsigned int value);
 	void log(std::string msg, float value);
 	void log(std::string msg, double value);
+	void log(std::string msg, glm::vec4 vector);
 	void indent();
 	void outdent();
 	void print() const;
