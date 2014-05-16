@@ -11,6 +11,7 @@ Node::Node(Node* parent)
 	}
 
 	m_object = 0;
+	m_children.clear();
 }
 
 Node::~Node()
@@ -79,21 +80,23 @@ void Node::setParent(Node* parent)
 
 Node* Node::findObjectNode(Object* object)
 {
-	if (m_object == object)
+	if (m_object == object)	// this is the Node
 	{
 		return this;
 	}
-	else
+	else					// might be at a child node
 	{
-		for (unsigned int i = 0; 0 < m_children.size(); i++)
+		for (unsigned int i = 0; i < m_children.size(); i++)
 		{
-			if ( m_children[i]->findObjectNode( object ) )
-			{
-				return m_children[i];
+			Node* foundNode = m_children[i]->findObjectNode( object );
+
+			if ( foundNode != 0 ){
+				return foundNode;
 			}
 		}
 	}
-	return 0;
+
+	return 0;	// neither this, nor child Node
 }
 
 void Node::setObject(Object* object)

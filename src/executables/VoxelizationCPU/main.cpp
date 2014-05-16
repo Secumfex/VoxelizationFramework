@@ -211,7 +211,7 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid object");
 			DEBUGLOG->indent();
-				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f,-5.0f,5.0f,100,100,100,0.1f);
+				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f,-5.0f, -5.0f,100,100,100,0.1f);
 				DEBUGLOG->log("Grid width    : ", axisAlignedVoxelGrid->getWidth());
 				DEBUGLOG->log("Grid height   : ", axisAlignedVoxelGrid->getHeight());
 				DEBUGLOG->log("Grid depth    : ", axisAlignedVoxelGrid->getDepth());
@@ -221,31 +221,38 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->log("Filling voxel grid");
 			DEBUGLOG->indent();
 				std::vector< Object* > objects = scene->getObjects();
+				int filledCells = 0;
 				for (unsigned int i = 0; i < objects.size(); i++)
 				{
 					Model* model = objects[i]->getModel();
+//					DEBUGLOG->log("trying to find object: ", (int) objects[i]);
+
 					Node* objectNode = scene->getSceneGraph()->findObjectNode(objects[i]);
+
 					glm::mat4 modelMatrix;
 					if (objectNode)
 					{
 						modelMatrix = objectNode->getAccumulatedModelMatrix();
-						DEBUGLOG->log("found object Node:", (int) objectNode);
+//						DEBUGLOG->log("found object Node:", (int) objectNode);
 					}
 					std::vector < glm::vec4 > assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
-						DEBUGLOG->log("found assimp mesh with vertices :", (int) assimpMesh.size());
-						// TODO fill voxel grid by checking vertices against grid volume
+//						DEBUGLOG->log("found assimp mesh with vertices :", (int) assimpMesh.size());
+
+					// fill voxel grid by checking vertices against grid volume
 						for (unsigned int j = 0; j < assimpMesh.size(); j++)
 						{
 							glm::vec4 transformedVertex = modelMatrix * assimpMesh[j];
-							DEBUGLOG->log("transformed vertex: ", transformedVertex);
+//							DEBUGLOG->log("transformed vertex: ", transformedVertex);
 							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(transformedVertex.x,transformedVertex.y,transformedVertex.z) );
-							if (gridCell != 0 && !gridCell->isOccupied())
+							if (gridCell && (! (gridCell->isOccupied( ) ) )  )
 							{
 								gridCell->setOccupied(true);
-								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
+								filledCells ++;
+//								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
 							}
 						}
 				}
+				DEBUGLOG->log("Filled voxel grid cells: ", filledCells);
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();

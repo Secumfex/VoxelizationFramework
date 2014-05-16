@@ -92,6 +92,8 @@ void VoxelGrid::setWidth(int width) {
 	m_width = width;
 }
 
+#include <Utility/DebugLog.h>
+
 GridCell* VoxelGrid::getGridCell(int x, int y, int z)
 {
 

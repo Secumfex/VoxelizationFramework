@@ -6,6 +6,8 @@ RotatingNode::RotatingNode(Node* parent)
 {
 	setParent(parent);
 	m_angle = 0.0f;
+
+	m_object = 0;
 }
 void RotatingNode::update(float d_t)
 {
