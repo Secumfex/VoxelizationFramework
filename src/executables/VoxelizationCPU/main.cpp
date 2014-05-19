@@ -15,10 +15,34 @@
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
 
-class ObjectLoadingApp : public Application
+class GridRenderPass : public CameraRenderPass
+{
+protected:
+public:
+
+	GridRenderPass(Shader* shader, FramebufferObject* fbo)
+	: CameraRenderPass(shader, fbo)
+	{
+
+	}
+
+	void enableStates()
+	{
+		RenderPass::enableStates();
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	void restoreStates()
+	{
+		RenderPass::restoreStates();
+		glBlendFunc(GL_ONE, GL_ONE);
+	}
+};
+
+class UniformVoxelGridApp : public Application
 {
 	public:
-	virtual ~ObjectLoadingApp()
+	virtual ~UniformVoxelGridApp()
 	{
 
 	}
@@ -121,6 +145,25 @@ class ObjectLoadingApp : public Application
 				phongPerspectiveRenderPass->setCamera(perspectiveCamera);
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Creating grid overlay renderpasses");
+			DEBUGLOG->indent();
+				Shader* gridPersp= new Shader(SHADERS_PATH "/grid/simpleVertex.vert", SHADERS_PATH "/grid/simpleColor.frag");
+
+				GridRenderPass* gridPerspectiveRenderPass = new GridRenderPass(gridPersp, fbo2);	// just render on top of that other render pass
+				gridPerspectiveRenderPass->setViewport(0,0,512,512);
+				gridPerspectiveRenderPass->addEnable(GL_DEPTH_TEST);
+				gridPerspectiveRenderPass->addEnable(GL_BLEND);
+
+				gridPerspectiveRenderPass->setCamera(perspectiveCamera);
+
+				GridRenderPass* gridOrthoRenderPass = new GridRenderPass(gridPersp, fbo);	// just render on top of that other render pass
+				gridOrthoRenderPass->setViewport(0,0,512,512);
+				gridOrthoRenderPass->addEnable(GL_DEPTH_TEST);
+				gridOrthoRenderPass->addEnable(GL_BLEND);
+
+				gridOrthoRenderPass->setCamera(orthographicCamera);
+
+			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding objects to perspective phong render pass");
 			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
@@ -133,6 +176,8 @@ class ObjectLoadingApp : public Application
 			DEBUGLOG->log("Adding renderpasses to application");
 			m_renderManager.addRenderPass(phongPerspectiveRenderPass);
 			m_renderManager.addRenderPass(phongOrthoRenderPass);
+			m_renderManager.addRenderPass(gridPerspectiveRenderPass);
+			m_renderManager.addRenderPass(gridOrthoRenderPass);
 
 			DEBUGLOG->log("Creating screen filling triangle render passes");
 			DEBUGLOG->indent();
@@ -161,10 +206,6 @@ class ObjectLoadingApp : public Application
 
 					m_renderManager.addRenderPass(showRenderPassPerspective);
 				DEBUGLOG->outdent();
-			DEBUGLOG->outdent();
-
-			DEBUGLOG->indent();
-				DEBUGLOG->log("Setting the slicemap's camera in ortho phong renderpass");
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -225,9 +266,9 @@ class ObjectLoadingApp : public Application
 					axisAlignedVoxelGridNode->setObject(axisAlignedVoxelGrid);
 					axisAlignedVoxelGridNode->translate(glm::translate(glm::mat4(), glm::vec3(axisAlignedVoxelGrid->getX(), axisAlignedVoxelGrid->getY(), axisAlignedVoxelGrid->getZ())));
 
-				DEBUGLOG->log("Adding voxel grid object to render pass");
-				phongPerspectiveRenderPass->addRenderable(axisAlignedVoxelGridNode);
-				phongOrthoRenderPass->addRenderable(axisAlignedVoxelGridNode);
+				DEBUGLOG->log("Adding voxel grid object to render passes");
+				gridPerspectiveRenderPass->addRenderable(axisAlignedVoxelGridNode);
+				gridOrthoRenderPass->addRenderable(axisAlignedVoxelGridNode);
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -273,7 +314,7 @@ class ObjectLoadingApp : public Application
 
 int main(){
 
-	ObjectLoadingApp myApp;
+	UniformVoxelGridApp myApp;
 
 	myApp.configure();
 

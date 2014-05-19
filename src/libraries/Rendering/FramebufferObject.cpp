@@ -111,6 +111,9 @@ GLuint FramebufferObject::getDepthTextureHandle() const {
 
 void FramebufferObject::setDepthTextureHandle(GLuint depthTextureHandle) {
 	m_depthTextureHandle = depthTextureHandle;
+	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferHandle);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTextureHandle, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 const std::vector<GLenum>& FramebufferObject::getDrawBuffers() const {
