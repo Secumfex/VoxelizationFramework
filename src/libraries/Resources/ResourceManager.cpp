@@ -259,3 +259,129 @@ Renderable* ResourceManager::getScreenFillingTriangle(){
 	} return m_screenFillingTriangle;
 }
 
+
+Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth, float cellSize )
+{
+	DEBUGLOG->log("Creating Voxel Grid Model with parameters: ");
+	DEBUGLOG->indent();
+		DEBUGLOG->log("width   : ", width);
+		DEBUGLOG->log("height  : ", height);
+		DEBUGLOG->log("depth   : ", depth);
+		DEBUGLOG->log("cellSize: ", cellSize);
+	DEBUGLOG->outdent();
+
+	Model *voxelGrid = new Model();
+	Material *mat = new Material();
+
+	GLuint vertexArrayHandle;
+	glGenVertexArrays(1, &vertexArrayHandle);
+	glBindVertexArray(vertexArrayHandle);
+
+	// create an entire grid
+	std::vector< float > vertices;
+	std::vector< unsigned int > indices;
+
+	unsigned int index = 0;
+
+	// all vertical lines
+	for(unsigned int w = 0; w <= width; w++)
+	{
+		for (unsigned int d = 0; d <= depth; d++)
+		{
+			vertices.push_back(cellSize * (float) w );
+			vertices.push_back(0.0f);
+			vertices.push_back(cellSize * (float) d );
+
+			indices.push_back( index );	// start vertex index
+			index++;
+
+			vertices.push_back( cellSize * (float) w );
+			vertices.push_back( cellSize * (float) height);
+			vertices.push_back( cellSize * (float) d );
+
+			indices.push_back( index );	// end vertex index
+			index++;
+		}
+	}
+
+	// all horizontal lines
+	for(unsigned int d = 0; d <= depth; d++)
+	{
+		for (unsigned int h = 0; h <= height; h++)
+		{
+			vertices.push_back( 0.0f );
+			vertices.push_back( cellSize * (float) h );
+			vertices.push_back( cellSize * (float) d );
+
+			indices.push_back( index );	// start vertex index
+			index++;
+
+			vertices.push_back( cellSize * width );
+			vertices.push_back( cellSize * (float) h );
+			vertices.push_back( cellSize * (float) d );
+
+			indices.push_back( index );	// end vertex index
+			index++;
+		}
+	}
+
+	// all lines into space lines
+	for(unsigned int w = 0; w <= width; w++)
+	{
+		for (unsigned int h = 0; h <= height; h++)
+		{
+			vertices.push_back( cellSize * (float) w );
+			vertices.push_back( cellSize * (float) h );
+			vertices.push_back( 0.0f );
+
+			indices.push_back( index );	// start vertex index
+			index++;
+
+			vertices.push_back( cellSize * (float) w );
+			vertices.push_back( cellSize * (float) h );
+			vertices.push_back( cellSize * (float) depth );
+
+			indices.push_back( index );	// end vertex index
+			index++;
+		}
+	}
+
+	// buffer indices
+	GLuint indexBufferHandle;
+	glGenBuffers(1, &indexBufferHandle);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+
+	glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW );
+
+
+	// buffer vertices
+	GLuint vertexBufferHandle;
+	glGenBuffers(1, &vertexBufferHandle);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW	);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(   0,    // attribute 0. No particular reason for 0, but must match the layout in the shader.
+			   3,                  // size
+			   GL_FLOAT,           // type
+			   GL_FALSE,           // normalized?
+			   0,                  // stride
+			   0          // array buffer offset
+			   );
+
+	glBindVertexArray(0);
+
+	DEBUGLOG->indent();
+		DEBUGLOG->log("generated indices : ", indices.size());
+		DEBUGLOG->log("generated vertices : ", vertices.size() / 3);
+
+		voxelGrid->setNumIndices(indices.size());
+		voxelGrid->setNumVertices(vertices.size() / 3);
+		voxelGrid->setNumFaces(indices.size() / 2);
+
+		voxelGrid->setVAOHandle(vertexArrayHandle);
+
+	DEBUGLOG->outdent();
+	return voxelGrid;
+}

@@ -7,7 +7,7 @@
 
 class Object : public Renderable
 {
-private:
+protected:
 	Model* m_model;
 	Material* m_material;
 public:
@@ -20,8 +20,8 @@ public:
 	Model* getModel();
 	Material* getMaterial();
 
-	void render();
-	void uploadUniforms(Shader* shader);
+	virtual void render();
+	virtual void uploadUniforms(Shader* shader);
 };
 
 #endif

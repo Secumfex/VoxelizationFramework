@@ -27,23 +27,6 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->log("Loading some objects");
 		DEBUGLOG->indent();
 		
-			DEBUGLOG->log("Loading cube dae file");
-			DEBUGLOG->indent();
-				std::vector< Object* > daeCube = m_resourceManager.loadObjectsFromFile(RESOURCES_PATH "/cube.dae");
-				DEBUGLOG->log("Loading custom Texture for dae Cube");
-				daeCube[0]->getMaterial()->setTexture("diffuseTexture", m_resourceManager.loadTexture("cvlogo.png", RESOURCES_PATH "/"));
-			DEBUGLOG->outdent();
-
-			DEBUGLOG->log("Loading cube obj file");
-			DEBUGLOG->indent();
-				std::vector< Object* > objCube =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/cube.obj" );
-			DEBUGLOG->outdent();
-
-			DEBUGLOG->log("Loading background dae file");
-			DEBUGLOG->indent();
-				std::vector< Object* > daeBackground=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/background.dae" );
-			DEBUGLOG->outdent();
-
 			DEBUGLOG->log("Loading test room dae file");
 			DEBUGLOG->indent();
 				std::vector< Object* > testRoom=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/testRoom.dae" );
@@ -60,20 +43,11 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->log("Adding objects to a scene instance");
 		DEBUGLOG->indent();
 			Scene* scene = new Scene();
-			scene->addObjects( daeCube );
-			scene->addObjects( objCube );
-			scene->addObjects( daeBackground );
 			scene->addObjects( testRoom );
 			scene->addObjects( overlappingGeometry );
 
 			DEBUGLOG->log("Creating scene graph nodes");
 			DEBUGLOG->indent();
-
-				DEBUGLOG->log("Creating renderable node for .dae cube");
-				RenderableNode* cubeNode1 = new RenderableNode( scene->getSceneGraph()->getRootNode( ) );
-				cubeNode1->rotate( glm::rotate (glm::mat4(1.0f), 60.0f, glm::vec3(0.0f,1.0f,0.0f) ) );
-				cubeNode1->translate( glm::translate( glm::mat4(1.0f), glm::vec3(1.5f, 0.5f,-1.0f) ) );
-				cubeNode1->setObject(daeCube[0]);
 
 				DEBUGLOG->log("Creating node tree for rotating node");
 				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
@@ -94,15 +68,6 @@ class ObjectLoadingApp : public Application
 				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
 				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
 				overlappingGeometryNode->setObject(overlappingGeometry[0]);
-
-				DEBUGLOG->log("Creating renderable node for .obj cube attached to rotating node");
-				RenderableNode* cubeNode_2 = new RenderableNode(rotatingNode);
-				cubeNode_2->setObject(objCube[0]);
-
-				DEBUGLOG->log("Creating renderable node for background");
-				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
-				backgroundNode->translate( glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, -1.0f ,0.0f) ) );
-				backgroundNode->setObject(daeBackground[0]);
 
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
@@ -162,9 +127,6 @@ class ObjectLoadingApp : public Application
 			phongPerspectiveRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding objects to ortho phong render pass");
-//			phongOrthoRenderPass->addRenderable(cubeNode1);
-//			phongOrthoRenderPass->addRenderable(backgroundNode);
-//			phongOrthoRenderPass->addRenderable(cubeNode_2);
 			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
 			phongOrthoRenderPass->addRenderable(testRoomNode);
 
@@ -211,7 +173,7 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid object");
 			DEBUGLOG->indent();
-				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f,-5.0f, -5.0f,100,100,100,0.1f);
+				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f,-5.0f, -5.0f, 32, 32, 32, 0.3125f);
 				DEBUGLOG->log("Grid width    : ", axisAlignedVoxelGrid->getWidth());
 				DEBUGLOG->log("Grid height   : ", axisAlignedVoxelGrid->getHeight());
 				DEBUGLOG->log("Grid depth    : ", axisAlignedVoxelGrid->getDepth());
@@ -253,6 +215,19 @@ class ObjectLoadingApp : public Application
 						}
 				}
 				DEBUGLOG->log("Filled voxel grid cells: ", filledCells);
+
+				DEBUGLOG->log("Creating voxel grid model");
+					Model* gridModel = m_resourceManager.generateVoxelGridModel(axisAlignedVoxelGrid->getWidth(), axisAlignedVoxelGrid->getHeight(), axisAlignedVoxelGrid->getDepth(), axisAlignedVoxelGrid->getCellSize());
+					axisAlignedVoxelGrid->setModel(gridModel);
+
+				DEBUGLOG->log("Creating renderable node voxel grid object");
+					RenderableNode* axisAlignedVoxelGridNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+					axisAlignedVoxelGridNode->setObject(axisAlignedVoxelGrid);
+					axisAlignedVoxelGridNode->translate(glm::translate(glm::mat4(), glm::vec3(axisAlignedVoxelGrid->getX(), axisAlignedVoxelGrid->getY(), axisAlignedVoxelGrid->getZ())));
+
+				DEBUGLOG->log("Adding voxel grid object to render pass");
+				phongPerspectiveRenderPass->addRenderable(axisAlignedVoxelGridNode);
+				phongOrthoRenderPass->addRenderable(axisAlignedVoxelGridNode);
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -286,6 +261,7 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Configuring Turntable for root node");
 			Turntable* turntable = new Turntable(scene->getSceneGraph()->getRootNode(), &m_inputManager);
+			turntable->setSensitivity(0.05f);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
 

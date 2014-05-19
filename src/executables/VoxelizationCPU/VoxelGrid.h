@@ -1,11 +1,14 @@
 #ifndef VOXELGRID_H_
 #define VOXELGRID_H_
 
+#include <Resources/Object.h>
+#include <Rendering/Renderable.h>
+
 #include <glm/glm.hpp>
 #include <vector>
 namespace Grid
 {
-	class GridCell
+	class GridCell : public Renderable
 	{
 	protected:
 		bool m_occupied;
@@ -13,14 +16,17 @@ namespace Grid
 	public:
 		GridCell(bool occupied = false, float size = 1.0f);
 		virtual ~GridCell();
-	bool isOccupied() const;
-	void setOccupied(bool occupied);
-	float getSize() const;
-	void setSize(float size);
-};
+		bool isOccupied() const;
+		void setOccupied(bool occupied);
+		float getSize() const;
+		void setSize(float size);
+
+		void render();
+		void uploadUniforms(Shader* shader);
+	};
 
 
-	class VoxelGrid {
+	class VoxelGrid : public Object{
 	protected:
 		int m_width;
 		int m_height;
@@ -44,6 +50,9 @@ namespace Grid
 		void setHeight(int height);
 		int getWidth() const;
 		void setWidth(int width);
+
+		void render();
+		void uploadUniforms(Shader* shader);
 	};
 
 	class AxisAlignedVoxelGrid : public VoxelGrid
@@ -67,6 +76,12 @@ namespace Grid
 		virtual ~AxisAlignedVoxelGrid();
 
 		GridCell* getGridCell(glm::vec3 position);
-	};
+	float getX() const;
+	void setX(float x);
+	float getY() const;
+	void setY(float y);
+	float getZ() const;
+	void setZ(float z);
+};
 }
 #endif

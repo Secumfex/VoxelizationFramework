@@ -1,6 +1,7 @@
 #include "VoxelGrid.h"
 
 #include <Utility/DebugLog.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 using namespace Grid;
 
@@ -111,6 +112,30 @@ bool VoxelGrid::checkCoordinates(int x, int y, int z)
 	return ( ( x > 0 && x < m_width ) && ( y > 0 && y < m_height ) && ( z > 0 && z < m_depth ) );
 }
 
+float Grid::AxisAlignedVoxelGrid::getX() const {
+	return m_x;
+}
+
+void Grid::AxisAlignedVoxelGrid::setX(float x) {
+	m_x = x;
+}
+
+float Grid::AxisAlignedVoxelGrid::getY() const {
+	return m_y;
+}
+
+void Grid::AxisAlignedVoxelGrid::setY(float y) {
+	m_y = y;
+}
+
+float Grid::AxisAlignedVoxelGrid::getZ() const {
+	return m_z;
+}
+
+void Grid::AxisAlignedVoxelGrid::setZ(float z) {
+	m_z = z;
+}
+
 GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
 {
 	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
@@ -143,3 +168,29 @@ GridCell::~GridCell()
 {
 
 }
+
+/*******   RENDERING METHODS   *********/
+void VoxelGrid::render()
+{
+	// quick and dirty : render every line of the grid
+	glBindVertexArray(m_model->getVAOHandle());
+		glDrawElements(GL_LINES, m_model->getNumIndices(), GL_UNSIGNED_INT, 0 );
+	glBindVertexArray(0);
+}
+
+void GridCell::uploadUniforms(Shader* shader)
+{
+	shader->uploadUniform( isOccupied(), "uniformOccupied");	// cuz why not
+}
+
+void VoxelGrid::uploadUniforms(Shader* shader)
+{
+
+}
+
+void GridCell::render()
+{
+	//TODO render a Cube
+}
+
+

@@ -45,6 +45,8 @@ public:
 	const std::map<std::string, Texture*>& getLoadedTextures() const;
 
 	void setScreenFillingTriangle(Renderable* screenFillingTriangle);
+
+	Model* generateVoxelGridModel(int width, int height, int depth, float cellSize);
 };
 
 #endif

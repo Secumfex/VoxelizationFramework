@@ -6,6 +6,11 @@ Object::Object( Model* model, Material* material)
 	m_material = material;	
 }
 
+Object::~Object()
+{
+
+}
+
 void Object::setMaterial( Material* material )
 {
 	m_material = material;
@@ -29,12 +34,12 @@ Material* Object::getMaterial()
 void Object::render()
 {
 	glBindVertexArray(m_model->getVAOHandle());
-	glDrawElements(GL_TRIANGLES, m_model->getNumIndices(), GL_UNSIGNED_INT, 0);
+	glDrawElements(GL_TRIANGLES, ( m_model != 0 ) ? m_model->getNumIndices() : 0, GL_UNSIGNED_INT, 0);
 }
 
 void Object::uploadUniforms(Shader* shader)
 {
-	std::map<std::string, Texture*> textures = m_material->getTextures();
+	std::map<std::string, Texture*> textures = (m_material != 0) ? m_material->getTextures() : std::map<std::string, Texture*>();
 	int unit = 0;
 	for (std::map<std::string, Texture* >::iterator it = textures.begin(); it != textures.end(); ++it)
 	{
