@@ -259,6 +259,69 @@ Renderable* ResourceManager::getScreenFillingTriangle(){
 	} return m_screenFillingTriangle;
 }
 
+/**
+ *	get a cube with side length = 1.0
+ */
+Renderable* ResourceManager::getCube(){
+	if(m_screenFillingTriangle == 0){
+
+		Model *cube = new Model;
+		Material *mat = new Material();
+
+		GLuint cubeVertexArrayHandle;
+
+		glGenVertexArrays(1, &cubeVertexArrayHandle);
+		glBindVertexArray(cubeVertexArrayHandle);
+
+		GLuint indexBufferHandle;
+		glGenBuffers(1, &indexBufferHandle);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+
+		GLint indices[] = {
+				0, 1,
+				1, 2 ,
+				2, 3,
+				0, 2,
+				0, 4,
+				3, 7,
+				4, 7,
+				2, 6,
+				4, 5,
+				1, 5,
+				5, 6 };
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+		GLuint vertexBufferHandle;
+		glGenBuffers(1, &vertexBufferHandle);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
+
+		GLfloat vertices[] = {
+				-0.5f, -0.5f,  0.5f,
+				0.5f, -0.5f,  0.5f,
+				0.5f, 0.5f,  0.5f,
+				-0.5f, 0.5f,  0.5f,
+
+				-0.5f, -0.5f,  -0.5f,
+				-0.5f, 0.5f,  -0.5f,
+				0.5f, 0.5f,  -0.5f,
+				0.5f, -0.5f,  -0.5f
+				};
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		cube->setVAOHandle(cubeVertexArrayHandle);
+		cube->setNumIndices(sizeof(indices));
+		cube->setNumVertices(sizeof(vertices));
+		cube->setNumFaces(6);
+
+		Object* cubeObject  = new Object(cube,mat);
+		cubeObject->setRenderMode(GL_LINES);
+		m_cube = cubeObject;
+
+	} return m_cube;
+}
 
 Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth, float cellSize )
 {

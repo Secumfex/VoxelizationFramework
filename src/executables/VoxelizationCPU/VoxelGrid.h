@@ -11,6 +11,7 @@ namespace Grid
 	class GridCell : public Renderable
 	{
 	protected:
+		int x,y,z;
 		bool m_occupied;
 		float m_size;
 	public:

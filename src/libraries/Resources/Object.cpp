@@ -4,6 +4,7 @@ Object::Object( Model* model, Material* material)
 {
 	m_model = model;
 	m_material = material;	
+	m_renderMode = GL_TRIANGLES;
 }
 
 Object::~Object()
@@ -34,7 +35,7 @@ Material* Object::getMaterial()
 void Object::render()
 {
 	glBindVertexArray(m_model->getVAOHandle());
-	glDrawElements(GL_TRIANGLES, ( m_model != 0 ) ? m_model->getNumIndices() : 0, GL_UNSIGNED_INT, 0);
+	glDrawElements(m_renderMode, ( m_model != 0 ) ? m_model->getNumIndices() : 0, GL_UNSIGNED_INT, 0);
 }
 
 void Object::uploadUniforms(Shader* shader)
@@ -47,4 +48,8 @@ void Object::uploadUniforms(Shader* shader)
 		shader->uploadUniform(unit, (*it).first);
 		unit++;
 	}
+}
+
+void Object::setRenderMode(GLenum renderMode) {
+	m_renderMode = renderMode;
 }
