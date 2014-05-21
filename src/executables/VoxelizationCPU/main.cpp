@@ -169,8 +169,6 @@ class UniformVoxelGridApp : public Application
 			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
 			phongPerspectiveRenderPass->addRenderable(testRoomNode);
 
-			phongPerspectiveRenderPass->addRenderable( m_resourceManager.getCube());
-
 			DEBUGLOG->log("Adding objects to ortho phong render pass");
 			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
 			phongOrthoRenderPass->addRenderable(testRoomNode);
@@ -227,6 +225,7 @@ class UniformVoxelGridApp : public Application
 			DEBUGLOG->indent();
 				std::vector< Object* > objects = scene->getObjects();
 				int filledCells = 0;
+
 				for (unsigned int i = 0; i < objects.size(); i++)
 				{
 					Model* model = objects[i]->getModel();
@@ -253,6 +252,14 @@ class UniformVoxelGridApp : public Application
 							{
 								gridCell->setOccupied(true);
 								filledCells ++;
+								DEBUGLOG->log("Creating Cube Node for rendering purposes");
+								RenderableNode* filledCell = new RenderableNode(scene->getSceneGraph()->getRootNode() );
+								filledCell->translate( glm::translate(glm::mat4(1.0f), axisAlignedVoxelGrid->getGridCellCenter( glm::vec3( transformedVertex.x ,transformedVertex.y ,transformedVertex.z  ) ) ) );
+								filledCell->setObject( m_resourceManager.getCube( ) );
+
+	//							phongPerspectiveRenderPass->addRenderable( filledCell);
+	//							phongOrthoRenderPass->addRenderable( filledCell );
+
 //								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
 							}
 						}

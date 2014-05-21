@@ -262,8 +262,8 @@ Renderable* ResourceManager::getScreenFillingTriangle(){
 /**
  *	get a cube with side length = 1.0
  */
-Renderable* ResourceManager::getCube(){
-	if(m_screenFillingTriangle == 0){
+Object* ResourceManager::getCube(){
+	if(m_cube == 0){
 
 		Model *cube = new Model;
 		Material *mat = new Material();
@@ -281,14 +281,15 @@ Renderable* ResourceManager::getCube(){
 				0, 1,
 				1, 2 ,
 				2, 3,
-				0, 2,
+				0, 3,
 				0, 4,
 				3, 7,
 				4, 7,
 				2, 6,
 				4, 5,
 				1, 5,
-				5, 6 };
+				5, 6,
+				6, 7};
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
 		GLuint vertexBufferHandle;
@@ -296,15 +297,15 @@ Renderable* ResourceManager::getCube(){
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
 
 		GLfloat vertices[] = {
-				-0.5f, -0.5f,  0.5f,
-				0.5f, -0.5f,  0.5f,
-				0.5f, 0.5f,  0.5f,
-				-0.5f, 0.5f,  0.5f,
+				-0.5f, -0.5f,  0.5f,	//0
+				-0.5f, 0.5f,  0.5f,		//1
+				0.5f, 0.5f,  0.5f,		//2
+				0.5f, -0.5f,  0.5f,		//3
 
-				-0.5f, -0.5f,  -0.5f,
-				-0.5f, 0.5f,  -0.5f,
-				0.5f, 0.5f,  -0.5f,
-				0.5f, -0.5f,  -0.5f
+				-0.5f, -0.5f,  -0.5f,	//4
+				-0.5f, 0.5f,  -0.5f,	//5
+				0.5f, 0.5f,  -0.5f,		//6
+				0.5f, -0.5f,  -0.5f		//7
 				};
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 

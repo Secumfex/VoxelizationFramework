@@ -20,7 +20,7 @@ protected:
 	std::map<std::string, std::string > m_loadedFiles;
 
 	Renderable* m_screenFillingTriangle;
-	Renderable* m_cube;
+	Object* m_cube;
 public:
 	ResourceManager();
 	~ResourceManager();
@@ -38,7 +38,7 @@ public:
 	std::vector<glm::vec4> getAssimpMeshForModel(Model* model);
 
 	Renderable* getScreenFillingTriangle();
-	Renderable* getCube();
+	Object* getCube();
 
 	void deleteAll();
 	const std::map<std::string, std::string>& getLoadedFiles() const;

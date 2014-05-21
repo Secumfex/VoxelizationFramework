@@ -142,10 +142,26 @@ GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
 	return VoxelGrid::getGridCell(gridPos.x, gridPos.y, gridPos.z);
 }
 
+#include <cmath>
+
+// return the center of the affected grid cell
+glm::vec3 AxisAlignedVoxelGrid::getGridCellCenter(glm::vec3 position)
+{
+
+	float x = fmod( position.x / m_cellSize , 1.0f ) * m_cellSize + ( m_cellSize / 2.0f );
+	float y = fmod( position.y / m_cellSize , 1.0f ) * m_cellSize + ( m_cellSize / 2.0f );
+	float z = fmod( position.z / m_cellSize , 1.0f ) * m_cellSize + ( m_cellSize / 2.0f );
+
+	return glm::vec3 ( x , y, z );
+}
+
 GridCell::GridCell(bool occupied, float size)
 {
 	m_occupied = occupied;
 	m_size = size;
+	m_x = 0;
+	m_y = 0;
+	m_z = 0;
 }
 
 bool GridCell::isOccupied() const {

@@ -11,7 +11,7 @@ namespace Grid
 	class GridCell : public Renderable
 	{
 	protected:
-		int x,y,z;
+		int m_x,m_y,m_z;
 		bool m_occupied;
 		float m_size;
 	public:
@@ -75,7 +75,7 @@ namespace Grid
 		 */
 		AxisAlignedVoxelGrid(float x, float y, float z, int width, int height, int depth, float cellSize);
 		virtual ~AxisAlignedVoxelGrid();
-
+		glm::vec3 getGridCellCenter(glm::vec3 position);
 		GridCell* getGridCell(glm::vec3 position);
 	float getX() const;
 	void setX(float x);
