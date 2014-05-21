@@ -51,9 +51,6 @@ namespace Grid
 		void setHeight(int height);
 		int getWidth() const;
 		void setWidth(int width);
-
-		void render();
-		void uploadUniforms(Shader* shader);
 	};
 
 	class AxisAlignedVoxelGrid : public VoxelGrid

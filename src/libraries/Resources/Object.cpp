@@ -1,5 +1,7 @@
 #include "Object.h"
 
+#include "Utility/DebugLog.h"
+
 Object::Object( Model* model, Material* material)
 {
 	m_model = model;
@@ -40,6 +42,7 @@ void Object::render()
 
 void Object::uploadUniforms(Shader* shader)
 {
+	// upload textures
 	std::map<std::string, Texture*> textures = (m_material != 0) ? m_material->getTextures() : std::map<std::string, Texture*>();
 	int unit = 0;
 	for (std::map<std::string, Texture* >::iterator it = textures.begin(); it != textures.end(); ++it)
@@ -47,6 +50,13 @@ void Object::uploadUniforms(Shader* shader)
 		(*it).second->bindToTextureUnit(unit);
 		shader->uploadUniform(unit, (*it).first);
 		unit++;
+	}
+
+	// upload attributes
+	std::map<std::string, float> attributes = (m_material != 0) ? m_material->getAttributes() : std::map<std::string, float>();
+	for (std::map<std::string, float >::iterator it = attributes.begin(); it != attributes.end(); ++it)
+	{
+		shader->uploadUniform( (*it).second, (*it).first);
 	}
 }
 

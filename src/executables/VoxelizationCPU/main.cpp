@@ -86,8 +86,8 @@ class UniformVoxelGridApp : public Application
 				rotatingNode->setAngle(0.01f);
 
 				DEBUGLOG->log("Adding updatable rotation nodes to scene");
-				scene->addUpdatable(yAxisRotationNode);
-				scene->addUpdatable(rotatingNode);
+//				scene->addUpdatable(yAxisRotationNode);
+//				scene->addUpdatable(rotatingNode);
 
 				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
 				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
@@ -196,8 +196,8 @@ class UniformVoxelGridApp : public Application
 					m_renderManager.addRenderPass(showRenderPass);
 				DEBUGLOG->outdent();
 
-				DEBUGLOG->log("Creating screen filling triangle rendering for perspective phong render pass");
 				DEBUGLOG->indent();
+				DEBUGLOG->log("Creating screen filling triangle rendering for perspective phong render pass");
 					TriangleRenderPass* showRenderPassPerspective = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 					showRenderPassPerspective->setViewport(512,0,512,512);
 
@@ -208,79 +208,95 @@ class UniformVoxelGridApp : public Application
 					m_renderManager.addRenderPass(showRenderPassPerspective);
 				DEBUGLOG->outdent();
 			DEBUGLOG->outdent();
-
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Configuring voxel grid");
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid object");
 			DEBUGLOG->indent();
-				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f,-5.0f, -5.0f, 32, 32, 32, 0.3125f);
+				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f, -5.0f, -5.0f, 32, 32, 32, 0.3125f);
 				DEBUGLOG->log("Grid width    : ", axisAlignedVoxelGrid->getWidth());
 				DEBUGLOG->log("Grid height   : ", axisAlignedVoxelGrid->getHeight());
 				DEBUGLOG->log("Grid depth    : ", axisAlignedVoxelGrid->getDepth());
 				DEBUGLOG->log("Grid cell size: ", axisAlignedVoxelGrid->getCellSize());
 			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Filling voxel grid");
+			DEBUGLOG->log("Voxelizing scene");
 			DEBUGLOG->indent();
+
+				// objects to be voxelized
 				std::vector< Object* > objects = scene->getObjects();
 				int filledCells = 0;
 
 				for (unsigned int i = 0; i < objects.size(); i++)
 				{
 					Model* model = objects[i]->getModel();
-//					DEBUGLOG->log("trying to find object: ", (int) objects[i]);
 
+//					DEBUGLOG->log("trying to find object: ", (int) objects[i]);
 					Node* objectNode = scene->getSceneGraph()->findObjectNode(objects[i]);
 
 					glm::mat4 modelMatrix;
 					if (objectNode)
 					{
-						modelMatrix = objectNode->getAccumulatedModelMatrix();
 //						DEBUGLOG->log("found object Node:", (int) objectNode);
+						modelMatrix = objectNode->getAccumulatedModelMatrix();
 					}
 					std::vector < glm::vec4 > assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
-//						DEBUGLOG->log("found assimp mesh with vertices :", (int) assimpMesh.size());
+//					DEBUGLOG->log("found assimp mesh with vertices :", (int) assimpMesh.size());
 
 					// fill voxel grid by checking vertices against grid volume
 						for (unsigned int j = 0; j < assimpMesh.size(); j++)
 						{
-							glm::vec4 transformedVertex = modelMatrix * assimpMesh[j];
-//							DEBUGLOG->log("transformed vertex: ", transformedVertex);
-							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(transformedVertex.x,transformedVertex.y,transformedVertex.z) );
+							glm::vec4 worldSpaceVertex = modelMatrix * assimpMesh[j];
+
+							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(worldSpaceVertex.x,worldSpaceVertex.y,worldSpaceVertex.z) );
+
 							if (gridCell && (! (gridCell->isOccupied( ) ) )  )
 							{
 								gridCell->setOccupied(true);
 								filledCells ++;
-								DEBUGLOG->log("Creating Cube Node for rendering purposes");
-								RenderableNode* filledCell = new RenderableNode(scene->getSceneGraph()->getRootNode() );
-								filledCell->translate( glm::translate(glm::mat4(1.0f), axisAlignedVoxelGrid->getGridCellCenter( glm::vec3( transformedVertex.x ,transformedVertex.y ,transformedVertex.z  ) ) ) );
-								filledCell->setObject( m_resourceManager.getCube( ) );
 
-	//							phongPerspectiveRenderPass->addRenderable( filledCell);
-	//							phongOrthoRenderPass->addRenderable( filledCell );
+//								DEBUGLOG->log("Creating Cube Node for rendering purposes");
+
+									RenderableNode* filledCell = new RenderableNode(scene->getSceneGraph()->getRootNode() );
+									filledCell->scale( glm::scale ( glm::mat4(1.0f), glm::vec3(axisAlignedVoxelGrid->getCellSize())));
+									filledCell->translate( glm::translate(glm::mat4(1.0f), axisAlignedVoxelGrid->getGridCellCenter( glm::vec3( worldSpaceVertex.x ,worldSpaceVertex.y ,worldSpaceVertex.z  ) ) ) );
+									filledCell->setObject( m_resourceManager.getCube( ) );
+
+									gridOrthoRenderPass->addRenderable( filledCell );
+									gridPerspectiveRenderPass->addRenderable( filledCell );
 
 //								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
 							}
 						}
 				}
+
+				// TODO : find a way to clone objects and attach objects with the same model but different material to the nodes
+				m_resourceManager.getCube()->getMaterial()->setAttribute("uniformRed", 0.5f);
+				m_resourceManager.getCube()->getMaterial()->setAttribute("uniformGreen", 0.1f);
+				m_resourceManager.getCube()->getMaterial()->setAttribute("uniformBlue", 0.1f);
+				m_resourceManager.getCube()->getMaterial()->setAttribute("uniformAlpha", 0.8f);
+
+
 				DEBUGLOG->log("Filled voxel grid cells: ", filledCells);
+				DEBUGLOG->outdent();
 
-				DEBUGLOG->log("Creating voxel grid model");
-					Model* gridModel = m_resourceManager.generateVoxelGridModel(axisAlignedVoxelGrid->getWidth(), axisAlignedVoxelGrid->getHeight(), axisAlignedVoxelGrid->getDepth(), axisAlignedVoxelGrid->getCellSize());
-					axisAlignedVoxelGrid->setModel(gridModel);
+			DEBUGLOG->log("Creating voxel grid model");
+			Model* gridModel = m_resourceManager.generateVoxelGridModel(axisAlignedVoxelGrid->getWidth(), axisAlignedVoxelGrid->getHeight(), axisAlignedVoxelGrid->getDepth(), axisAlignedVoxelGrid->getCellSize());
+			axisAlignedVoxelGrid->setModel(gridModel);
+			axisAlignedVoxelGrid->getMaterial()->setAttribute("uniformRed",   0.5f);
+			axisAlignedVoxelGrid->getMaterial()->setAttribute("uniformGreen", 0.5f);
+			axisAlignedVoxelGrid->getMaterial()->setAttribute("uniformBlue",  0.5f);
+			axisAlignedVoxelGrid->getMaterial()->setAttribute("uniformAlpha", 0.2f);
 
-				DEBUGLOG->log("Creating renderable node voxel grid object");
-					RenderableNode* axisAlignedVoxelGridNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
-					axisAlignedVoxelGridNode->setObject(axisAlignedVoxelGrid);
-					axisAlignedVoxelGridNode->translate(glm::translate(glm::mat4(), glm::vec3(axisAlignedVoxelGrid->getX(), axisAlignedVoxelGrid->getY(), axisAlignedVoxelGrid->getZ())));
+			DEBUGLOG->log("Creating renderable node voxel grid object");
+			RenderableNode* axisAlignedVoxelGridNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+			axisAlignedVoxelGridNode->setObject(axisAlignedVoxelGrid);
+			axisAlignedVoxelGridNode->translate(glm::translate(glm::mat4(), glm::vec3(axisAlignedVoxelGrid->getX(), axisAlignedVoxelGrid->getY(), axisAlignedVoxelGrid->getZ())));
 
-				DEBUGLOG->log("Adding voxel grid object to render passes");
-				gridPerspectiveRenderPass->addRenderable(axisAlignedVoxelGridNode);
-				gridOrthoRenderPass->addRenderable(axisAlignedVoxelGridNode);
-
-			DEBUGLOG->outdent();
+			DEBUGLOG->log("Adding voxel grid object to render passes");
+			gridPerspectiveRenderPass->addRenderable(axisAlignedVoxelGridNode);
+			gridOrthoRenderPass->addRenderable(axisAlignedVoxelGridNode);
 
 		DEBUGLOG->outdent();
 

@@ -5,6 +5,7 @@
 ResourceManager::ResourceManager()
 {
 	m_screenFillingTriangle = 0;
+	m_cube = 0;
 }
 
 ResourceManager::~ResourceManager()

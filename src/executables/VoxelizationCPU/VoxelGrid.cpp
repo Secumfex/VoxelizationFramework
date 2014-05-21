@@ -6,6 +6,7 @@
 using namespace Grid;
 
 VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
+	: Object(new Model(), new Material())
 {
 	m_width = width;
 	m_height = height;
@@ -25,6 +26,8 @@ VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
 			}
 		}
 	}
+
+	setRenderMode(GL_LINES);
 }
 
 VoxelGrid::~VoxelGrid() {
@@ -147,10 +150,13 @@ GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
 // return the center of the affected grid cell
 glm::vec3 AxisAlignedVoxelGrid::getGridCellCenter(glm::vec3 position)
 {
+	// position in grid space
+	glm::vec3 gridPos = ( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
 
-	float x = fmod( position.x / m_cellSize , 1.0f ) * m_cellSize + ( m_cellSize / 2.0f );
-	float y = fmod( position.y / m_cellSize , 1.0f ) * m_cellSize + ( m_cellSize / 2.0f );
-	float z = fmod( position.z / m_cellSize , 1.0f ) * m_cellSize + ( m_cellSize / 2.0f );
+	// round to bottom left front corner of cell and add half a cell and compute world position
+	float x = trunc( gridPos.x ) * m_cellSize + ( m_cellSize / 2.0f ) + m_x;
+	float y = trunc( gridPos.y ) * m_cellSize + ( m_cellSize / 2.0f ) + m_y;
+	float z = trunc( gridPos.z ) * m_cellSize + ( m_cellSize / 2.0f ) + m_z;
 
 	return glm::vec3 ( x , y, z );
 }
@@ -186,22 +192,10 @@ GridCell::~GridCell()
 }
 
 /*******   RENDERING METHODS   *********/
-void VoxelGrid::render()
-{
-	// quick and dirty : render every line of the grid
-	glBindVertexArray(m_model->getVAOHandle());
-		glDrawElements(GL_LINES, m_model->getNumIndices(), GL_UNSIGNED_INT, 0 );
-	glBindVertexArray(0);
-}
 
 void GridCell::uploadUniforms(Shader* shader)
 {
 	shader->uploadUniform( isOccupied(), "uniformOccupied");	// cuz why not
-}
-
-void VoxelGrid::uploadUniforms(Shader* shader)
-{
-
 }
 
 void GridCell::render()
