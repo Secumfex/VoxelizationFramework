@@ -168,6 +168,7 @@ class UniformVoxelGridApp : public Application
 			DEBUGLOG->log("Adding objects to perspective phong render pass");
 			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
 			phongPerspectiveRenderPass->addRenderable(testRoomNode);
+		//	phongPerspectiveRenderPass->addRenderable( m_resourceManager.getCube() );
 
 			DEBUGLOG->log("Adding objects to ortho phong render pass");
 			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
