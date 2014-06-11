@@ -1,5 +1,3 @@
-#include <Input/InputManager.h>
-#include <Application/WindowManager.h>
 #include <Utility/SubjectListenerPattern.h>
 #include <Scene/Camera.h>
 

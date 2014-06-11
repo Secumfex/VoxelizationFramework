@@ -3,14 +3,14 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "CustomRenderPasses.h"
 #include "Listeners.h"
-#include "VoxelGrid.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
+#include <Rendering/CustomRenderPasses.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
+#include <Voxelization/VoxelGrid.h>
 
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>

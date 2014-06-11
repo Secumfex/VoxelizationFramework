@@ -3,12 +3,12 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "CustomRenderPasses.h"
-#include "SliceMapRendering.h"
 #include "Listeners.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
+#include <Rendering/CustomRenderPasses.h>
+#include <Voxelization/SliceMapRendering.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
 
