@@ -14,6 +14,7 @@
 
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
+#include <Utility/Timer.h>
 
 class TextureAtlasBuildingApp : public Application
 {
@@ -150,6 +151,11 @@ class TextureAtlasBuildingApp : public Application
 			turntable->setSensitivity(0.1f);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+
+			DEBUGLOG->log("Adding a Timer to the scene for fun");
+			GLFWTimer* glfwTimer = new GLFWTimer(true);
+			m_inputManager.attachListenerOnKeyPress(new DebugPrintDoubleListener( glfwTimer->getElapsedTimePtr( ), "Elapsed Time: " ), GLFW_KEY_SPACE, GLFW_PRESS);
+			scene->addUpdatable( glfwTimer );
 
 			scene->addUpdatable(turntable);
 		DEBUGLOG->outdent();

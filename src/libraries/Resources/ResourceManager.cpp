@@ -327,13 +327,13 @@ Object* ResourceManager::getCube(){
 
 Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth, float cellSize )
 {
-	DEBUGLOG->log("Creating Voxel Grid Model with parameters: ");
-	DEBUGLOG->indent();
-		DEBUGLOG->log("width   : ", width);
-		DEBUGLOG->log("height  : ", height);
-		DEBUGLOG->log("depth   : ", depth);
-		DEBUGLOG->log("cellSize: ", cellSize);
-	DEBUGLOG->outdent();
+//	DEBUGLOG->log("Creating Voxel Grid Model with parameters: ");
+//	DEBUGLOG->indent();
+//		DEBUGLOG->log("width   : ", width);
+//		DEBUGLOG->log("height  : ", height);
+//		DEBUGLOG->log("depth   : ", depth);
+//		DEBUGLOG->log("cellSize: ", cellSize);
+//	DEBUGLOG->outdent();
 
 	Model *voxelGrid = new Model();
 	Material *mat = new Material();
@@ -438,8 +438,8 @@ Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth
 	glBindVertexArray(0);
 
 	DEBUGLOG->indent();
-		DEBUGLOG->log("generated indices : ", indices.size());
-		DEBUGLOG->log("generated vertices : ", vertices.size() / 3);
+//		DEBUGLOG->log("generated indices : ", indices.size());
+//		DEBUGLOG->log("generated vertices : ", vertices.size() / 3);
 
 		voxelGrid->setNumIndices(indices.size());
 		voxelGrid->setNumVertices(vertices.size() / 3);
