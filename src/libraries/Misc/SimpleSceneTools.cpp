@@ -7,6 +7,24 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+RenderableNode* SimpleScene::loadObject( std::string object, Application* app )
+{
+	DEBUGLOG->log("Loading file" + object);
+	DEBUGLOG->indent();
+		std::vector< Object* > loadedObject= app->getResourceManager().loadObjectsFromFile( RESOURCES_PATH + object );
+	DEBUGLOG->outdent();
+
+	app->getSceneManager().getActiveScene()->addObjects( loadedObject );
+
+	DEBUGLOG->log("Creating renderable node for " + object);
+	RenderableNode* objectNode = new RenderableNode( );
+
+	objectNode->setObject(loadedObject[0]);
+
+	return objectNode;
+
+}
+
 RenderableNode* SimpleScene::loadTestRoomObject( Application* app)
 {
 	DEBUGLOG->log("Loading test room dae file");

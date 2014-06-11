@@ -2,7 +2,6 @@
 
 #include <iostream>
 
-#include "Listeners.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
@@ -11,6 +10,7 @@
 #include <Utility/Updatable.h>
 #include <Voxelization/VoxelGrid.h>
 
+#include <Misc/MiscListeners.h>
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
 #include <Misc/SimpleSceneTools.h>
@@ -103,24 +103,30 @@ public:
 		DEBUGLOG->log("Loading some objects");
 		DEBUGLOG->indent();
 
+		std::vector<Renderable* > renderables;
+
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
+			renderables.push_back(testRoomNode);
 
 			testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
 
-			RenderableNode* overlappingGeometryNode = SimpleScene::loadOverlappingGeometry( this );
+//			RenderableNode* overlappingGeometryNode = SimpleScene::loadOverlappingGeometry( this );
+//			renderables.push_back(overlappingGeometryNode);
+
+			RenderableNode* someObjectNode = SimpleScene::loadObject("/cow.obj" , this);
+			someObjectNode->scale( glm::scale( glm::mat4( 1.0f ), glm::vec3( 5.0f,5.0f,5.0f ) ) );
+			renderables.push_back(someObjectNode);
+
 			std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this );
 
 			rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
-			overlappingGeometryNode->setParent( rotatingNodes.second );
+//			overlappingGeometryNode->setParent( rotatingNodes.second );
+			someObjectNode->setParent( rotatingNodes.second );
 
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Attaching objects to scene graph");
 		DEBUGLOG->indent();
-
-				std::vector<Renderable* > renderables;
-				renderables.push_back(testRoomNode);
-				renderables.push_back(overlappingGeometryNode);
 
 		DEBUGLOG->outdent();
 		
