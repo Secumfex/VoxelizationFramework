@@ -1,13 +1,9 @@
 #include "Scene/RenderableNode.h"
 
-RenderableNode::RenderableNode(Node* parent) {
-	m_parent = parent;
-	if (parent)
-	{
-		parent->addChild(this);
-	}
+RenderableNode::RenderableNode(Node* parent)
+  : Node( parent )
+{
 
-	m_object = 0;
 }
 
 RenderableNode::~RenderableNode() {

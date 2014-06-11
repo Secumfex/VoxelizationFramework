@@ -3,7 +3,6 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Listeners.h"
 
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
@@ -12,6 +11,7 @@
 #include <Utility/Updatable.h>
 #include <Voxelization/VoxelGrid.h>
 
+#include <Misc/MiscListeners.h>
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
 
