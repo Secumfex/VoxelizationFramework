@@ -144,24 +144,26 @@ void Application::run()
 	m_inputManager. attachListenerOnKeyPress(terminateListener2, GLFW_KEY_ESCAPE, GLFW_PRESS);
 
 	int fps_counter = 0;
+	double fps_accumulator;
 
 	m_cycleTimer.toggleRunning( );
 	while (!m_terminate)
 	{
 		m_cycleTimer.update( 0.0f );
 
-
 		/*UGLY : PRINT SOME FPS*/
-		if( fps_counter == 60 )
+		if( fps_counter > 20 )
 		{
 			std::stringstream ss;
-			ss<< 1.0 / m_cycleTimer.getElapsedTime();
+			ss<< 20.0 / (fps_accumulator + m_cycleTimer.getElapsedTime() );
 			glfwSetWindowTitle( m_windowManager.getActiveWindow(), ss.str().c_str() );
 			fps_counter = 0;
+			fps_accumulator = 0.0;
 		}
 		else
 		{
 			fps_counter++;
+			fps_accumulator += m_cycleTimer.getElapsedTime();
 		}
 
 		m_sceneManager.update( m_cycleTimer.getElapsedTime() );	// update with last actual cycle time

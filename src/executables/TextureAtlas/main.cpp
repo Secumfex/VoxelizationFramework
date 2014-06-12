@@ -189,12 +189,10 @@ public:
 
 			DEBUGLOG->log("Configuring Turntable for root node");
 			Turntable* turntable = new Turntable(scene->getSceneGraph()->getRootNode(), &m_inputManager);
-			turntable->setSensitivity(0.05f);
+			turntable->setSensitivity(0.1f);
+
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
-
-			DEBUGLOG->log("Adding a Timer to the scene for fun");
-			m_inputManager.attachListenerOnKeyPress(new DebugPrintDoubleListener( m_cycleTimer.getElapsedTimePtr(), "Elapsed Time: " ), GLFW_KEY_SPACE, GLFW_PRESS);
 
 			scene->addUpdatable(turntable);
 		DEBUGLOG->outdent();
