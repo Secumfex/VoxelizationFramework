@@ -1,0 +1,85 @@
+#ifndef TEXTUREATLAS_H
+#define TEXTUREATLAS_H
+
+#include <Rendering/Shader.h>
+#include <Rendering/Renderable.h>
+#include <Rendering/CustomRenderPasses.h>
+#include <Scene/RenderableNode.h>
+
+namespace TexAtlas
+{
+	Shader* getWriteWorldPositionTextureAtlasShader();
+
+	/**
+	 * This class represents a Texture Atlas, which is derived from a FramebufferObject
+	 */
+	class TextureAtlas : public FramebufferObject
+	{
+	protected:
+		Object* p_object; 		// corresponding object
+		Texture* m_texture; 	// texture atlas
+	public:
+		TextureAtlas(int width, int height);
+		~TextureAtlas();
+	};
+
+	/**
+	 * This class represents a Renderer for a Texture Atlas of a Model
+	 * It consists of
+	 * - a FBO with a position texture to which the UV coordinates of the model will be written
+	 * - a CameraRenderPass which will render only one object
+	 * - a Camera which will be arbitrarily placed around the Object, to ensure all of it will be rendered
+	 * - a RenderableNode pointer with an Object attached to it which will be rendered
+	 */
+	class TextureAtlasRenderer : public Renderable
+	{
+	protected:
+		FramebufferObject* m_fbo;			// FBO to be rendered to
+		CameraRenderPass* m_renderPass;		// Renderpass to be used with this
+		Camera*			p_camera;			// arbitrary Camera to be used to render the Object ( should be the same as voxelization camera )
+		RenderableNode* p_renderableNode;	// pointer to the object node to be rendered
+
+		/**
+		 * private methods used exclusively during configuration and rendering
+		 */
+
+		void configureCamera();
+		void configureRenderPass( int width, int height);
+		void configureFramebufferObject(int width, int height);
+
+	public:
+		/**
+		 *	Create a Texture Atlas Renderer for an object
+		 * @param renderableNode	to be rendered into a texture atlas
+		 * @param width				of texture atlas
+		 * @param height			of texture atlas
+		 * @param camera			used to voxelize ( can be left out if texture atlas should be rendered, even if object is outside of voxelgrid )
+		 */
+		TextureAtlasRenderer( RenderableNode* renderableNode, int width, int height, Camera* camera = 0 );
+		virtual ~TextureAtlasRenderer();
+
+		virtual void render();
+		virtual void uploadUniforms(Shader* shader);
+
+		RenderableNode* getRenderableNodePtr();
+	};
+
+
+	/**
+	 * This class represents a Generator of Vertices for a Texture Atlas
+	 * It will produce a set of vertices from the provided Texture Atlas, one vertex per valid Atlas texel
+	 */
+	class TextureAtlasVertexGenerator
+	{
+	protected:
+		std::vector< glm::vec3 > m_vertexPositions;
+		TextureAtlas* p_textureAtlas;
+	public:
+		TextureAtlasVertexGenerator( TextureAtlas* textureAtlasPtr );
+		~TextureAtlasVertexGenerator();
+
+		std::vector< glm::vec3 >& getVertexPositions();
+	};
+}
+
+#endif

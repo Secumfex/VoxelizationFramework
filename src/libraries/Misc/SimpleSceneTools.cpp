@@ -9,7 +9,7 @@
 
 RenderableNode* SimpleScene::loadObject( std::string object, Application* app )
 {
-	DEBUGLOG->log("Loading file" + object);
+	DEBUGLOG->log("Loading file " + object);
 	DEBUGLOG->indent();
 		std::vector< Object* > loadedObject= app->getResourceManager().loadObjectsFromFile( RESOURCES_PATH + object );
 	DEBUGLOG->outdent();
@@ -88,6 +88,19 @@ std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app)
 	scene->addUpdatable(rotatingNode);
 
 	return result;
+}
+
+Scene* SimpleScene::createNewScene(Application* app) {
+
+	DEBUGLOG->log("Creating a scene instance");
+	DEBUGLOG->indent();
+	Scene* scene = new Scene();
+	DEBUGLOG->outdent();
+
+	DEBUGLOG->log("Setting scene instance as active scene ");
+	app->getSceneManager().setActiveScene(scene);
+
+	return scene;
 }
 
 void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,

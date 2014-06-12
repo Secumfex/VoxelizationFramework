@@ -9,14 +9,8 @@ CameraRenderPass::CameraRenderPass()
 }
 
 CameraRenderPass::CameraRenderPass(Shader* shader, FramebufferObject* fbo)
+  : RenderPass(shader, fbo)
 {
-	m_shader = shader;
-	m_fbo = fbo;
-	if (fbo)
-	{
-		m_viewport.z = fbo->getWidth();
-		m_viewport.w = fbo->getHeight();
-	}
 	m_camera = 0;
 }
 

@@ -7,6 +7,8 @@
 
 namespace SimpleScene
 {
+	Scene* createNewScene( Application* app);
+
 	// loads an object, adds it to the scene and returns a node which can be added to the scenegraph
 	RenderableNode* loadObject( std::string object, Application* app);
 

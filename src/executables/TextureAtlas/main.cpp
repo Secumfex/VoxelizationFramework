@@ -29,7 +29,7 @@ private:
 
 			CameraRenderPass* uvRenderPass = new CameraRenderPass(uvShader, fbo);
 			uvRenderPass->setViewport(0,0,512,512);
-			uvRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
+			uvRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 0.0f );
 			uvRenderPass->addEnable(GL_DEPTH_TEST);
 			uvRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 			uvRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
@@ -80,26 +80,14 @@ public:
 
 	void postInitialize()
 	{
-		DEBUGLOG->log("Creating a scene instance");
-		DEBUGLOG->indent();
-		Scene* scene = new Scene();
-		DEBUGLOG->outdent();
-
-		DEBUGLOG->log("Setting scene instance as active scene ");
-		m_sceneManager.setActiveScene(scene);
+		Scene* scene = SimpleScene:: createNewScene ( this );
 
 		DEBUGLOG->log("Loading some objects");
 		DEBUGLOG->indent();
-
-		std::vector<Renderable* > renderables;
+			std::vector<Renderable* > renderables;
 
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
 			renderables.push_back(testRoomNode);
-
-			testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
-
-//			RenderableNode* overlappingGeometryNode = SimpleScene::loadOverlappingGeometry( this );
-//			renderables.push_back(overlappingGeometryNode);
 
 			RenderableNode* someObjectNode = SimpleScene::loadObject("/stanford/bunny/bunny_blender.dae" , this);
 			someObjectNode->scale( glm::vec3( 25.0f,25.0f,25.0f ) );
@@ -107,17 +95,16 @@ public:
 
 			std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this );
 
-			rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
-//			overlappingGeometryNode->setParent( rotatingNodes.second );
-			someObjectNode->setParent( rotatingNodes.second );
+			DEBUGLOG->log("Attaching objects to scene graph");
+			DEBUGLOG->indent();
+				testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
+
+				rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
+	//			overlappingGeometryNode->setParent( rotatingNodes.second );
+				someObjectNode->setParent( rotatingNodes.second );
+			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
-
-		DEBUGLOG->log("Attaching objects to scene graph");
-		DEBUGLOG->indent();
-
-		DEBUGLOG->outdent();
-		
 
 		DEBUGLOG->log("Configuring Rendering");
 		DEBUGLOG->indent();
