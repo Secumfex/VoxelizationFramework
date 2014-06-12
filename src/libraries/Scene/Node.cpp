@@ -62,15 +62,15 @@ void Node::multiply(glm::mat4 transform)
 }
 void Node::translate(glm::vec3 translate)
 {
-	m_modelMatrix = glm::translate( m_modelMatrix, translate);
+	m_modelMatrix = glm::translate( glm::mat4(1.0f), translate) * m_modelMatrix;
 }
 void Node::scale(glm::vec3 scale)
 {
-	m_modelMatrix = glm::scale( m_modelMatrix, scale );
+	m_modelMatrix = glm::scale( glm::mat4(1.0f), scale ) * m_modelMatrix;
 }
 void Node::rotate(float angle, glm::vec3 axis)
 {
-	m_modelMatrix = glm::rotate( m_modelMatrix, angle, axis );
+	m_modelMatrix = glm::rotate( glm::mat4(1.0f), angle, axis ) * m_modelMatrix;
 }
 
 void Node::setParent(Node* parent)
@@ -80,6 +80,10 @@ void Node::setParent(Node* parent)
 	{
 		parent->addChild(this);
 	}
+}
+
+Object* Node::getObject() {
+	return m_object;
 }
 
 Node* Node::findObjectNode(Object* object)

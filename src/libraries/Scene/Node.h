@@ -21,6 +21,7 @@ public:
 	void addChild(Node* node);
 
 	void setObject(Object* object);
+	Object* getObject();
 
 	std::vector< Node* > getChildren();
 	glm::mat4 getModelMatrix();
