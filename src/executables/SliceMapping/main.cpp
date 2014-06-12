@@ -71,13 +71,13 @@ class ObjectLoadingApp : public Application
 
 				DEBUGLOG->log("Creating renderable node for .dae cube");
 				RenderableNode* cubeNode1 = new RenderableNode( scene->getSceneGraph()->getRootNode( ) );
-				cubeNode1->rotate( glm::rotate (glm::mat4(1.0f), 60.0f, glm::vec3(0.0f,1.0f,0.0f) ) );
-				cubeNode1->translate( glm::translate( glm::mat4(1.0f), glm::vec3(1.5f, 0.5f,-1.0f) ) );
+				cubeNode1->rotate(  60.0f, glm::vec3(0.0f,1.0f,0.0f) );
+				cubeNode1->translate( glm::vec3(1.5f, 0.5f,-1.0f) );
 				cubeNode1->setObject(daeCube[0]);
 
 				DEBUGLOG->log("Creating node tree for rotating node");
 				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
-				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(0.0f, 0.0f, 0.0f) ) );
+				positionNode->translate( glm::vec3(0.0f, 0.0f, 0.0f) );
 
 				RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
 				yAxisRotationNode->setAngle(0.005f);
@@ -101,12 +101,12 @@ class ObjectLoadingApp : public Application
 
 				DEBUGLOG->log("Creating renderable node for background");
 				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
-				backgroundNode->translate( glm::translate( glm::mat4(1.0f), glm::vec3(0.0f, -1.0f ,0.0f) ) );
+				backgroundNode->translate( glm::vec3(0.0f, -1.0f ,0.0f) );
 				backgroundNode->setObject(daeBackground[0]);
 
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
-				testRoomNode->scale(glm::scale(glm::mat4(1.0f), glm::vec3(0.75f, 0.75f, 0.75f)));
+				testRoomNode->scale( glm::vec3(0.75f, 0.75f, 0.75f) );
 				testRoomNode->setObject(testRoom[0]);
 
 			DEBUGLOG->outdent();

@@ -27,9 +27,10 @@ public:
 	glm::mat4 getAccumulatedModelMatrix();
 	void setModelMatrix(glm::mat4 modelMatrix);
 
-	void translate(glm::mat4 translate);
-	void scale(glm::mat4 scale);
-	void rotate(glm::mat4 rotate);
+	void multiply(glm::mat4 transform);	// multiplies the transform matrix from left
+	void translate(glm::vec3 translate);
+	void scale(glm::vec3 scale);
+	void rotate(float angle, glm::vec3 axis);
 
 	Node* findObjectNode(Object* object);
 };

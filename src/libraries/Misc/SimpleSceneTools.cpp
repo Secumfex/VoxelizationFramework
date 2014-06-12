@@ -36,7 +36,7 @@ RenderableNode* SimpleScene::loadTestRoomObject( Application* app)
 
 	DEBUGLOG->log("Creating renderable node for test room");
 	RenderableNode* testRoomNode = new RenderableNode( );
-	testRoomNode->scale(glm::scale(glm::mat4(1.0f), glm::vec3(0.75f, 0.75f, 0.75f)));
+	testRoomNode->scale( glm::vec3(0.75f, 0.75f, 0.75f) );
 	testRoomNode->setObject(testRoom[0]);
 
 	return testRoomNode;
@@ -70,7 +70,7 @@ std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app)
 
 	DEBUGLOG->log("Creating node tree for rotating node");
 	Node* positionNode = new Node( );
-	positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(0.0f, 0.0f, 0.0f) ) );
+	positionNode->translate( glm::vec3(0.0f, 0.0f, 0.0f) );
 	result.first = positionNode;
 
 	RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);

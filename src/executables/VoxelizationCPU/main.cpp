@@ -75,7 +75,7 @@ class UniformVoxelGridApp : public Application
 
 				DEBUGLOG->log("Creating node tree for rotating node");
 				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
-				positionNode->translate( glm::translate(glm::mat4(1.0f),  glm::vec3(0.0f, 0.0f, 0.0f) ) );
+				positionNode->translate( glm::vec3(0.0f, 0.0f, 0.0f) );
 
 				RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
 				yAxisRotationNode->setAngle(0.005f);
@@ -95,7 +95,7 @@ class UniformVoxelGridApp : public Application
 
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
-				testRoomNode->scale(glm::scale(glm::mat4(1.0f), glm::vec3(0.75f, 0.75f, 0.75f)));
+				testRoomNode->scale( glm::vec3(0.75f, 0.75f, 0.75f) );
 				testRoomNode->setObject(testRoom[0]);
 
 			DEBUGLOG->outdent();
@@ -259,8 +259,8 @@ class UniformVoxelGridApp : public Application
 //								DEBUGLOG->log("Creating Cube Node for rendering purposes");
 
 									RenderableNode* filledCell = new RenderableNode(scene->getSceneGraph()->getRootNode() );
-									filledCell->scale( glm::scale ( glm::mat4(1.0f), glm::vec3(axisAlignedVoxelGrid->getCellSize())));
-									filledCell->translate( glm::translate(glm::mat4(1.0f), axisAlignedVoxelGrid->getGridCellCenter( glm::vec3( worldSpaceVertex.x ,worldSpaceVertex.y ,worldSpaceVertex.z  ) ) ) );
+									filledCell->scale( glm::vec3(axisAlignedVoxelGrid->getCellSize() ) );
+									filledCell->translate(  axisAlignedVoxelGrid->getGridCellCenter( glm::vec3( worldSpaceVertex.x ,worldSpaceVertex.y ,worldSpaceVertex.z  ) ) );
 									filledCell->setObject( m_resourceManager.getCube( ) );
 
 									gridOrthoRenderPass->addRenderable( filledCell );
@@ -292,7 +292,7 @@ class UniformVoxelGridApp : public Application
 			DEBUGLOG->log("Creating renderable node voxel grid object");
 			RenderableNode* axisAlignedVoxelGridNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
 			axisAlignedVoxelGridNode->setObject(axisAlignedVoxelGrid);
-			axisAlignedVoxelGridNode->translate(glm::translate(glm::mat4(), glm::vec3(axisAlignedVoxelGrid->getX(), axisAlignedVoxelGrid->getY(), axisAlignedVoxelGrid->getZ())));
+			axisAlignedVoxelGridNode->translate( glm::vec3(axisAlignedVoxelGrid->getX(), axisAlignedVoxelGrid->getY(), axisAlignedVoxelGrid->getZ() ) );
 
 			DEBUGLOG->log("Adding voxel grid object to render passes");
 			gridPerspectiveRenderPass->addRenderable(axisAlignedVoxelGridNode);

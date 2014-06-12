@@ -20,7 +20,7 @@ class TextureAtlasBuildingApp : public Application
 {
 private:
 
-	CameraRenderPass* createUVRenderPass( std::vector< Renderable* > renderables )
+	CameraRenderPass* createUVRenderPass( )
 	{
 		DEBUGLOG->indent();
 			Shader* uvShader= new Shader(SHADERS_PATH "/textureAtlas/simpleUV.vert", SHADERS_PATH "/textureAtlas/worldPosition.frag");
@@ -40,19 +40,13 @@ private:
 			uvRenderPass->setCamera(camera);
 		DEBUGLOG->outdent();
 
-		DEBUGLOG->log("Adding objects to uv render pass");
-		for (unsigned int i = 0; i < renderables.size(); i++)
-		{
-			uvRenderPass->addRenderable( renderables[i] );
-		}
-
 		DEBUGLOG->log("Adding renderpass to application");
 		m_renderManager.addRenderPass(uvRenderPass);
 
 		return uvRenderPass;
 	}
 
-	CameraRenderPass* createPhongRenderPass(std::vector< Renderable* > renderables)
+	CameraRenderPass* createPhongRenderPass( )
 	{
 		DEBUGLOG->indent();
 		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/textureAtlas/worldPosition_backfaceCulling.frag");
@@ -71,12 +65,6 @@ private:
 		camera->setPosition(0.0f,0.0f,5.0f);
 		phongPerspectiveRenderPass->setCamera(camera);
 		DEBUGLOG->outdent();
-
-		DEBUGLOG->log("Adding objects to perspective phong render pass");
-		for (unsigned int i = 0; i < renderables.size(); i++)
-		{
-			phongPerspectiveRenderPass->addRenderable( renderables[i] );
-		}
 
 		DEBUGLOG->log("Adding renderpasses to application");
 		m_renderManager.addRenderPass(phongPerspectiveRenderPass);
@@ -113,8 +101,8 @@ public:
 //			RenderableNode* overlappingGeometryNode = SimpleScene::loadOverlappingGeometry( this );
 //			renderables.push_back(overlappingGeometryNode);
 
-			RenderableNode* someObjectNode = SimpleScene::loadObject("/cow.obj" , this);
-			someObjectNode->scale( glm::scale( glm::mat4( 1.0f ), glm::vec3( 5.0f,5.0f,5.0f ) ) );
+			RenderableNode* someObjectNode = SimpleScene::loadObject("/stanford/bunny/bunny_blender.dae" , this);
+			someObjectNode->scale( glm::vec3( 25.0f,25.0f,25.0f ) );
 			renderables.push_back(someObjectNode);
 
 			std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this );
@@ -136,7 +124,13 @@ public:
 
 			DEBUGLOG->log("Creating perspective phong renderpass");
 
-			CameraRenderPass* phongPerspectiveRenderPass = createPhongRenderPass( renderables );
+			CameraRenderPass* phongPerspectiveRenderPass = createPhongRenderPass( );
+
+			DEBUGLOG->log("Adding objects to perspective phong render pass");
+			for (unsigned int i = 0; i < renderables.size(); i++)
+			{
+				phongPerspectiveRenderPass->addRenderable( renderables[i] );
+			}
 
 			DEBUGLOG->log("Creating screen filling triangle render passes");
 			DEBUGLOG->indent();
@@ -157,7 +151,15 @@ public:
 
 			DEBUGLOG->log("Creating perspective phong renderpass");
 
-			CameraRenderPass* UVRenderPass = createUVRenderPass( renderables );
+			CameraRenderPass* UVRenderPass = createUVRenderPass( );
+
+			DEBUGLOG->log("Adding objects to uv render pass");
+//			for (unsigned int i = 0; i < renderables.size(); i++)
+//			{
+//				UVRenderPass->addRenderable( renderables[i] );
+//			}
+
+			UVRenderPass->addRenderable( someObjectNode );
 
 			DEBUGLOG->log("Creating screen filling triangle render passes");
 			DEBUGLOG->indent();

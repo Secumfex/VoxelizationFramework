@@ -56,17 +56,21 @@ void Node::setModelMatrix(glm::mat4 modelMatrix)
 	m_modelMatrix = modelMatrix;
 }
 
-void Node::translate(glm::mat4 translate)
+void Node::multiply(glm::mat4 transform)
 {
-	m_modelMatrix = translate * m_modelMatrix;
+	m_modelMatrix = transform * m_modelMatrix;
 }
-void Node::scale(glm::mat4 scale)
+void Node::translate(glm::vec3 translate)
 {
-	m_modelMatrix = scale * m_modelMatrix;
+	m_modelMatrix = glm::translate( m_modelMatrix, translate);
 }
-void Node::rotate(glm::mat4 rotate)
+void Node::scale(glm::vec3 scale)
 {
-	m_modelMatrix = rotate * m_modelMatrix;
+	m_modelMatrix = glm::scale( m_modelMatrix, scale );
+}
+void Node::rotate(float angle, glm::vec3 axis)
+{
+	m_modelMatrix = glm::rotate( m_modelMatrix, angle, axis );
 }
 
 void Node::setParent(Node* parent)
