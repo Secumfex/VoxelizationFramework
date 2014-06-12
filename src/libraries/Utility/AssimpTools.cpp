@@ -51,6 +51,7 @@ namespace AssimpTools
 		const aiScene* pScene = Importer.ReadFile( path,
 				aiProcess_Triangulate |
 				aiProcess_GenSmoothNormals|
+//				aiProcess_GenNormals|
 				aiProcess_GenUVCoords |
 				aiProcess_FlipUVs|
 				aiProcess_ValidateDataStructure |
@@ -196,7 +197,6 @@ namespace AssimpTools
 			glBindBuffer(GL_ARRAY_BUFFER, buffer);
 			glBufferData(GL_ARRAY_BUFFER, sizeof(float)*2*mesh->mNumVertices, &texCoords[0], GL_STATIC_DRAW);
 	        
-			//und texCoordLoc wurde dann auch ersetzt
 			glEnableVertexAttribArray(1);
 			glVertexAttribPointer(1, 2, GL_FLOAT, 0, 0, 0);
 
@@ -205,7 +205,7 @@ namespace AssimpTools
 			if (mesh->HasNormals()) {
 				glGenBuffers(1, &buffer);
 				glBindBuffer(GL_ARRAY_BUFFER, buffer);
-				glBufferData(GL_ARRAY_BUFFER, sizeof(float)*3*mesh->mNumVertices, mesh->mNormals, GL_STATIC_DRAW);
+				glBufferData(GL_ARRAY_BUFFER, sizeof(aiVector3D) * mesh->mNumVertices, mesh->mNormals, GL_STATIC_DRAW);
 
 				glEnableVertexAttribArray(2);
 				glVertexAttribPointer(2, 3, GL_FLOAT, 0, 0, 0);

@@ -101,8 +101,9 @@ public:
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
 			renderables.push_back(testRoomNode);
 
-			RenderableNode* someObjectNode = SimpleScene::loadObject("/stanford/bunny/bunny_blender.dae" , this);
-			someObjectNode->scale( glm::vec3( 25.0f,25.0f,25.0f ) );
+			RenderableNode* someObjectNode = SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
+
+			someObjectNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
 			renderables.push_back(someObjectNode);
 
 			std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this );

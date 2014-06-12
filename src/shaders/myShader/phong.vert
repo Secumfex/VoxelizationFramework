@@ -20,7 +20,7 @@ void main() {
 	passPosition = ( uniformView * worldPos ).xyz;
 	
 	passUV = uvCoordAttribute;
-	passNormal = vec3(transpose(inverse(uniformView * uniformModel)) * normalAttribute);
+	passNormal = normalize ( ( transpose( inverse( uniformView * uniformModel ) ) * normalAttribute ).xyz );
     
     gl_Position = uniformProjection * uniformView * uniformModel * positionAttribute;
 }
