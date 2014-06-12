@@ -8,6 +8,7 @@
 #include "Scene/SceneManager.h"
 #include "WindowManager.h"
 #include "Utility/UtilityListeners.h"
+#include "Utility/Timer.h"
 
 class Application {
 protected:
@@ -22,6 +23,7 @@ protected:
 
 	/*Utility*/
 	bool 			m_terminate;
+	GLFWTimer		m_cycleTimer;
 public:
 	Application();
 	~Application();

@@ -36,7 +36,7 @@ public:
 	GLFWTimer(bool running);
 	~GLFWTimer();
 	virtual void update(float d_t);	// read glfwtime and add actual difference to elapsed time if running
-	virtual void toggleRunning();	//
+	virtual void toggleRunning();
 };
 
 #endif

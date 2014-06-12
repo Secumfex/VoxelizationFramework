@@ -3,6 +3,7 @@
 #include <sstream>
 
 Application::Application()
+ : m_cycleTimer(false)
 {
 	m_name = "Application";
 	m_terminate = false;
@@ -131,6 +132,8 @@ void Application::postInitialize()
 	
 }
 
+#include <sstream>
+
 void Application::run()
 {
 	DEBUGLOG->log("Entering Application main loop ");
@@ -140,14 +143,38 @@ void Application::run()
 	m_windowManager.attachListenerOnWindowClose(terminateListener);
 	m_inputManager. attachListenerOnKeyPress(terminateListener2, GLFW_KEY_ESCAPE, GLFW_PRESS);
 
+	int fps_counter = 0;
+
+	m_cycleTimer.toggleRunning( );
 	while (!m_terminate)
 	{
-		m_sceneManager.update( 0.005f );	//TODO replace with actual frame time
+		m_cycleTimer.update( 0.0f );
+
+
+		/*UGLY : PRINT SOME FPS*/
+		if( fps_counter == 60 )
+		{
+			std::stringstream ss;
+			ss<< 1.0 / m_cycleTimer.getElapsedTime();
+			glfwSetWindowTitle( m_windowManager.getActiveWindow(), ss.str().c_str() );
+			fps_counter = 0;
+		}
+		else
+		{
+			fps_counter++;
+		}
+
+		m_sceneManager.update( m_cycleTimer.getElapsedTime() );	// update with last actual cycle time
+		m_cycleTimer.reset();
+
 		m_renderManager.render();
+
 
 		glfwSwapBuffers(m_windowManager.getActiveWindow());
         glfwPollEvents();
 	}
+
+	m_cycleTimer.toggleRunning();
 
 	DEBUGLOG->log("Quitting Application main loop ");
 	DEBUGLOG->outdent();
