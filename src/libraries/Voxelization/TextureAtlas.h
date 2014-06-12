@@ -11,22 +11,24 @@ namespace TexAtlas
 	Shader* getWriteWorldPositionTextureAtlasShader();
 
 	/**
-	 * This class represents a Texture Atlas, which is derived from a FramebufferObject
+	 * This class represents a Texture Atlas, which is a special type of texture referencing an object
 	 */
-	class TextureAtlas : public FramebufferObject
+	class TextureAtlas : public Texture
 	{
 	protected:
-		Object* p_object; 		// corresponding object
-		Texture* m_texture; 	// texture atlas
+		Object* p_object; 	// corresponding object
 	public:
-		TextureAtlas(int width, int height);
+		TextureAtlas( Object* object = 0, GLuint TextureAtlasHandle = 0);
 		~TextureAtlas();
+
+		Object* 		getObject();
+		void 			setObject( Object* object );
 	};
 
 	/**
 	 * This class represents a Renderer for a Texture Atlas of a Model
 	 * It consists of
-	 * - a FBO with a position texture to which the UV coordinates of the model will be written
+	 * - a FBO with one texture to which the UV coordinates of the model will be written
 	 * - a CameraRenderPass which will render only one object
 	 * - a Camera which will be arbitrarily placed around the Object, to ensure all of it will be rendered
 	 * - a RenderableNode pointer with an Object attached to it which will be rendered
@@ -34,9 +36,13 @@ namespace TexAtlas
 	class TextureAtlasRenderer : public Renderable
 	{
 	protected:
+		TextureAtlas*	m_textureAtlas;		// TextureAtlas to be rendered to
+
 		FramebufferObject* m_fbo;			// FBO to be rendered to
 		CameraRenderPass* m_renderPass;		// Renderpass to be used with this
+
 		Camera*			p_camera;			// arbitrary Camera to be used to render the Object ( should be the same as voxelization camera )
+
 		RenderableNode* p_renderableNode;	// pointer to the object node to be rendered
 
 		/**
@@ -44,8 +50,9 @@ namespace TexAtlas
 		 */
 
 		void configureCamera();
-		void configureRenderPass( int width, int height);
-		void configureFramebufferObject(int width, int height);
+		void configureRenderPass();
+		void configureFramebufferObject();
+		void configureTextureAtlas();
 
 	public:
 		/**
@@ -61,8 +68,18 @@ namespace TexAtlas
 		virtual void render();
 		virtual void uploadUniforms(Shader* shader);
 
-		RenderableNode* getRenderableNodePtr();
-	};
+		RenderableNode* getRenderableNode();
+
+		FramebufferObject* getFbo() ;
+		void setFbo( FramebufferObject* fbo);
+		CameraRenderPass* getRenderPass() ;
+		void setRenderPass( CameraRenderPass* renderPass);
+		TextureAtlas* getTextureAtlas();
+		void setTextureAtlas( TextureAtlas* textureAtlas);
+		Camera* getCamera() ;
+		void setCamera( Camera* camera);
+		void setRenderableNode( RenderableNode* renderableNode);
+};
 
 
 	/**
@@ -74,11 +91,14 @@ namespace TexAtlas
 	protected:
 		std::vector< glm::vec3 > m_vertexPositions;
 		TextureAtlas* p_textureAtlas;
+
 	public:
-		TextureAtlasVertexGenerator( TextureAtlas* textureAtlasPtr );
+		TextureAtlasVertexGenerator( TextureAtlas* textureAtlas );
 		~TextureAtlasVertexGenerator();
 
 		std::vector< glm::vec3 >& getVertexPositions();
+
+		void generateVertexPositions();
 	};
 }
 

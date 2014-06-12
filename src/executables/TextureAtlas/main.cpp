@@ -8,7 +8,7 @@
 #include <Rendering/CustomRenderPasses.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
-#include <Voxelization/VoxelGrid.h>
+#include <Voxelization/TextureAtlas.h>
 
 #include <Misc/MiscListeners.h>
 #include <Misc/Turntable.h>
@@ -19,6 +19,8 @@
 class TextureAtlasBuildingApp : public Application
 {
 private:
+
+	TexAtlas::TextureAtlasRenderer* m_textureAtlasRenderer;
 
 	CameraRenderPass* createUVRenderPass( )
 	{
@@ -49,7 +51,7 @@ private:
 	CameraRenderPass* createPhongRenderPass( )
 	{
 		DEBUGLOG->indent();
-		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/textureAtlas/worldPosition_backfaceCulling.frag");
+		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_persp.frag");
 		FramebufferObject* fbo = new FramebufferObject(512,512);
 		fbo->addColorAttachments(1);
 
@@ -70,6 +72,16 @@ private:
 		m_renderManager.addRenderPass(phongPerspectiveRenderPass);
 
 		return phongPerspectiveRenderPass;
+	}
+
+	TexAtlas::TextureAtlasRenderer* createTextureAtlasRenderer( RenderableNode* renderableNode )
+	{
+		DEBUGLOG->log("Creating TextureAtlasRenderer for provided renderable node");
+		DEBUGLOG->indent();
+			m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderer( renderableNode, 512, 512 );
+		DEBUGLOG->outdent();
+
+		return m_textureAtlasRenderer;
 	}
 
 public:
@@ -104,6 +116,11 @@ public:
 				someObjectNode->setParent( rotatingNodes.second );
 			DEBUGLOG->outdent();
 
+		DEBUGLOG->outdent();
+
+		DEBUGLOG->log("Configuring Voxelization");
+		DEBUGLOG->indent();
+			TexAtlas::TextureAtlasRenderer* textureAtlasRenderer = createTextureAtlasRenderer( someObjectNode );
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Configuring Rendering");
@@ -141,10 +158,6 @@ public:
 			CameraRenderPass* UVRenderPass = createUVRenderPass( );
 
 			DEBUGLOG->log("Adding objects to uv render pass");
-//			for (unsigned int i = 0; i < renderables.size(); i++)
-//			{
-//				UVRenderPass->addRenderable( renderables[i] );
-//			}
 
 			UVRenderPass->addRenderable( someObjectNode );
 
@@ -158,6 +171,8 @@ public:
 					Texture* renderPassUVTexture = new Texture();
 					renderPassUVTexture->setTextureHandle(UVRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 					showRenderPassUV->addUniformTexture(renderPassUVTexture, "uniformTexture");
+
+//TODO				showRenderPassUV->addUniformTexture(textureAtlasRenderer->getTextureAtlas(), "uniformTexture");
 
 					m_renderManager.addRenderPass(showRenderPassUV);
 				DEBUGLOG->outdent();
@@ -178,13 +193,10 @@ public:
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
 
 			DEBUGLOG->log("Adding a Timer to the scene for fun");
-			GLFWTimer* glfwTimer = new GLFWTimer(true);
-			m_inputManager.attachListenerOnKeyPress(new DebugPrintDoubleListener( glfwTimer->getElapsedTimePtr( ), "Elapsed Time: " ), GLFW_KEY_SPACE, GLFW_PRESS);
-			scene->addUpdatable( glfwTimer );
+			m_inputManager.attachListenerOnKeyPress(new DebugPrintDoubleListener( m_cycleTimer.getElapsedTimePtr(), "Elapsed Time: " ), GLFW_KEY_SPACE, GLFW_PRESS);
 
 			scene->addUpdatable(turntable);
 		DEBUGLOG->outdent();
-
 	}
 };
 

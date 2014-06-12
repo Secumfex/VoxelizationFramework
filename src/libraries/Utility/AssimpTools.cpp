@@ -167,6 +167,10 @@ namespace AssimpTools
 				glEnableVertexAttribArray(0);
 				glVertexAttribPointer(0, 3, GL_FLOAT, 0, 0, 0);
 			}
+			else
+			{
+				DEBUGLOG->log("WARNING : Object has no VERTICES");
+			}
 
 			// generate texture coordinates buffer
 			vector <float>texCoords;
@@ -180,6 +184,7 @@ namespace AssimpTools
 			}
 			else
 			{
+				DEBUGLOG->log("WARNING : Object has no UV COORDINATES");
 				for(unsigned int k = 0; k < mesh->mNumVertices; ++k){
 					texCoords.push_back(k * uv_steps);
 					texCoords.push_back(k * uv_steps);
@@ -205,6 +210,10 @@ namespace AssimpTools
 				glEnableVertexAttribArray(2);
 				glVertexAttribPointer(2, 3, GL_FLOAT, 0, 0, 0);
 			}
+			else
+			{
+				DEBUGLOG->log("WARNING : Object has no NORMALS");
+			}
 
 			// generate tangent buffer
 			buffer = 0;
@@ -215,6 +224,10 @@ namespace AssimpTools
 
 				glEnableVertexAttribArray(3);
 				glVertexAttribPointer(3, 3, GL_FLOAT, 0, 0, 0);
+			}
+			else
+			{
+				DEBUGLOG->log("WARNING : Object has no TANGENTS AND BITANGENTS");
 			}
 
 			// unbind buffers

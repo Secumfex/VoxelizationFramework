@@ -140,6 +140,10 @@ void FramebufferObject::setNumColorAttachments(int numColorAttachments) {
 	m_numColorAttachments = numColorAttachments;
 }
 
+FramebufferObject::~FramebufferObject() {
+	// TODO free OpenGL textures etc.
+}
+
 void FramebufferObject::setWidth(int width) {
 	m_width = width;
 }
