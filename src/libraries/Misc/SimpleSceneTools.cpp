@@ -74,12 +74,12 @@ std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app)
 	result.first = positionNode;
 
 	RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
-	yAxisRotationNode->setAngle(0.02f);
+	yAxisRotationNode->setAngle(0.05f);
 	yAxisRotationNode->setRotationAxis( glm::vec3( 0.0f, 1.0f, 0.0f ) );
 
 	RotatingNode* rotatingNode = new RotatingNode(yAxisRotationNode);
 	rotatingNode->setRotationAxis(glm::vec3 ( 1.0f, 1.0f, 0.1f));
-	rotatingNode->setAngle(0.5f);
+	rotatingNode->setAngle(0.2f);
 	result.second = rotatingNode;
 
 	DEBUGLOG->log("Adding updatable rotation nodes to scene");

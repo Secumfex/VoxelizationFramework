@@ -21,6 +21,9 @@ private:
 	std::map< GLenum, GLuint > m_colorAttachments;
 	std::vector<GLenum > m_drawBuffers;
 public:
+
+	static GLenum internalFormat;
+
 	FramebufferObject(int width = 800, int height = 600);
 	~FramebufferObject();
 

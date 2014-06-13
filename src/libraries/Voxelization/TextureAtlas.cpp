@@ -154,7 +154,7 @@ void TexAtlas::TextureAtlasVertexGenerator::generateVertexPositions() {
 			int pixelIndex = ( ( (y *  width) * 4 ) + (x * 4) );
 			if ( pixels[ pixelIndex + 3 ] != 0.0f )
 			{
-				m_vertexPositions.push_back( glm::vec3( x / ( (float) width ), y / ( (float) height ), 0.0f) );	// push back corresponding pixel coordinates
+				m_vertexPositions.push_back( glm::vec3( ( (float) x + 0.25f ) / ( (float) width ), ( (float) y + 0.25f ) / ( (float) height ), 0.0f) );	// push back corresponding pixel coordinates
 			}
 		}
 	}
@@ -165,7 +165,7 @@ void TexAtlas::TextureAtlasVertexGenerator::generateVertexArrayObject()
 	Model *pixels = new Model;
 	Material *mat = new Material();
 
-	mat->setTexture("diffuseTexture", p_textureAtlas);
+	mat->setTexture("uniformTexture", p_textureAtlas);
 
 	GLuint vertexArrayHandle;
 
@@ -253,3 +253,23 @@ Object* TexAtlas::TextureAtlasVertexGenerator::getPixelsObject() {
 void TexAtlas::TextureAtlasVertexGenerator::setPixelsObject(Object* pixelsObject) {
 	m_pixelsObject = pixelsObject;
 }
+
+//TexAtlas::TextureAtlasVerticesObject::TextureAtlasVerticesObject( TextureAtlas* textureAtlasPtr )
+//{
+//	p_textureAtlas = textureAtlasPtr;
+//}
+//
+//TexAtlas::TextureAtlasVerticesObject::~TextureAtlasVerticesObject()
+//{
+//}
+//
+//void TexAtlas::TextureAtlasVerticesObject::render()
+//{
+//
+//}
+//
+//void TexAtlas::TextureAtlasVerticesObject::uploadUniforms(Shader* shader)
+//{
+//	shader->uploadUniform()
+//}
+

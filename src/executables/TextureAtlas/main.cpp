@@ -76,15 +76,21 @@ private:
 	}
 
 	/**
-	 * 	creates a Texture Atlas Renderpass for the provided renderable node
-	 * @param renderableNode
+	 * 	creates a Texture Atlas Renderpass for the provided renderable node in the provided resolution
+	 * @param renderableNode node with object to be used
+	 * @param atlasResolution desired resolution of atlas to be created
 	 * @return
 	 */
-	TexAtlas::TextureAtlasRenderPass* createTextureAtlasRenderPass( RenderableNode* renderableNode )
+	TexAtlas::TextureAtlasRenderPass* createTextureAtlasRenderPass( RenderableNode* renderableNode , int atlasResolution = 512)
 	{
 		DEBUGLOG->log("Creating TextureAtlasRenderPass for provided renderable node");
 		DEBUGLOG->indent();
-			m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderPass( renderableNode, 512, 512 );
+			GLenum internalFormat = FramebufferObject::internalFormat;
+			FramebufferObject::internalFormat = GL_RGBA32F_ARB;	// change this first
+
+			m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderPass( renderableNode, atlasResolution, atlasResolution );
+
+			FramebufferObject::internalFormat = internalFormat;	// restore default
 		DEBUGLOG->outdent();
 
 		return m_textureAtlasRenderer;
@@ -144,13 +150,11 @@ public:
 
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
-			TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode );
+			TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode , 256);
 
 			m_renderManager.addRenderPass( textureAtlasRenderPass );
 
 			TexAtlas::TextureAtlasVertexGenerator* textureAtlasVertexGenerator = createTextureAtlasVertexGenerator( textureAtlasRenderPass->getTextureAtlas() );
-
-//			attach(textureAtlasVertexGenerator, "POST_PROGRAM_CYCLE");	// attach to post program cycle
 		DEBUGLOG->outdent();
 
 
@@ -184,7 +188,7 @@ public:
 					renderPassPerspectiveTexture->setTextureHandle(phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 					showRenderPassPerspective->addUniformTexture(renderPassPerspectiveTexture, "uniformTexture");
 
-					m_renderManager.addRenderPass(showRenderPassPerspective);
+					// dont add yet
 				DEBUGLOG->outdent();
 
 				DEBUGLOG->indent();
@@ -234,12 +238,22 @@ public:
 
 			RenderableNode* verticesNode = new RenderableNode( scene->getSceneGraph()->getRootNode());
 			verticesNode->setObject( m_textureAtlasVertexGenerator->getPixelsObject() );
-			verticesNode->scale( glm::vec3(5.0f, 5.0f, 5.0f) );
-			verticesNode->translate( glm::vec3( 3.0f, -2.5f, 0.0f ) );
+//			verticesNode->scale( glm::vec3(5.0f, 5.0f, 5.0f) );
+//			verticesNode->translate( glm::vec3( 3.0f, -2.5f, 0.0f ) );
 
 			glPointSize( 3.0f );
 
-			phongPerspectiveRenderPass->addRenderable( verticesNode );
+			// a Renderpass which transforms the vertices to the world position proposed by the texture atlas
+			Shader* transformTextureAtlasShader = new Shader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" , SHADERS_PATH "/screenspace/simpleTexture.frag");
+			CameraRenderPass* transformVerticesByTextureAtlasRenderPass = new CameraRenderPass(transformTextureAtlasShader, phongPerspectiveRenderPass->getFramebufferObject());
+			transformVerticesByTextureAtlasRenderPass->setCamera( phongPerspectiveRenderPass->getCamera() );
+			transformVerticesByTextureAtlasRenderPass->addRenderable( verticesNode );
+			transformVerticesByTextureAtlasRenderPass->addEnable(GL_DEPTH_TEST);
+
+			m_renderManager.addRenderPass( transformVerticesByTextureAtlasRenderPass );
+
+			// add screen fill render pass now
+			m_renderManager.addRenderPass(showRenderPassPerspective);
 		DEBUGLOG->outdent();
 	}
 };

@@ -107,6 +107,19 @@ namespace TexAtlas
 		void setPixelsObject(Object* pixelsObject);
 		Object* getPixelsObject();
 	};
+
+
+	class TextureAtlasVerticesObject : public Object
+	{
+	protected:
+		TextureAtlas* p_textureAtlas;	// texture atlas corresponding to this object
+	public:
+		TextureAtlasVerticesObject( TextureAtlas* textureAtlasPtr );
+		virtual ~TextureAtlasVerticesObject();
+
+		virtual void render();
+		virtual void uploadUniforms(Shader* shader);
+	};
 }
 
 #endif
