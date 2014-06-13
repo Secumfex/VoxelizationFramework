@@ -24,7 +24,7 @@ protected:
 	Subject* m_subject;
 public:
 	Listener();
-	~Listener();
+	virtual ~Listener();
 
 	virtual void call() = 0;
 	void detach();

@@ -39,9 +39,11 @@ void Subject::detach( Listener* listener )
 
 void Subject::call ( std::string interface )
 {
-	for ( std::list <Listener* >::iterator it = m_listeners[interface].begin(); it != m_listeners[interface].end(); ++it)
+	for ( std::list <Listener* >::iterator it = m_listeners[interface].begin(); it != m_listeners[interface].end(); )
 	{
-		(*it)->call();
+		Listener* listener = (*it);
+		++it;
+		listener->call();
 	}
 }
 
@@ -49,7 +51,7 @@ void Subject::call ( std::string interface )
 
 Listener::Listener()
 {
-
+	m_subject = 0;
 }
 
 Listener::~Listener()
