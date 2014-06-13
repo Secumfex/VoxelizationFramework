@@ -111,6 +111,7 @@ Object* TexAtlas::TextureAtlas::getObject() {
 TexAtlas::TextureAtlasVertexGenerator::TextureAtlasVertexGenerator(
 		TextureAtlas* textureAtlas) {
 	p_textureAtlas = textureAtlas;
+	m_pixelsObject = 0;
 }
 
 TexAtlas::TextureAtlasVertexGenerator::~TextureAtlasVertexGenerator() {
@@ -121,10 +122,6 @@ std::vector<glm::vec3>& TexAtlas::TextureAtlasVertexGenerator::getVertexPosition
 }
 
 void TexAtlas::TextureAtlasVertexGenerator::generateVertexPositions() {
-	// TODO : read texture ( using glGet... or something )
-	// for every valid texel ( alpha == 1.0f )
-		// push back glm::vec3 at this x,y coordinate ( set z = 0.0f )
-
 
 	// retrieve width and height
 	GLint width = 0;
@@ -137,16 +134,16 @@ void TexAtlas::TextureAtlasVertexGenerator::generateVertexPositions() {
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0,GL_TEXTURE_HEIGHT, &height);
 
 	// retrieve the image and save as an array
-	GLuint* pixels = new GLuint[ width * height * 4];
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT, pixels);
+	GLubyte* pixels = new GLubyte[ width * height * 4];
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
 	DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : retrieved width : ", width );
 	DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : retrieved height: ", height );
 
 	// alternative : retrieve the image as an PBO
-	// TODO create a PBO with GL_STREAM_READ
-	// TODO Bind it for pack
-	// TODO glMapBuffer to access
+	// create a PBO with GL_STREAM_READ
+	// Bind it for pack
+	// glMapBuffer to access
 
 	// iterate over texture
 	for ( int y = 0; y < height; y++ )
@@ -154,12 +151,78 @@ void TexAtlas::TextureAtlasVertexGenerator::generateVertexPositions() {
 		for( int x = 0; x < width; x++)
 		{
 			// valid texture atlas pixel : alpha is != 0.0f
-			if ( pixels[ ( y *  width ) + (x * 4) + 3 ] != 0.0f )
+			int pixelIndex = ( ( (y *  width) * 4 ) + (x * 4) );
+			if ( pixels[ pixelIndex + 3 ] != 0.0f )
 			{
-				m_vertexPositions.push_back( glm::vec3( x, y, 0.0f) );	// push back corresponding pixel coordinates
+				m_vertexPositions.push_back( glm::vec3( x / ( (float) width ), y / ( (float) height ), 0.0f) );	// push back corresponding pixel coordinates
 			}
 		}
 	}
+}
+
+void TexAtlas::TextureAtlasVertexGenerator::generateVertexArrayObject()
+{
+	Model *pixels = new Model;
+	Material *mat = new Material();
+
+	mat->setTexture("diffuseTexture", p_textureAtlas);
+
+	GLuint vertexArrayHandle;
+
+	glGenVertexArrays(1, &vertexArrayHandle);
+	glBindVertexArray(vertexArrayHandle);
+
+	std::vector <GLint> indices;
+	std::vector <GLfloat> vertices;
+	std::vector <GLfloat> uvCoords;
+
+	 // buffer vertices
+	for( unsigned int i = 0; i < m_vertexPositions.size(); i++)
+	{
+		for (unsigned int c = 0; c < 3; c++)
+		{
+			vertices.push_back( m_vertexPositions[i][c] );
+			if ( c < 2 )
+			{
+				uvCoords.push_back( m_vertexPositions[i][c] );
+			}
+			indices.push_back(i);
+		}
+	}
+
+	GLuint indexBufferHandle;
+	glGenBuffers(1, &indexBufferHandle);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLint) * indices.size(), &indices[0], GL_STATIC_DRAW);
+
+	// buffer vertices
+	GLuint vertexBufferHandle;
+	glGenBuffers(1, &vertexBufferHandle);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+	// buffer uv coords
+	GLuint uvBufferHandle;
+	glGenBuffers(1, &uvBufferHandle);
+	glBindBuffer(GL_ARRAY_BUFFER, uvBufferHandle);
+
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * uvCoords.size(), &uvCoords[0], GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+	pixels->setVAOHandle(vertexArrayHandle);
+	pixels->setNumIndices( indices.size() );
+	pixels->setNumVertices( vertices.size() );
+	pixels->setNumFaces(0);
+
+	m_pixelsObject = new Object(pixels,mat);
+	m_pixelsObject->setRenderMode( GL_POINTS );
 }
 
 void TexAtlas::TextureAtlasVertexGenerator::call()
@@ -169,11 +232,24 @@ void TexAtlas::TextureAtlasVertexGenerator::call()
 		DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : generating Vertex Positions from Texture Atlas");
 		DEBUGLOG->indent();
 			generateVertexPositions();
+			DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : generated Vertices :", m_vertexPositions.size( ) );
 		DEBUGLOG->outdent();
 
-		DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : generated Vertices :", m_vertexPositions.size( ) );
+		DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : generating Vertex Array Object");
+		DEBUGLOG->indent();
+			generateVertexArrayObject();
+		DEBUGLOG->outdent();
+
 
 		detach();
 		DEBUGLOG->log("TEXTURE ATLAS VERTEX GENERATOR : detached from subject");
 	}
+}
+
+Object* TexAtlas::TextureAtlasVertexGenerator::getPixelsObject() {
+	return m_pixelsObject;
+}
+
+void TexAtlas::TextureAtlasVertexGenerator::setPixelsObject(Object* pixelsObject) {
+	m_pixelsObject = pixelsObject;
 }

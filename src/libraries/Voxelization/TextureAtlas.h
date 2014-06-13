@@ -91,6 +91,7 @@ namespace TexAtlas
 		std::vector< glm::vec3 > m_vertexPositions;
 		TextureAtlas* p_textureAtlas;
 
+		Object* m_pixelsObject;
 	public:
 		TextureAtlasVertexGenerator( TextureAtlas* textureAtlas );
 		virtual ~TextureAtlasVertexGenerator();
@@ -99,7 +100,12 @@ namespace TexAtlas
 
 		void generateVertexPositions();
 
+		void generateVertexArrayObject();
+
 		void call();			// generate Vertex Positions if empty
+
+		void setPixelsObject(Object* pixelsObject);
+		Object* getPixelsObject();
 	};
 }
 

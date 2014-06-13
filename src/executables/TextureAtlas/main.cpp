@@ -106,7 +106,6 @@ public:
 	{
 
 	}
-
 	void postInitialize()
 	{
 		/**************************************************************************************
@@ -151,7 +150,7 @@ public:
 
 			TexAtlas::TextureAtlasVertexGenerator* textureAtlasVertexGenerator = createTextureAtlasVertexGenerator( textureAtlasRenderPass->getTextureAtlas() );
 
-			attach(textureAtlasVertexGenerator, "POST_PROGRAM_CYCLE");	// attach to post program cycle
+//			attach(textureAtlasVertexGenerator, "POST_PROGRAM_CYCLE");	// attach to post program cycle
 		DEBUGLOG->outdent();
 
 
@@ -219,6 +218,28 @@ public:
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
 
 			scene->addUpdatable(turntable);
+		DEBUGLOG->outdent();
+
+
+		/**************************************************************************************
+		 * 								INITIALIZE TEXTURE ATLAS
+		 **************************************************************************************/
+		DEBUGLOG->log("Initializing Texture Atlas functionality");
+		DEBUGLOG->indent();
+			DEBUGLOG->log("Generating Texture Atlas valid coordinates");
+			m_textureAtlasRenderer->render();	// render texture atlas once so it can be validated
+
+			DEBUGLOG->log("Generating Texture Atlas vertex array object");
+			m_textureAtlasVertexGenerator->call();	// generate vertices from texture atlas
+
+			RenderableNode* verticesNode = new RenderableNode( scene->getSceneGraph()->getRootNode());
+			verticesNode->setObject( m_textureAtlasVertexGenerator->getPixelsObject() );
+			verticesNode->scale( glm::vec3(5.0f, 5.0f, 5.0f) );
+			verticesNode->translate( glm::vec3( 3.0f, -2.5f, 0.0f ) );
+
+			glPointSize( 3.0f );
+
+			phongPerspectiveRenderPass->addRenderable( verticesNode );
 		DEBUGLOG->outdent();
 	}
 };
