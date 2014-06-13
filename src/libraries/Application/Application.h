@@ -9,8 +9,9 @@
 #include "WindowManager.h"
 #include "Utility/UtilityListeners.h"
 #include "Utility/Timer.h"
+#include "Utility/SubjectListenerPattern.h"
 
-class Application {
+class Application : public Subject{
 protected:
 	std::string m_name;
 

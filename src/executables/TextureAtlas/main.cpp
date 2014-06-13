@@ -20,7 +20,8 @@ class TextureAtlasBuildingApp : public Application
 {
 private:
 
-	TexAtlas::TextureAtlasRenderer* m_textureAtlasRenderer;
+	TexAtlas::TextureAtlasRenderPass* m_textureAtlasRenderer;
+	TexAtlas::TextureAtlasVertexGenerator* m_textureAtlasVertexGenerator;
 
 	CameraRenderPass* createUVRenderPass( )
 	{
@@ -74,14 +75,30 @@ private:
 		return phongPerspectiveRenderPass;
 	}
 
-	TexAtlas::TextureAtlasRenderer* createTextureAtlasRenderer( RenderableNode* renderableNode )
+	/**
+	 * 	creates a Texture Atlas Renderpass for the provided renderable node
+	 * @param renderableNode
+	 * @return
+	 */
+	TexAtlas::TextureAtlasRenderPass* createTextureAtlasRenderPass( RenderableNode* renderableNode )
 	{
-		DEBUGLOG->log("Creating TextureAtlasRenderer for provided renderable node");
+		DEBUGLOG->log("Creating TextureAtlasRenderPass for provided renderable node");
 		DEBUGLOG->indent();
-			m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderer( renderableNode, 512, 512 );
+			m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderPass( renderableNode, 512, 512 );
 		DEBUGLOG->outdent();
 
 		return m_textureAtlasRenderer;
+	}
+
+
+	TexAtlas::TextureAtlasVertexGenerator* createTextureAtlasVertexGenerator( 	TexAtlas::TextureAtlas* textureAtlas )
+	{
+		DEBUGLOG->log("Creating TextureAtlasVertexGenerator for provided texture Atlas");
+		DEBUGLOG->indent();
+			m_textureAtlasVertexGenerator = new TexAtlas::TextureAtlasVertexGenerator( textureAtlas );
+		DEBUGLOG->outdent();
+
+		return m_textureAtlasVertexGenerator;
 	}
 
 public:
@@ -92,6 +109,9 @@ public:
 
 	void postInitialize()
 	{
+		/**************************************************************************************
+		 * 								   OBJECT LOADING
+		 **************************************************************************************/
 		Scene* scene = SimpleScene:: createNewScene ( this );
 
 		DEBUGLOG->log("Loading some objects");
@@ -113,17 +133,31 @@ public:
 				testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
 
 				rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
-	//			overlappingGeometryNode->setParent( rotatingNodes.second );
+
 				someObjectNode->setParent( rotatingNodes.second );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
 
+		/**************************************************************************************
+		 * 								   VOXELIZATION
+		 **************************************************************************************/
+
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
-			TexAtlas::TextureAtlasRenderer* textureAtlasRenderer = createTextureAtlasRenderer( someObjectNode );
+			TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode );
+
+			m_renderManager.addRenderPass( textureAtlasRenderPass );
+
+			TexAtlas::TextureAtlasVertexGenerator* textureAtlasVertexGenerator = createTextureAtlasVertexGenerator( textureAtlasRenderPass->getTextureAtlas() );
+
+			attach(textureAtlasVertexGenerator, "POST_PROGRAM_CYCLE");	// attach to post program cycle
 		DEBUGLOG->outdent();
 
+
+		/**************************************************************************************
+		 * 									RENDERING
+		 **************************************************************************************/
 		DEBUGLOG->log("Configuring Rendering");
 		DEBUGLOG->indent();
 
@@ -139,6 +173,7 @@ public:
 
 			DEBUGLOG->log("Creating screen filling triangle render passes");
 			DEBUGLOG->indent();
+				DEBUGLOG->log("Creating texture presentation shader");
 				Shader* showTexture = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/screenspace/simpleTexture.frag");
 
 				DEBUGLOG->indent();
@@ -152,34 +187,23 @@ public:
 
 					m_renderManager.addRenderPass(showRenderPassPerspective);
 				DEBUGLOG->outdent();
-			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Creating perspective phong renderpass");
-
-			CameraRenderPass* UVRenderPass = createUVRenderPass( );
-
-			DEBUGLOG->log("Adding objects to uv render pass");
-
-			UVRenderPass->addRenderable( someObjectNode );
-
-			DEBUGLOG->log("Creating screen filling triangle render passes");
-			DEBUGLOG->indent();
 				DEBUGLOG->indent();
-				DEBUGLOG->log("Creating screen filling triangle rendering for UV render pass");
-					TriangleRenderPass* showRenderPassUV = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
-					showRenderPassUV->setViewport(512,0,512,512);
+				DEBUGLOG->log("Creating screen filling triangle rendering for Texture Atlas render pass");
+					TriangleRenderPass* showTextureAtlasRenderPass = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+					showTextureAtlasRenderPass->setViewport(512,0,512,512);
 
-					Texture* renderPassUVTexture = new Texture();
-					renderPassUVTexture->setTextureHandle(UVRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
-					showRenderPassUV->addUniformTexture(renderPassUVTexture, "uniformTexture");
+					showTextureAtlasRenderPass->addUniformTexture(textureAtlasRenderPass->getTextureAtlas(), "uniformTexture");
 
-//TODO				showRenderPassUV->addUniformTexture(textureAtlasRenderer->getTextureAtlas(), "uniformTexture");
-
-					m_renderManager.addRenderPass(showRenderPassUV);
+					m_renderManager.addRenderPass(showTextureAtlasRenderPass);
 				DEBUGLOG->outdent();
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 									INPUT
+		 **************************************************************************************/
 
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();

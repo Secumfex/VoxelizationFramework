@@ -147,8 +147,13 @@ void Application::run()
 	double fps_accumulator;
 
 	m_cycleTimer.toggleRunning( );
+
+	call("ENTER_PROGRAM_CYCLE");
+
 	while (!m_terminate)
 	{
+		call("PRE_PROGRAM_CYCLE");
+
 		m_cycleTimer.update( 0.0f );
 
 		/*UGLY : PRINT SOME FPS*/
@@ -171,10 +176,13 @@ void Application::run()
 
 		m_renderManager.render();
 
-
 		glfwSwapBuffers(m_windowManager.getActiveWindow());
         glfwPollEvents();
+
+        call("POST_PROGRAM_CYCLE");
 	}
+
+	call("QUIT_PROGRAM_CYCLE");
 
 	m_cycleTimer.toggleRunning();
 
