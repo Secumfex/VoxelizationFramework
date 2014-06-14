@@ -4,6 +4,7 @@
 #include <Application/Application.h>
 #include <Scene/Camera.h>
 #include <Scene/RenderableNode.h>
+#include <Misc/Turntable.h>
 
 namespace SimpleScene
 {
@@ -19,6 +20,8 @@ namespace SimpleScene
 	std::pair<Node*, Node*> createRotatingNodes( Application* app );
 
 	void configureSimpleCameraMovement(Camera* movableCam, Application* app);
+
+	Turntable* configureTurnTable( Node* node, Application* app);
 }
 
 #endif

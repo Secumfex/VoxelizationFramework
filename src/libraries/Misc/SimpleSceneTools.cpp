@@ -121,5 +121,16 @@ void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,
 		DEBUGLOG->log("Adding updatable camera to scene");
 		scene->addUpdatable(movableCam);
 	}
+}
 
+Turntable* SimpleScene::configureTurnTable(Node* node, Application* app)
+{
+	Turntable* turntable = new Turntable( app->getSceneManager().getActiveScene()->getSceneGraph()->getRootNode(), &(app->getInputManager() ));
+	turntable->setSensitivity(0.1f);
+
+	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
+	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+
+	app->getSceneManager().getActiveScene()->addUpdatable(turntable);
+	return turntable;
 }

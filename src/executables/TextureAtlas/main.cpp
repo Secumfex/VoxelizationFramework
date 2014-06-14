@@ -148,12 +148,14 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
-		 * 								   VOXELIZATION
+		 * 								   TEXTURE ATLAS CONFIG
 		 **************************************************************************************/
 
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
-
+			/**
+			*	1 : Configure Texture Atlases	
+			*/
 			TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode , textureAtlasResolution);
 
 			m_renderManager.addRenderPass( textureAtlasRenderPass );
@@ -163,7 +165,7 @@ public:
 
 
 		/**************************************************************************************
-		 * 									RENDERING
+		 * 									REGULAR RENDERING
 		 **************************************************************************************/
 		DEBUGLOG->log("Configuring Rendering");
 		DEBUGLOG->indent();
@@ -209,28 +211,7 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
-		 * 									INPUT
-		 **************************************************************************************/
-
-		DEBUGLOG->log("Configuring Input");
-		DEBUGLOG->indent();
-			DEBUGLOG->log("Configuring camera movement");
-			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
-			SimpleScene::configureSimpleCameraMovement(movableCam, this);
-
-			DEBUGLOG->log("Configuring Turntable for root node");
-			Turntable* turntable = new Turntable(scene->getSceneGraph()->getRootNode(), &m_inputManager);
-			turntable->setSensitivity(0.1f);
-
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
-
-			scene->addUpdatable(turntable);
-		DEBUGLOG->outdent();
-
-
-		/**************************************************************************************
-		 * 								INITIALIZE TEXTURE ATLAS
+		 * 								TEXTURE ATLAS INITIALIZATION
 		 **************************************************************************************/
 		DEBUGLOG->log("Initializing Texture Atlas functionality");
 		DEBUGLOG->indent();
@@ -256,6 +237,28 @@ public:
 
 			// add screen fill render pass now
 			m_renderManager.addRenderPass(showRenderPassPerspective);
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 								VOXELIZATION
+		 **************************************************************************************/
+		// TODO : neuer Shader - VertexShader: textureAtlasWorldPosition.vert , Fragmentshader: slicemap.frag
+		// neuer Rednerpass --> Voxelvolumen-Kamera, Slicemap Framebuffer, o.g. Shader
+
+
+		/**************************************************************************************
+		 * 									INPUT
+		 **************************************************************************************/
+
+		DEBUGLOG->log("Configuring Input");
+		DEBUGLOG->indent();
+			DEBUGLOG->log("Configuring camera movement");
+			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
+			SimpleScene::configureSimpleCameraMovement(movableCam, this);
+
+			DEBUGLOG->log("Configuring Turntable for root node");
+			Turntable* turntable = SimpleScene::configureTurnTable( scene->getSceneGraph()->getRootNode(), this);
+
 		DEBUGLOG->outdent();
 	}
 };
