@@ -9,8 +9,8 @@ SliceMap::SliceMapRenderPass::SliceMapRenderPass(Shader* shader,
 	m_numSliceMaps = 1;
 	if (fbo)
 	{
-		m_viewport.z = fbo->getWidth();
-		m_viewport.w = fbo->getHeight();
+		m_viewport.z = (float) fbo->getWidth();
+		m_viewport.w = (float) fbo->getHeight();
 		m_numSliceMaps = fbo->getNumColorAttachments();
 	}
 	m_camera = 0;

@@ -144,7 +144,7 @@ void Application::run()
 	m_inputManager. attachListenerOnKeyPress(terminateListener2, GLFW_KEY_ESCAPE, GLFW_PRESS);
 
 	int fps_counter = 0;
-	double fps_accumulator;
+	double fps_accumulator = 0.0;
 
 	m_cycleTimer.toggleRunning( );
 
@@ -171,7 +171,7 @@ void Application::run()
 			fps_accumulator += m_cycleTimer.getElapsedTime();
 		}
 
-		m_sceneManager.update( m_cycleTimer.getElapsedTime() );	// update with last actual cycle time
+		m_sceneManager.update( (float) m_cycleTimer.getElapsedTime() );	// update with last actual cycle time
 		m_cycleTimer.reset();
 
 		m_renderManager.render();

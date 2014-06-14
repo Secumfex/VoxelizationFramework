@@ -12,7 +12,7 @@ WindowManager::~WindowManager()
 
 void WindowManager::closeWindows()
 {
-	for (int i = 0; i < m_windows.size(); i++)
+	for (unsigned int i = 0; i < m_windows.size(); i++)
 	{
 		glfwDestroyWindow(m_windows[i]);
 	}
@@ -96,7 +96,7 @@ void WindowManager::bindAsGlobalWindowManager()
 
 void WindowManager::destroyWindow(GLFWwindow* window)
 {
-	for (int i = 0; i < m_windows.size(); i++)
+	for (unsigned int i = 0; i < m_windows.size(); i++)
 	{
 		if (m_windows[i] == window)
 		{

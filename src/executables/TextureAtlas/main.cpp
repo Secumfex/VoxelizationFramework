@@ -16,6 +16,9 @@
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
 
+static int textureAtlasResolution   = 256;
+static int voxelGridResolution		= 256;
+
 class TextureAtlasBuildingApp : public Application
 {
 private:
@@ -150,7 +153,8 @@ public:
 
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
-			TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode , 256);
+
+			TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode , textureAtlasResolution);
 
 			m_renderManager.addRenderPass( textureAtlasRenderPass );
 
@@ -238,8 +242,6 @@ public:
 
 			RenderableNode* verticesNode = new RenderableNode( scene->getSceneGraph()->getRootNode());
 			verticesNode->setObject( m_textureAtlasVertexGenerator->getPixelsObject() );
-//			verticesNode->scale( glm::vec3(5.0f, 5.0f, 5.0f) );
-//			verticesNode->translate( glm::vec3( 3.0f, -2.5f, 0.0f ) );
 
 			glPointSize( 3.0f );
 

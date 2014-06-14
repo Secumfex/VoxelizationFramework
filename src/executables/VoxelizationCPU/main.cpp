@@ -3,7 +3,6 @@
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
 
-
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
 #include <Rendering/CustomRenderPasses.h>

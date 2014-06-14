@@ -162,13 +162,13 @@ void Camera::setCenter(glm::vec3 center){
 }
 
 void Camera::clampPhiTheta(){
-	m_phi = std::fmod (m_phi , 2.0*PI);
+	m_phi = std::fmod (m_phi , 2.0f * PI);
 
-	if (m_theta >= PI / 2.0){
-		m_theta =  PI / 2.0 - 0.001;
+	if (m_theta >= PI / 2.0f){
+		m_theta =  PI / 2.0f - 0.001f;
 	}
-	if (m_theta <= -PI / 2.0){
-		m_theta = -PI / 2.0 + 0.001;
+	if (m_theta <= -PI / 2.0f ){
+		m_theta = -PI / 2.0f + 0.001f;
 	}
 }
 

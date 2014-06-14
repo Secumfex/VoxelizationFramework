@@ -5,6 +5,9 @@
 
 using namespace Grid;
 
+double trunc(double d){ return (d>0) ? floor(d) : ceil(d) ; }
+float trunc(float d){ return (d>0) ? floor(d) : ceil(d) ; }
+
 VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
 	: Object(new Model(), new Material())
 {
@@ -142,7 +145,7 @@ void Grid::AxisAlignedVoxelGrid::setZ(float z) {
 GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
 {
 	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
-	return VoxelGrid::getGridCell(gridPos.x, gridPos.y, gridPos.z);
+	return VoxelGrid::getGridCell( (int) gridPos.x, (int) gridPos.y, (int) gridPos.z);
 }
 
 #include <cmath>

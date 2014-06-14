@@ -8,8 +8,8 @@ RenderPass::RenderPass(Shader* shader, FramebufferObject* fbo)
 	m_clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	if (fbo)
 	{
-		m_viewport.z = fbo->getWidth();
-		m_viewport.w = fbo->getHeight();
+		m_viewport.z = (float) fbo->getWidth();
+		m_viewport.w = (float) fbo->getHeight();
 	}
 }
 
@@ -77,7 +77,7 @@ void RenderPass::render()
 	}
 
 	m_shader->useProgram();
-	glViewport(m_viewport.x, m_viewport.y, m_viewport.z, m_viewport.w);
+	glViewport( (GLint) m_viewport.x, (GLint) m_viewport.y, (GLsizei) m_viewport.z, (GLsizei) m_viewport.w);
 
 	clearBits();
 
@@ -113,10 +113,10 @@ std::vector< Renderable* > RenderPass::getRenderables()
 
 void RenderPass::setViewport(int x, int y, int width, int height)
 {
-	m_viewport.x = x;
-	m_viewport.y = y;
-	m_viewport.z = width;
-	m_viewport.w = height;
+	m_viewport.x = (float) x;
+	m_viewport.y = (float) y;
+	m_viewport.z = (float) width;
+	m_viewport.w = (float) height;
 }
 
 void RenderPass::addClearBit(GLbitfield clearBit)

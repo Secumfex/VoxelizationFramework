@@ -349,9 +349,9 @@ Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth
 	unsigned int index = 0;
 
 	// all vertical lines
-	for(unsigned int w = 0; w <= width; w++)
+	for( int w = 0; w <= width; w++ )
 	{
-		for (unsigned int d = 0; d <= depth; d++)
+		for ( int d = 0; d <= depth; d++ )
 		{
 			vertices.push_back(cellSize * (float) w );
 			vertices.push_back(0.0f);
@@ -370,9 +370,9 @@ Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth
 	}
 
 	// all horizontal lines
-	for(unsigned int d = 0; d <= depth; d++)
+	for(int d = 0; d <= depth; d++)
 	{
-		for (unsigned int h = 0; h <= height; h++)
+		for (int h = 0; h <= height; h++)
 		{
 			vertices.push_back( 0.0f );
 			vertices.push_back( cellSize * (float) h );
@@ -391,9 +391,9 @@ Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth
 	}
 
 	// all lines into space lines
-	for(unsigned int w = 0; w <= width; w++)
+	for( int w = 0; w <= width; w++ )
 	{
-		for (unsigned int h = 0; h <= height; h++)
+		for ( int h = 0; h <= height; h++ )
 		{
 			vertices.push_back( cellSize * (float) w );
 			vertices.push_back( cellSize * (float) h );

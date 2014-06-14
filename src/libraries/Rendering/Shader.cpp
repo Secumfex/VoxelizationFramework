@@ -8,7 +8,7 @@ Shader::Shader(std::string vertexShader, std::string fragmentShader)
 
 	glGetProgramiv( m_programHandle, GL_ACTIVE_UNIFORMS, &total );
 
-	unsigned int i= 0;
+	int i= 0;
 	for(i=0; i<total; ++i)  {
 		int name_len=-1, num=-1;
 		GLenum type = GL_ZERO;
