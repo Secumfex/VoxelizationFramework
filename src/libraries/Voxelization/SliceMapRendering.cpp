@@ -77,7 +77,7 @@ Texture* SliceMap::get8BitMask()
 		unsigned char bitMaskData[32][4] = { {1,0,0,0}, {2,0,0,0}, {4,0,0,0}, {8,0,0,0}, {16,0,0,0}, {32,0,0,0}, {64,0,0,0}, {128,0,0,0},
 										     {0,1,0,0}, {0,2,0,0}, {0,4,0,0}, {0,8,0,0}, {0,16,0,0}, {0,32,0,0}, {0,64,0,0}, {0,128,0,0},
 										     {0,0,1,0}, {0,0,2,0}, {0,0,4,0}, {0,0,8,0}, {0,0,16,0}, {0,0,32,0}, {0,0,64,0}, {0,0,128,0},
-										     {0,0,0,1}, {0,2,0,0}, {0,0,0,4}, {0,0,0,8}, {0,0,0,16}, {0,0,0,32}, {0,0,0,64}, {0,0,0,128},
+										     {0,0,0,1}, {0,0,0,2}, {0,0,0,4}, {0,0,0,8}, {0,0,0,16}, {0,0,0,32}, {0,0,0,64}, {0,0,0,128},
 		};
 
 		glGenTextures(1, &bitMaskHandle);
@@ -93,12 +93,11 @@ Texture* SliceMap::get8BitMask()
 
 SliceMap::SliceMapRenderPass* SliceMap::getSliceMapRenderPass(float width, float height,
 		float depth, int resX, int resY, int numSliceMaps,
-		ShaderType shaderType)
+		ShaderType shaderType, std::string vertexShader)
 {
 	/*Init shader & FBO*/
 	DEBUGLOG->log("Creating Shader to construct Slice Map");
 
-	std::string vertexShader = std::string ( SHADERS_PATH "/slicemap/simpleVertex.vert" );
 	std::string fragmentShader;
 
 	switch (shaderType)

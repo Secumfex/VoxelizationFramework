@@ -9,12 +9,15 @@
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
 #include <Voxelization/TextureAtlas.h>
+#include <Voxelization/SliceMapRendering.h>
 
 #include <Misc/MiscListeners.h>
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
+
+static bool rotatingBunny			= false;
 
 static int textureAtlasResolution   = 256;
 static int voxelGridResolution		= 256;
@@ -134,15 +137,21 @@ public:
 			someObjectNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
 			renderables.push_back(someObjectNode);
 
-			std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this );
-
 			DEBUGLOG->log("Attaching objects to scene graph");
 			DEBUGLOG->indent();
+				if ( rotatingBunny )
+				{
+					std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this );
+					rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
+
+					someObjectNode->setParent( rotatingNodes.second );
+				}
+				else
+				{
+					someObjectNode->setParent(scene->getSceneGraph()->getRootNode() );
+				}
+
 				testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
-
-				rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
-
-				someObjectNode->setParent( rotatingNodes.second );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -242,9 +251,57 @@ public:
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
-		// TODO : neuer Shader - VertexShader: textureAtlasWorldPosition.vert , Fragmentshader: slicemap.frag
 		// neuer Rednerpass --> Voxelvolumen-Kamera, Slicemap Framebuffer, o.g. Shader
 
+		// shader using texture atlas vertex shader ( to move vertex to world position ) and slice map fragment shader ( to write into bit mask )
+		std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
+
+		// create slice map renderpass
+		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 5.0f, 5.0f, 5.0f, voxelGridResolution, voxelGridResolution, 4, SliceMap::BITMASK_MULTIPLETARGETS, vertexShader);
+
+		// configure slice map render pass
+		voxelizeWithTextureAtlas->getCamera()->setPosition(0.0f,0.0f,2.5f);	// tiny offset to set infront of bunny
+
+		// add texture atlas vertices
+		voxelizeWithTextureAtlas->addRenderable( verticesNode );
+
+		// add voxelization renderpass
+		m_renderManager.addRenderPass( voxelizeWithTextureAtlas );
+
+
+		/**************************************************************************************
+		 * 							VOXELIZATION PRESENTATION
+		 **************************************************************************************/
+		// show result as tiny debug view
+		DEBUGLOG->log("Creating screen filling triangle rendering in FBO for slice maps");
+						DEBUGLOG->indent();
+
+							FramebufferObject* compositingFramebufferObject = new FramebufferObject(512,512);
+							compositingFramebufferObject->addColorAttachments(1);
+							Texture* composedImageTexture = new Texture();
+							composedImageTexture->setTextureHandle(compositingFramebufferObject->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+
+							int numColorAttachments =voxelizeWithTextureAtlas->getFramebufferObject()->getNumColorAttachments();
+							for (int i = 0; i < numColorAttachments; i++)
+							{
+								Texture* voxelizeWithTextureAtlasTexture = new Texture();
+								voxelizeWithTextureAtlasTexture->setTextureHandle(voxelizeWithTextureAtlas->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 + i));
+
+								Shader* overlaySliceMap = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/slicemap/sliceMapOverlay.frag");
+								TriangleRenderPass* composevoxelizeWithTextureAtlas = new TriangleRenderPass(overlaySliceMap, compositingFramebufferObject, m_resourceManager.getScreenFillingTriangle());
+								composevoxelizeWithTextureAtlas->setViewport(0,0,512,512);
+								composevoxelizeWithTextureAtlas->addUniformTexture(voxelizeWithTextureAtlasTexture, "uniformSliceMapTexture");
+								composevoxelizeWithTextureAtlas->addUniformTexture(( i == 0 ) ? new Texture() : composedImageTexture,  "uniformBaseTexture");
+
+								m_renderManager.addRenderPass(composevoxelizeWithTextureAtlas);
+							}
+
+							DEBUGLOG->log("Creating screen filling triangle rendering on screen for composed image of slice maps and ortho phong render pass");
+							TriangleRenderPass* showComposedImage= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+							showComposedImage->setViewport(512,0,512,512);
+							showComposedImage->addUniformTexture(composedImageTexture, "uniformTexture");
+							m_renderManager.addRenderPass(showComposedImage);
+						DEBUGLOG->outdent();
 
 		/**************************************************************************************
 		 * 									INPUT

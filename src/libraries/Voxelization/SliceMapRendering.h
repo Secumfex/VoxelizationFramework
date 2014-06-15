@@ -49,9 +49,10 @@ namespace SliceMap
 	 * @param resX grid resolution in X dimension
 	 * @param resY grid resolution in Y dimension
 	 * @param numSliceMaps grid resolution in Z dimension ( interpreted as factor of 32 )
+	 * @param vertexShader to be used with slice mapping fragment shader
 	 * @return a slice map render pass consisting of a framebuffer object of given dimensions, voxelizing the given grid volume
 	 */
-	SliceMapRenderPass* getSliceMapRenderPass(float width, float height, float depth, int resX, int resY, int numSliceMaps = 3, ShaderType shaderType = BITMASK_MULTIPLETARGETS);
+	SliceMapRenderPass* getSliceMapRenderPass(float width, float height, float depth, int resX, int resY, int numSliceMaps = 3, ShaderType shaderType = BITMASK_MULTIPLETARGETS, std::string vertexShader = std::string ( SHADERS_PATH "/slicemap/simpleVertex.vert" ));
 }
 
 #endif
