@@ -64,7 +64,7 @@ RenderableNode* SimpleScene::loadOverlappingGeometry( Application* app )
 }
 
 // returns a pair < root, rotatingnode >
-std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app)
+std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app, float angularVelocityXY, float angularVelocityY)
 {
 	std::pair<Node*, Node*> result;
 
@@ -74,12 +74,12 @@ std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app)
 	result.first = positionNode;
 
 	RotatingNode* yAxisRotationNode = new RotatingNode(positionNode);
-	yAxisRotationNode->setAngle(0.05f);
+	yAxisRotationNode->setAngle( angularVelocityY );
 	yAxisRotationNode->setRotationAxis( glm::vec3( 0.0f, 1.0f, 0.0f ) );
 
 	RotatingNode* rotatingNode = new RotatingNode(yAxisRotationNode);
-	rotatingNode->setRotationAxis(glm::vec3 ( 1.0f, 1.0f, 0.1f));
-	rotatingNode->setAngle(0.2f);
+	rotatingNode->setRotationAxis(glm::vec3 ( 1.0f, 0.5f, 0.2f));
+	rotatingNode->setAngle( angularVelocityXY );
 	result.second = rotatingNode;
 
 	DEBUGLOG->log("Adding updatable rotation nodes to scene");
@@ -94,7 +94,7 @@ Scene* SimpleScene::createNewScene(Application* app) {
 
 	DEBUGLOG->log("Creating a scene instance");
 	DEBUGLOG->indent();
-	Scene* scene = new Scene();
+		Scene* scene = new Scene();
 	DEBUGLOG->outdent();
 
 	DEBUGLOG->log("Setting scene instance as active scene ");

@@ -17,7 +17,7 @@ namespace SimpleScene
 
 	RenderableNode* loadOverlappingGeometry( Application* app );
 
-	std::pair<Node*, Node*> createRotatingNodes( Application* app );
+	std::pair<Node*, Node*> createRotatingNodes( Application* app , float angularVelocityXY = 0.2f, float angularVelocityY = 0.05f);
 
 	void configureSimpleCameraMovement(Camera* movableCam, Application* app, float speed = 2.0f);
 
