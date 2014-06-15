@@ -114,6 +114,13 @@ private:
 	}
 
 public:
+	TextureAtlasBuildingApp()
+	{
+		m_textureAtlasRenderer = 0;
+		m_textureAtlasVertexGenerator = 0;
+
+		m_name = "Texture Atlas Voxelization App";
+	}
 	virtual ~TextureAtlasBuildingApp()
 	{
 
@@ -209,7 +216,7 @@ public:
 				DEBUGLOG->indent();
 				DEBUGLOG->log("Creating screen filling triangle rendering for Texture Atlas render pass");
 					TriangleRenderPass* showTextureAtlasRenderPass = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
-					showTextureAtlasRenderPass->setViewport(512,0,512,512);
+					showTextureAtlasRenderPass->setViewport(0,513,188,188);
 
 					showTextureAtlasRenderPass->addUniformTexture(textureAtlasRenderPass->getTextureAtlas(), "uniformTexture");
 
@@ -233,7 +240,7 @@ public:
 			RenderableNode* verticesNode = new RenderableNode( scene->getSceneGraph()->getRootNode());
 			verticesNode->setObject( m_textureAtlasVertexGenerator->getPixelsObject() );
 
-			glPointSize( 3.0f );
+			glPointSize( 2.0f );
 
 			// a Renderpass which transforms the vertices to the world position proposed by the texture atlas
 			Shader* transformTextureAtlasShader = new Shader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" , SHADERS_PATH "/screenspace/simpleTexture.frag");
@@ -251,7 +258,6 @@ public:
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
-		// neuer Rednerpass --> Voxelvolumen-Kamera, Slicemap Framebuffer, o.g. Shader
 
 		// shader using texture atlas vertex shader ( to move vertex to world position ) and slice map fragment shader ( to write into bit mask )
 		std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
@@ -274,34 +280,40 @@ public:
 		 **************************************************************************************/
 		// show result as tiny debug view
 		DEBUGLOG->log("Creating screen filling triangle rendering in FBO for slice maps");
-						DEBUGLOG->indent();
+		DEBUGLOG->indent();
 
-							FramebufferObject* compositingFramebufferObject = new FramebufferObject(512,512);
-							compositingFramebufferObject->addColorAttachments(1);
-							Texture* composedImageTexture = new Texture();
-							composedImageTexture->setTextureHandle(compositingFramebufferObject->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
+			FramebufferObject* compositingFramebufferObject = new FramebufferObject(512,512);
 
-							int numColorAttachments =voxelizeWithTextureAtlas->getFramebufferObject()->getNumColorAttachments();
-							for (int i = 0; i < numColorAttachments; i++)
-							{
-								Texture* voxelizeWithTextureAtlasTexture = new Texture();
-								voxelizeWithTextureAtlasTexture->setTextureHandle(voxelizeWithTextureAtlas->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 + i));
+			compositingFramebufferObject->addColorAttachments(1);
 
-								Shader* overlaySliceMap = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/slicemap/sliceMapOverlay.frag");
-								TriangleRenderPass* composevoxelizeWithTextureAtlas = new TriangleRenderPass(overlaySliceMap, compositingFramebufferObject, m_resourceManager.getScreenFillingTriangle());
-								composevoxelizeWithTextureAtlas->setViewport(0,0,512,512);
-								composevoxelizeWithTextureAtlas->addUniformTexture(voxelizeWithTextureAtlasTexture, "uniformSliceMapTexture");
-								composevoxelizeWithTextureAtlas->addUniformTexture(( i == 0 ) ? new Texture() : composedImageTexture,  "uniformBaseTexture");
+			Texture* composedImageTexture = new Texture();
+			composedImageTexture->setTextureHandle(compositingFramebufferObject->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 
-								m_renderManager.addRenderPass(composevoxelizeWithTextureAtlas);
-							}
+			int numColorAttachments =voxelizeWithTextureAtlas->getFramebufferObject()->getNumColorAttachments();
+			for (int i = 0; i < numColorAttachments; i++)
+			{
+				Texture* voxelizeWithTextureAtlasTexture = new Texture();
+				voxelizeWithTextureAtlasTexture->setTextureHandle(voxelizeWithTextureAtlas->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 + i));
 
-							DEBUGLOG->log("Creating screen filling triangle rendering on screen for composed image of slice maps and ortho phong render pass");
-							TriangleRenderPass* showComposedImage= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
-							showComposedImage->setViewport(512,0,512,512);
-							showComposedImage->addUniformTexture(composedImageTexture, "uniformTexture");
-							m_renderManager.addRenderPass(showComposedImage);
-						DEBUGLOG->outdent();
+				Shader* overlaySliceMap = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/slicemap/sliceMapOverlay.frag");
+
+				TriangleRenderPass* composevoxelizeWithTextureAtlas = new TriangleRenderPass(overlaySliceMap, compositingFramebufferObject, m_resourceManager.getScreenFillingTriangle());
+
+				composevoxelizeWithTextureAtlas->setViewport(0,0,512,512);
+				composevoxelizeWithTextureAtlas->addUniformTexture(voxelizeWithTextureAtlasTexture, "uniformSliceMapTexture");
+				composevoxelizeWithTextureAtlas->addUniformTexture(( i == 0 ) ? new Texture() : composedImageTexture,  "uniformBaseTexture");
+
+				m_renderManager.addRenderPass(composevoxelizeWithTextureAtlas);
+			}
+
+			DEBUGLOG->log("Creating screen filling triangle rendering on screen for composed image of slice maps and ortho phong render pass");
+			TriangleRenderPass* showComposedImage= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+
+			showComposedImage->setViewport(512,0,512,512);
+			showComposedImage->addUniformTexture(composedImageTexture, "uniformTexture");
+
+			m_renderManager.addRenderPass(showComposedImage);
+		DEBUGLOG->outdent();
 
 		/**************************************************************************************
 		 * 									INPUT
@@ -309,6 +321,7 @@ public:
 
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();
+
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
 			SimpleScene::configureSimpleCameraMovement(movableCam, this);
@@ -321,6 +334,8 @@ public:
 };
 
 int main(){
+	// configure a little bit
+	Application::static_newWindowHeight = 700;
 
 	TextureAtlasBuildingApp myApp;
 

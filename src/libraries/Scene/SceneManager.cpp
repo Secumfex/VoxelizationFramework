@@ -2,7 +2,7 @@
 
 SceneManager::SceneManager()
 {
-
+	m_activeScene = 0;
 }
 
 SceneManager::~SceneManager()

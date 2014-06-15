@@ -104,18 +104,19 @@ Scene* SimpleScene::createNewScene(Application* app) {
 }
 
 void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,
-		Application* app) {
+		Application* app, float speed) {
 	{
 		Scene* scene = app->getSceneManager().getActiveScene();
 
 		InputManager& inputManager = app->getInputManager();
-		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 2.0f),GLFW_KEY_W, GLFW_PRESS);
+
+		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, speed),GLFW_KEY_W, GLFW_PRESS);
 		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_W, GLFW_RELEASE);
-		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 2.0f),GLFW_KEY_D, GLFW_PRESS);
+		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, speed),GLFW_KEY_D, GLFW_PRESS);
 		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_D, GLFW_RELEASE);
-		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, -2.0f),GLFW_KEY_S, GLFW_PRESS);
+		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, -speed),GLFW_KEY_S, GLFW_PRESS);
 		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_S, GLFW_RELEASE);
-		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, -2.0f),GLFW_KEY_A, GLFW_PRESS);
+		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, -speed),GLFW_KEY_A, GLFW_PRESS);
 		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
 
 		DEBUGLOG->log("Adding updatable camera to scene");
@@ -123,10 +124,10 @@ void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,
 	}
 }
 
-Turntable* SimpleScene::configureTurnTable(Node* node, Application* app)
+Turntable* SimpleScene::configureTurnTable(Node* node, Application* app, float sensitivity)
 {
 	Turntable* turntable = new Turntable( app->getSceneManager().getActiveScene()->getSceneGraph()->getRootNode(), &(app->getInputManager() ));
-	turntable->setSensitivity(0.1f);
+	turntable->setSensitivity(sensitivity);
 
 	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
 	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);

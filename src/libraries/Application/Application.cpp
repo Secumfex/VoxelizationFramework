@@ -2,13 +2,20 @@
 
 #include <sstream>
 
+int Application::static_newWindowHeight = 512;
+int Application::static_newWindowWidth = 1024;
+
+bool Application::static_autoPrint = true;
+
+int Application::static_fpsRefreshFrames = 20;
+
 Application::Application()
  : m_cycleTimer(false)
 {
 	m_name = "Application";
 	m_terminate = false;
 
-	DEBUGLOG->setAutoPrint(true);
+	DEBUGLOG->setAutoPrint(static_autoPrint);
 
 	DEBUGLOG->log( "Constructing Application" );
 
@@ -21,7 +28,7 @@ Application::Application()
 
 	DEBUGLOG->log("Creating GLFW window");
 
-	GLFWwindow* window = m_windowManager.createWindow(1024,512);
+	GLFWwindow* window = m_windowManager.createWindow(static_newWindowWidth, static_newWindowHeight);
 	if(!window){
 		DEBUGLOG->log ("ERROR : GLFW Window failed to initialize");
 	}
@@ -157,10 +164,10 @@ void Application::run()
 		m_cycleTimer.update( 0.0f );
 
 		/*UGLY : PRINT SOME FPS*/
-		if( fps_counter > 20 )
+		if( fps_counter > static_fpsRefreshFrames )
 		{
 			std::stringstream ss;
-			ss<< 20.0 / (fps_accumulator + m_cycleTimer.getElapsedTime() );
+			ss<< m_name << " | "<< (double)  static_fpsRefreshFrames / (fps_accumulator + m_cycleTimer.getElapsedTime() );
 			glfwSetWindowTitle( m_windowManager.getActiveWindow(), ss.str().c_str() );
 			fps_counter = 0;
 			fps_accumulator = 0.0;

@@ -26,6 +26,13 @@ protected:
 	bool 			m_terminate;
 	GLFWTimer		m_cycleTimer;
 public:
+
+	/*Static Configuration*/
+	static int 	static_newWindowWidth;
+	static int 	static_newWindowHeight;
+	static bool static_autoPrint;
+	static int  static_fpsRefreshFrames;
+
 	Application();
 	~Application();
 
