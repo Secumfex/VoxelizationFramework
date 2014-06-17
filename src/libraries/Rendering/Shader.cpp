@@ -40,6 +40,10 @@ void Shader::useProgram()
 	glUseProgram(m_programHandle);
 }
 
+bool Shader :: hasUniform(std::string uniformName){
+	return ( m_uniformHandles.find(uniformName) != m_uniformHandles.end() );
+}
+
 bool Shader :: uploadUniform(glm::mat4 uniformMatrix, std::string uniformName){
 
 	if(m_uniformHandles.find(uniformName)!=m_uniformHandles.end()){

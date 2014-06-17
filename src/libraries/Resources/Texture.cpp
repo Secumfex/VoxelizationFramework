@@ -6,6 +6,12 @@ Texture::Texture(std::string path) {
 	m_activeUnit = -1;
 }
 
+Texture::Texture(GLuint textureHandle)
+: Texture( "" )
+{
+	m_texturehandle = textureHandle;
+}
+
 Texture::~Texture() {
 }
 

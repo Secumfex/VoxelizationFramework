@@ -247,7 +247,7 @@ public:
 			RenderableNode* verticesNode = new RenderableNode( scene->getSceneGraph()->getRootNode());
 			verticesNode->setObject( m_textureAtlasVertexGenerator->getPixelsObject() );
 
-			glPointSize( 2.0f );
+			glPointSize( 1.0f );
 
 			DEBUGLOG->log("Creating Texture Atlas vertices world position render pass");
 			DEBUGLOG->indent();

@@ -11,6 +11,7 @@ protected:
 	int m_activeUnit;
 public:
 	Texture(std::string path = "");
+	Texture(GLuint textureHandle);
 	virtual ~Texture();
 
 	GLuint getTextureHandle();
