@@ -358,7 +358,7 @@ public:
 		DEBUGLOG->log("Creating composed image presentation render pass");
 		TriangleRenderPass* showComposedImage= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 
-		showComposedImage->setViewport(512,0,512,512);
+		showComposedImage->setViewport(188,512,188,188);
 		showComposedImage->addUniformTexture(composedImageTexture, "uniformTexture");
 
 		m_renderManager.addRenderPass(showComposedImage);
@@ -419,11 +419,21 @@ public:
 
 		m_renderManager.addRenderPass( shadowMappingRenderPass );
 
+		DEBUGLOG->log("Creating shadow mapped gbuffer presentation render pass");
+		TriangleRenderPass* showShadowMappedGbuffer= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+
+		showShadowMappedGbuffer->setViewport(2 * 188,512, 188, 188);
+		showShadowMappedGbuffer->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformTexture");
+
+		m_renderManager.addRenderPass(showShadowMappedGbuffer);
+
 		DEBUGLOG->log("Creating composed image presentation render pass");
-		TriangleRenderPass* showShadowMappedImage= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
+		Shader* multiplyTexture = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/screenspace/multiplyTexture.frag");
+		TriangleRenderPass* showShadowMappedImage= new TriangleRenderPass(multiplyTexture, 0, m_resourceManager.getScreenFillingTriangle());
 
 		showShadowMappedImage->setViewport(512,0,512,512);
-		showShadowMappedImage->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformTexture");
+		showShadowMappedImage->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformMultiply");
+		showShadowMappedImage->addUniformTexture( new Texture( phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 ) ), "uniformTexture");
 
 		m_renderManager.addRenderPass(showShadowMappedImage);
 

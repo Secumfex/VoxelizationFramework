@@ -13,9 +13,9 @@ uniform mat4 uniformProjectorPerspective;
 
 uniform mat4 uniformView;
 
-uniform sampler1D uniformBitMask;	// unsigned byte --> can be directly interpreted
+uniform sampler1D uniformBitMask;
 
-out vec4 fragmentColor;
+out vec4 fragmentLightFactor;
 
 void main() {
 	
@@ -39,10 +39,11 @@ void main() {
 	// read pixel
 	vec4 shadowMapVal = texture( uniformShadowMap, shadowMapLookup ) * 255.0;
 	
-	// use bitmask to determine which values are set
-	int depthBit = max( 0, min ( 32, int( LightPerspPos.z  * 32.0 + 2.0) ) );		// actual depth of fragment in shadow map
+	// actual depth of fragment in shadow map
+	int depthBit = max( 0, min ( 32, int( LightPerspPos.z  * 32.0 + 2.0) ) );		
 	
-	int fullSlices = 0;					// amount of slices which where set in direction to light source
+	// amount of slices which where set in direction to light source
+	int fullSlices = 0;					
 	
 	// for every slice from fragment depth to light source
 	for (int i = depthBit; i > 0; i-- )
@@ -51,8 +52,7 @@ void main() {
 		float currentDepth  = float(i) / 32.0;
 		vec4 currentBitMask = texture(uniformBitMask, currentDepth) * 255.0;
 
-		//determine r, g, b, or a channel to read
-		
+		//determine r, g, b, or a channel to read	
 		if ( i < 8)	// compare values of r channel
 		{
 			// if both bits are set
@@ -92,7 +92,7 @@ void main() {
 		}
 	}
 	
-	float opacityPerSlice = 1.0 / 32.0;
+	float opacityPerSlice = 1.0 / 16.0;
 	
-	fragmentColor = vec4 ( gbufferColor.rgb * ( 1.0 - ( fullSlices * opacityPerSlice ) ), 1.0 );
+	fragmentLightFactor = vec4 ( vec3(1.0,1.0,1.0) * ( 1.0 - ( fullSlices * opacityPerSlice ) ), 1.0 );
 }
