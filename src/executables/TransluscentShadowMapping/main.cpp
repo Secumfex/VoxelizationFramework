@@ -85,8 +85,6 @@ private:
 		uvRenderPass->setViewport(0,0,512,512);
 		uvRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 0.0f );
 		uvRenderPass->addEnable(GL_DEPTH_TEST);
-		uvRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
-		uvRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 
 		Camera* camera = new Camera();
 		camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
@@ -249,13 +247,16 @@ public:
 		DEBUGLOG->log("Creating phong presentation render pass");
 		TriangleRenderPass* showRenderPassPerspective = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 		showRenderPassPerspective->setViewport(0,0,512,512);
+		showRenderPassPerspective->addClearBit(GL_COLOR_BUFFER_BIT);
+		showRenderPassPerspective->addClearBit(GL_DEPTH_BUFFER_BIT);
 
 		Texture* renderPassPerspectiveTexture = new Texture();
 		renderPassPerspectiveTexture->setTextureHandle(phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0));
 		showRenderPassPerspective->addUniformTexture(renderPassPerspectiveTexture, "uniformTexture");
 
-		// dont add to render loop yet
-		DEBUGLOG->log("NOT Adding phong presentation render pass yet.");
+		DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
+		// add screen fill render pass now
+		m_renderManager.addRenderPass(showRenderPassPerspective);
 
 		DEBUGLOG->outdent();
 
@@ -292,10 +293,6 @@ public:
 
 		glPointSize( 1.0f );
 
-		DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
-		// add screen fill render pass now
-		m_renderManager.addRenderPass(showRenderPassPerspective);
-
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
@@ -309,7 +306,7 @@ public:
 		std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
 
 		// create slice map renderpass
-		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 5.5f, 5.5f, 3.2f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
+		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 6.0f, 6.0f, 3.2f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
 
 		DEBUGLOG->log("Configuring slice map render pass");
 		// configure slice map render pass
@@ -362,6 +359,24 @@ public:
 		showComposedImage->addUniformTexture(composedImageTexture, "uniformTexture");
 
 		m_renderManager.addRenderPass(showComposedImage);
+		DEBUGLOG->outdent();
+
+		DEBUGLOG->log("Creating Texture Atlas vertices world position render pass");
+		DEBUGLOG->indent();
+
+			// a Renderpass which transforms the vertices to the world position proposed by the texture atlas
+			Shader* transformTextureAtlasShader = new Shader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" , SHADERS_PATH "/screenspace/simpleTexture.frag");
+			CameraRenderPass* transformVerticesByTextureAtlasRenderPass = new CameraRenderPass(transformTextureAtlasShader, 0);
+
+			transformVerticesByTextureAtlasRenderPass->setViewport(3 * 188, 512, 188, 188);
+
+			transformVerticesByTextureAtlasRenderPass->setCamera( phongPerspectiveRenderPass->getCamera() );
+			transformVerticesByTextureAtlasRenderPass->addRenderable( verticesNode );
+			transformVerticesByTextureAtlasRenderPass->addEnable(GL_DEPTH_TEST);
+
+			// add vertex rendering before image presentation
+			m_renderManager.addRenderPass( transformVerticesByTextureAtlasRenderPass );
+
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
