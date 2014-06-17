@@ -19,7 +19,7 @@
 
 static bool rotatingBunny = false;
 
-static int textureAtlasResolution = 256;
+static int textureAtlasResolution = 512;
 static int voxelGridResolution = 128;
 
 class TransluscentShadowMappingApp: public Application {
@@ -32,13 +32,25 @@ private:
 	private:
 		Camera* m_projectionCamera;
 		Camera* m_gbufferCamera; // camera with which gbuffer was filled
+		Texture* m_bitmask;
 	public:
 		SliceMapShadowMappingRenderPass(Shader* shader, FramebufferObject* fbo,
 				Renderable* screenFillingTriangle, Camera* projectionCamera = 0,
-				Camera* gbufferCamera = 0) :
+				Camera* gbufferCamera = 0, Texture* bitmask = 0) :
 				TriangleRenderPass(shader, fbo, screenFillingTriangle) {
 			m_projectionCamera = projectionCamera;
-			m_gbufferCamera = 0;
+			m_gbufferCamera = gbufferCamera;
+			m_bitmask = bitmask;
+		}
+
+		virtual void preRender()
+		{
+			if (m_bitmask)
+			{
+				glActiveTexture(GL_TEXTURE5);
+				glBindTexture(GL_TEXTURE_1D, m_bitmask->getTextureHandle());
+				glActiveTexture(GL_TEXTURE0);
+			}
 		}
 
 		virtual void uploadUniforms() {
@@ -50,11 +62,15 @@ private:
 						"uniformProjectorView");
 				m_shader->uploadUniform(
 						m_projectionCamera->getProjectionMatrix(),
-						"uniformProjectorProjection");
+						"uniformProjectorPerspective");
 			}
 			if (m_gbufferCamera != 0) {
 				m_shader->uploadUniform(m_gbufferCamera->getViewMatrix(),
 						"uniformView");
+			}
+			if( m_bitmask != 0)
+			{
+				m_shader->uploadUniform(5, "uniformBitMask");
 			}
 		}
 	};
@@ -250,7 +266,7 @@ public:
 
 		showTextureAtlasRenderPass->addUniformTexture(textureAtlasRenderPass->getTextureAtlas(), "uniformTexture");
 
-//					m_renderManager.addRenderPass(showTextureAtlasRenderPass);
+					m_renderManager.addRenderPass(showTextureAtlasRenderPass);
 		DEBUGLOG->outdent();
 		DEBUGLOG->outdent();
 
@@ -274,28 +290,11 @@ public:
 		RenderableNode* verticesNode = new RenderableNode( scene->getSceneGraph()->getRootNode());
 		verticesNode->setObject( m_textureAtlasVertexGenerator->getPixelsObject() );
 
-		glPointSize( 2.0f );
-
-//			DEBUGLOG->log("Creating Texture Atlas vertices world position render pass");
-//			DEBUGLOG->indent();
-//
-//				DEBUGLOG->log("Using phong framebuffer as target");
-//				// a Renderpass which transforms the vertices to the world position proposed by the texture atlas
-//				Shader* transformTextureAtlasShader = new Shader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" , SHADERS_PATH "/screenspace/simpleTexture.frag");
-//				CameraRenderPass* transformVerticesByTextureAtlasRenderPass = new CameraRenderPass(transformTextureAtlasShader, phongPerspectiveRenderPass->getFramebufferObject());
-//
-//				transformVerticesByTextureAtlasRenderPass->setCamera( phongPerspectiveRenderPass->getCamera() );
-//				transformVerticesByTextureAtlasRenderPass->addRenderable( verticesNode );
-//				transformVerticesByTextureAtlasRenderPass->addEnable(GL_DEPTH_TEST);
-//
-//				// add vertex rendering before image presentation
-//				m_renderManager.addRenderPass( transformVerticesByTextureAtlasRenderPass );
-//
-//			DEBUGLOG->outdent();
+		glPointSize( 1.0f );
 
 		DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
 		// add screen fill render pass now
-//			m_renderManager.addRenderPass(showRenderPassPerspective);
+		m_renderManager.addRenderPass(showRenderPassPerspective);
 
 		DEBUGLOG->outdent();
 
@@ -310,11 +309,11 @@ public:
 		std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
 
 		// create slice map renderpass
-		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 5.0f, 5.0f, 5.0f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
+		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 5.5f, 5.5f, 3.2f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
 
 		DEBUGLOG->log("Configuring slice map render pass");
 		// configure slice map render pass
-		voxelizeWithTextureAtlas->getCamera()->setPosition(2.5f,2.5f,2.5f);
+		voxelizeWithTextureAtlas->getCamera()->setPosition(1.5f,1.5f,1.5f);
 		voxelizeWithTextureAtlas->getCamera()->setCenter(glm::vec3(0.0f,0.0f,0.0f));
 
 		DEBUGLOG->log("Adding Texture Atlas vertices to slice map render pass");
@@ -370,14 +369,22 @@ public:
 		 **************************************************************************************/
 
 		// TODO : Render Scene ( GBUFFER !? )
-		Shader* writeGbufferShader = new Shader(SHADERS_PATH "/gbuffer/gbuffer.vert", SHADERS_PATH "/gbuffer/gbuffer.frag");
+		Shader* writeGbufferShader = new Shader(SHADERS_PATH "/gbuffer/gbuffer.vert", SHADERS_PATH "/gbuffer/gbuffer_backfaceCulling_persp.frag");
+
+		GLenum internalFormat = FramebufferObject::internalFormat;
+		FramebufferObject::internalFormat = GL_RGBA32F_ARB;
+
 		FramebufferObject* gbufferFramebufferObject = new FramebufferObject (512,512);
 		// 3 attachments : position, normals, color
 		gbufferFramebufferObject->addColorAttachments(3);
 
+		FramebufferObject::internalFormat = internalFormat;
+
 		CameraRenderPass* writeGbufferRenderPass = new CameraRenderPass(writeGbufferShader, gbufferFramebufferObject);
 		writeGbufferRenderPass->addEnable(GL_DEPTH_TEST);
+		writeGbufferRenderPass->setClearColor(0.0f,0.0f,0.0f,1.0f);
 		writeGbufferRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+		writeGbufferRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 
 		writeGbufferRenderPass->setCamera( phongPerspectiveRenderPass->getCamera() );
 
@@ -397,12 +404,18 @@ public:
 		shadowMappingFramebufferObject->addColorAttachments(1);// write one texture
 
 		// take gbuffer and slice map and create a shadow mapped image in screen space
-		SliceMapShadowMappingRenderPass* shadowMappingRenderPass = new SliceMapShadowMappingRenderPass( shadowMappingShader, shadowMappingFramebufferObject, m_resourceManager.getScreenFillingTriangle(), voxelizeWithTextureAtlas->getCamera() , writeGbufferRenderPass->getCamera());
-		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( 0 ) ), "uniformPositionMap" );// position map
-		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( 1 ) ), "uniformNormalMap" );// normal   map
-		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( 2 ) ), "uniformColorMap" );// color    map
+		SliceMapShadowMappingRenderPass* shadowMappingRenderPass = new SliceMapShadowMappingRenderPass(
+				shadowMappingShader,
+				shadowMappingFramebufferObject,
+				m_resourceManager.getScreenFillingTriangle(),
+				voxelizeWithTextureAtlas->getCamera(),
+				writeGbufferRenderPass->getCamera(),
+				SliceMap::get8BitMask());
+		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformPositionMap" );// position map
+		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1 ) ), "uniformNormalMap" );// normal   map
+		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT2 ) ), "uniformColorMap" );// color    map
 
-		shadowMappingRenderPass->addUniformTexture( new Texture( shadowMappingFramebufferObject->getColorAttachmentTextureHandle( 0 ) ), "uniformShadowMap" );// shadow  map
+		shadowMappingRenderPass->addUniformTexture( new Texture( voxelizeWithTextureAtlas->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformShadowMap" );// shadow  map
 
 		m_renderManager.addRenderPass( shadowMappingRenderPass );
 
@@ -410,7 +423,7 @@ public:
 		TriangleRenderPass* showShadowMappedImage= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 
 		showShadowMappedImage->setViewport(512,0,512,512);
-		showShadowMappedImage->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( 0 ) ), "uniformTexture");
+		showShadowMappedImage->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformTexture");
 
 		m_renderManager.addRenderPass(showShadowMappedImage);
 

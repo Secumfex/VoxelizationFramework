@@ -4,6 +4,8 @@ in vec3 passPosition;
 in vec2 passUV;
 in vec3 passNormal;
 
+in vec3 lightPos;
+
 uniform sampler2D diffuseTexture;
 
 out vec4 fragColor;
@@ -14,7 +16,7 @@ void main() {
 		discard;	// back face culling
 	}
 
-	vec4 lightPos = vec4(5, 5, -2, 1);
+	// vec4 lightPos = vec4(5, 5, -2, 1);
 	
 	vec4 diffuseColor = texture( diffuseTexture, passUV );
 	

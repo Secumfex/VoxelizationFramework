@@ -44,9 +44,8 @@ void CameraRenderPass::uploadUniforms()
 }
 
 TriangleRenderPass::TriangleRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* screenFillingTriangle)
+	: RenderPass(shader, fbo)
 {
-	m_shader = shader;
-	m_fbo = fbo;
 	m_screenFillingTriangle = screenFillingTriangle;
 	addRenderable(screenFillingTriangle);
 	addDisable(GL_DEPTH_TEST);

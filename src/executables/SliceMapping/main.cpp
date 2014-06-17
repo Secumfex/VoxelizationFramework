@@ -14,6 +14,8 @@
 
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
+#include <Misc/SimpleSceneTools.h>
+
 
 class ObjectLoadingApp : public Application
 {
@@ -61,6 +63,12 @@ class ObjectLoadingApp : public Application
 				std::vector< Object* > overlappingGeometry =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/overlappingGeometry.dae" );
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Loading bunny object per SimpleScene tools");
+			DEBUGLOG->indent();
+				RenderableNode* bunnyNode = SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae", this);
+				bunnyNode->scale(glm::vec3(25.0f,25.0f,25.0f));
+			DEBUGLOG->outdent();
+
 		DEBUGLOG->log("Loading some objects complete");
 		DEBUGLOG->outdent();
 
@@ -72,6 +80,7 @@ class ObjectLoadingApp : public Application
 			scene->addObjects( daeBackground );
 			scene->addObjects( testRoom );
 			scene->addObjects( overlappingGeometry );
+			scene->addObject(bunnyNode->getObject());
 
 			DEBUGLOG->log("Creating scene graph nodes");
 			DEBUGLOG->indent();
@@ -101,6 +110,9 @@ class ObjectLoadingApp : public Application
 				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
 				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
 				overlappingGeometryNode->setObject(overlappingGeometry[0]);
+
+				DEBUGLOG->log("Attaching renderable bunny node to rotating node");
+				bunnyNode->setParent(rotatingNode);
 
 				DEBUGLOG->log("Creating renderable node for .obj cube attached to rotating node");
 				RenderableNode* cubeNode_2 = new RenderableNode(rotatingNode);
@@ -160,28 +172,31 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
-				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(10.0f,10.0f,10.0f, 512, 512, 8, SliceMap::BITMASK_MULTIPLETARGETS);
+				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(10.0f,10.0f,10.0f, 512, 512, 4, SliceMap::BITMASK_MULTIPLETARGETS);
 				sliceMapRenderPass->getCamera()->setPosition(0.0f,0.0f,5.00f);
 				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Adding objects to perspective phong render pass");
-			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
+//			phongPerspectiveRenderPass->addRenderable(overlappingGeometryNode);
 			phongPerspectiveRenderPass->addRenderable(testRoomNode);
+			phongPerspectiveRenderPass->addRenderable(bunnyNode);
 //			phongPerspectiveRenderPass->addRenderable(cubeNode_2);
 
 			DEBUGLOG->log("Adding objects to ortho phong render pass");
 //			phongOrthoRenderPass->addRenderable(cubeNode1);
 //			phongOrthoRenderPass->addRenderable(backgroundNode);
 //			phongOrthoRenderPass->addRenderable(cubeNode_2);
-			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
+//			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
+			phongOrthoRenderPass->addRenderable(bunnyNode);
 			phongOrthoRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding objects to slice map render pass");
 //			sliceMapRenderPass->addRenderable(cubeNode1);
 //			sliceMapRenderPass->addRenderable(backgroundNode);
 //			sliceMapRenderPass->addRenderable(cubeNode_2);
-			sliceMapRenderPass->addRenderable(overlappingGeometryNode);
+//			sliceMapRenderPass->addRenderable(overlappingGeometryNode);
+			sliceMapRenderPass->addRenderable(bunnyNode);
 			sliceMapRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding renderpasses to application");
@@ -283,11 +298,8 @@ class ObjectLoadingApp : public Application
 			scene->addUpdatable(movableCamClone);
 
 			DEBUGLOG->log("Configuring Turntable for root node");
-			Turntable* turntable = new Turntable(scene->getSceneGraph()->getRootNode(), &m_inputManager);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+			Turntable* turntable = SimpleScene::configureTurnTable(scene->getSceneGraph()->getRootNode(), this, 0.1f);
 
-			scene->addUpdatable(turntable);
 		DEBUGLOG->outdent();
 
 	}

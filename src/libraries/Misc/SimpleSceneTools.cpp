@@ -14,7 +14,10 @@ RenderableNode* SimpleScene::loadObject( std::string object, Application* app )
 		std::vector< Object* > loadedObject= app->getResourceManager().loadObjectsFromFile( RESOURCES_PATH + object );
 	DEBUGLOG->outdent();
 
-	app->getSceneManager().getActiveScene()->addObjects( loadedObject );
+	if ( app->getSceneManager().getActiveScene() != 0 )
+	{
+		app->getSceneManager().getActiveScene()->addObjects( loadedObject );
+	}
 
 	DEBUGLOG->log("Creating renderable node for " + object);
 	RenderableNode* objectNode = new RenderableNode( );
