@@ -23,8 +23,12 @@ void main() {
 	vec4 gbufferNormal = texture(uniformNormalMap, passUV);
 	vec4 gbufferColor = texture(uniformColorMap, passUV);
 	
+	// offset to sample point
+	vec4 samplePoint = gbufferPosition;
+	samplePoint.xyz += 0.1 * gbufferNormal.xyz;
+	
 	// retrieve Worldpositon point
-	vec4 worldPos = inverse( uniformView ) * gbufferPosition;
+	vec4 worldPos = inverse( uniformView ) * ( samplePoint );
 	
 	// project into shadow map
 	vec4 LightPerspPos = uniformProjectorPerspective * uniformProjectorView * worldPos;
@@ -40,13 +44,13 @@ void main() {
 	vec4 shadowMapVal = texture( uniformShadowMap, shadowMapLookup ) * 255.0;
 	
 	// actual depth of fragment in shadow map
-	int depthBit = max( 0, min ( 32, int( LightPerspPos.z  * 32.0 + 2.0) ) );		
+	int depthBit = max( 0, min ( 31, int( LightPerspPos.z  * 32.0 + 0.1) ) );		
 	
 	// amount of slices which where set in direction to light source
 	int fullSlices = 0;					
 	
 	// for every slice from fragment depth to light source
-	for (int i = depthBit; i > 0; i-- )
+	for (int i = depthBit; i >= 0; i-- )
 	{
 		// bitmask at this depth
 		float currentDepth  = float(i) / 32.0;
@@ -59,7 +63,7 @@ void main() {
 			if ( shadowMapVal.r / currentBitMask.r >= 1.0)
 			{
 				// write remainder
-				shadowMapVal.r = shadowMapVal.r - currentBitMask.r;
+				shadowMapVal.r = int(shadowMapVal.r) % int(currentBitMask.r);
 				fullSlices ++;
 			}
 		}
@@ -68,7 +72,7 @@ void main() {
 			// if both bits are set
 			if ( shadowMapVal.g / currentBitMask.g >= 1.0 )
 			{
-				shadowMapVal.g = shadowMapVal.g - currentBitMask.g;
+				shadowMapVal.g = int(shadowMapVal.g) % int(currentBitMask.g);
 				fullSlices ++;
 			}
 		}
@@ -77,7 +81,7 @@ void main() {
 			// if both bits are set
 			if ( shadowMapVal.b / currentBitMask.b >= 1.0 )
 			{
-				shadowMapVal.b = shadowMapVal.b - currentBitMask.b;
+				shadowMapVal.b = int(shadowMapVal.b) % int(currentBitMask.b);
 				fullSlices ++;
 			}
 		}
@@ -86,7 +90,7 @@ void main() {
 			// if both bits are set
 			if ( shadowMapVal.a / currentBitMask.a >= 1.0 )
 			{
-				shadowMapVal.a = shadowMapVal.a - currentBitMask.a;
+				shadowMapVal.a = int(shadowMapVal.a) % int(currentBitMask.a);
 				fullSlices++;
 			}
 		}

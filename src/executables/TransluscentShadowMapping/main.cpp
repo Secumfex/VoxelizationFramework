@@ -20,7 +20,7 @@
 static bool rotatingBunny = false;
 
 static int textureAtlasResolution = 512;
-static int voxelGridResolution = 128;
+static int voxelGridResolution = 256;
 
 class TransluscentShadowMappingApp: public Application {
 private:
