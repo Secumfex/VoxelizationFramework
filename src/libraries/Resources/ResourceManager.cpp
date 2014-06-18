@@ -108,6 +108,27 @@ void ResourceManager::saveVertexList(Model* model, const aiMesh* mesh)
 	}
 }
 
+/*save the vertex list of a mesh in the map as a corresponding vector to the model*/
+void ResourceManager::saveFacesList(Model* model, const aiMesh* mesh)
+{
+	// for every face
+	for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+	{
+		// current Face
+		aiFace currentFace = mesh->mFaces[i];
+
+		// read face vertices indices
+		std::vector< unsigned int > faceIndices;
+		for (int k = 0; k < currentFace.mNumIndices; k++)
+		{
+			faceIndices.push_back( currentFace.mIndices[k] );
+		}
+
+		// push back a vector of indices for this face
+		m_loadedMeshesFaces[model].push_back( faceIndices );
+	}
+}
+
 /* load a single model object from an assimp mesh*/
 Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 {
@@ -122,7 +143,10 @@ Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 		DEBUGLOG->log("Mesh does NOT exist and will be buffered... ");
 		Model* model = AssimpTools::createModelFromMesh( mesh );
 		m_loadedModels[mesh] = model;
+
 		saveVertexList ( model, mesh );
+		saveFacesList	(model, mesh );
+
 		DEBUGLOG->outdent();
 		return model;
 	}
@@ -136,6 +160,17 @@ std::vector<glm::vec4> ResourceManager::getAssimpMeshForModel(Model* model)
 		}
 	else{
 		return std::vector<glm::vec4>();
+	}
+}
+
+std::vector<std::vector< unsigned int > > ResourceManager::getAssimpMeshFacesForModel(Model* model)
+{
+	if( m_loadedMeshesFaces.find(model) != m_loadedMeshesFaces.end())
+		{
+			return m_loadedMeshesFaces[model];
+		}
+	else{
+		return std::vector< std::vector< unsigned int> >();
 	}
 }
 

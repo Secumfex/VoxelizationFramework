@@ -74,6 +74,7 @@ namespace Grid
 		virtual ~AxisAlignedVoxelGrid();
 		glm::vec3 getGridCellCenter(glm::vec3 position);
 		GridCell* getGridCell(glm::vec3 position);
+		std::vector < std::pair < GridCell* , glm::vec3 > > getGridCellsForFace(std::vector < glm::vec3 > facePositions);
 	float getX() const;
 	void setX(float x);
 	float getY() const;

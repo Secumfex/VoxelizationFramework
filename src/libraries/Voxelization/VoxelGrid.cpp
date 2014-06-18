@@ -148,6 +148,50 @@ GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
 	return VoxelGrid::getGridCell( (int) gridPos.x, (int) gridPos.y, (int) gridPos.z);
 }
 
+std::vector < std::pair < GridCell* , glm::vec3 > > AxisAlignedVoxelGrid::getGridCellsForFace(std::vector < glm::vec3 > facePositions)
+{
+	std::vector<std::pair< GridCell*, glm::vec3 > > result;
+
+	// for every edge, interpolate and check sample points.. (oh god this is horrible) TODO
+	for (float t = 0.0f; t < 1.0f ; t+=0.1f)
+	{
+		// TODO find a better way instead of this...
+		glm::vec3 currentSamplePoint = facePositions[0] + ( t * ( facePositions[1] - facePositions[0] ) );
+
+		GridCell* intersectedGridCell =  getGridCell( currentSamplePoint );
+		if (intersectedGridCell != 0)
+		{
+			result.push_back( std::pair <GridCell*, glm::vec3 >(intersectedGridCell, currentSamplePoint ) );
+		}
+	}
+
+	for (float t = 0.0f; t < 1.0f ; t+=0.1f)
+	{
+		// TODO find a better way instead of this...
+		glm::vec3 currentSamplePoint = facePositions[1] + ( t * ( facePositions[2] - facePositions[1] ) );
+
+		GridCell* intersectedGridCell =  getGridCell( currentSamplePoint );
+		if (intersectedGridCell != 0)
+		{
+			result.push_back( std::pair <GridCell*, glm::vec3 >(intersectedGridCell, currentSamplePoint ) );
+		}
+	}
+
+	for (float t = 0.0f; t < 1.0f ; t+=0.1f)
+	{
+		// TODO find a better way instead of this...
+		glm::vec3 currentSamplePoint = facePositions[2] + ( t * ( facePositions[0] - facePositions[2] ) );
+
+		GridCell* intersectedGridCell =  getGridCell( currentSamplePoint );
+		if (intersectedGridCell != 0)
+		{
+			result.push_back( std::pair <GridCell*, glm::vec3 >(intersectedGridCell, currentSamplePoint ) );
+		}
+	}
+
+	return result;
+}
+
 #include <cmath>
 
 // return the center of the affected grid cell

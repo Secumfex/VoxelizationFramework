@@ -209,6 +209,10 @@ class UniformVoxelGridApp : public Application
 			DEBUGLOG->outdent();
 		DEBUGLOG->outdent();
 
+		/**************************************************************************************
+		 * 								VOXELGRID SETUP
+		 **************************************************************************************/
+
 		DEBUGLOG->log("Configuring voxel grid");
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid object");
@@ -219,6 +223,10 @@ class UniformVoxelGridApp : public Application
 				DEBUGLOG->log("Grid depth    : ", axisAlignedVoxelGrid->getDepth());
 				DEBUGLOG->log("Grid cell size: ", axisAlignedVoxelGrid->getCellSize());
 			DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 								VOXELIZATION
+		 **************************************************************************************/
 
 			DEBUGLOG->log("Voxelizing scene");
 			DEBUGLOG->indent();
@@ -241,31 +249,51 @@ class UniformVoxelGridApp : public Application
 						modelMatrix = objectNode->getAccumulatedModelMatrix();
 					}
 					std::vector < glm::vec4 > assimpMesh = m_resourceManager.getAssimpMeshForModel(model);
+					std::vector < std::vector <unsigned int> > assimpMeshFaces = m_resourceManager.getAssimpMeshFacesForModel(model);
 //					DEBUGLOG->log("found assimp mesh with vertices :", (int) assimpMesh.size());
 
-					// fill voxel grid by checking vertices against grid volume
-						for (unsigned int j = 0; j < assimpMesh.size(); j++)
+					// fill voxel grid by checking faces against grid volume
+						for (unsigned int j = 0; j < assimpMeshFaces.size(); j++)
 						{
-							glm::vec4 worldSpaceVertex = modelMatrix * assimpMesh[j];
+							std::vector< glm::vec3 > worldSpaceFaceVertices;
 
-							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(worldSpaceVertex.x,worldSpaceVertex.y,worldSpaceVertex.z) );
+							// retrieve current face vertices indices
+							std::vector< unsigned int > currentFace = assimpMeshFaces[j];
 
-							if (gridCell && (! (gridCell->isOccupied( ) ) )  )
+							// retrieve world space face vertices
+							for (unsigned int k = 0; k < currentFace.size(); k++)
 							{
-								gridCell->setOccupied(true);
-								filledCells ++;
+								// retrieve vertex by face index
+								glm::vec4 worldSpaceVertex = modelMatrix * assimpMesh[ currentFace[k] ];
 
-//								DEBUGLOG->log("Creating Cube Node for rendering purposes");
+								worldSpaceFaceVertices.push_back( glm::vec3(worldSpaceVertex) );
+							}
 
-									RenderableNode* filledCell = new RenderableNode(scene->getSceneGraph()->getRootNode() );
-									filledCell->scale( glm::vec3(axisAlignedVoxelGrid->getCellSize() ) );
-									filledCell->translate(  axisAlignedVoxelGrid->getGridCellCenter( glm::vec3( worldSpaceVertex.x ,worldSpaceVertex.y ,worldSpaceVertex.z  ) ) );
-									filledCell->setObject( m_resourceManager.getCube( ) );
+//							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(worldSpaceVertex.x,worldSpaceVertex.y,worldSpaceVertex.z) );
 
-									gridOrthoRenderPass->addRenderable( filledCell );
-									gridPerspectiveRenderPass->addRenderable( filledCell );
+							// retrieve intersected grid cells of voxel grid
+							std::vector< std::pair< Grid::GridCell*, glm::vec3 > > gridCells = axisAlignedVoxelGrid->getGridCellsForFace( worldSpaceFaceVertices );
 
-//								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
+							// for every intersected grid cell : check occupation and set if empty
+							for (unsigned int k = 0; k < gridCells.size(); k++)
+							{
+								if (gridCells[k].first && (! (gridCells[k].first->isOccupied( ) ) )  )
+								{
+									gridCells[k].first->setOccupied(true);
+									filledCells ++;
+
+	//								DEBUGLOG->log("Creating Cube Node for rendering purposes");
+
+										RenderableNode* filledCell = new RenderableNode(scene->getSceneGraph()->getRootNode() );
+										filledCell->scale( glm::vec3(axisAlignedVoxelGrid->getCellSize() ) );
+										filledCell->translate(  axisAlignedVoxelGrid->getGridCellCenter( gridCells[k].second) );
+										filledCell->setObject( m_resourceManager.getCube( ) );
+
+										gridOrthoRenderPass->addRenderable( filledCell );
+										gridPerspectiveRenderPass->addRenderable( filledCell );
+
+	//								DEBUGLOG->log("Set Grid Cell to occupied :", (int) gridCell);
+								}
 							}
 						}
 				}
