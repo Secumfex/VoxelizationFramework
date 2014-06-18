@@ -33,9 +33,14 @@ private:
 	T* p_value;
 	T m_increment;
 public:
-	IncrementValueListener(T* valuePtr, T increment);
-	virtual ~IncrementValueListener();
-	void call();
+	IncrementValueListener(T* valuePtr, T increment) {
+		m_increment = increment;
+		p_value = valuePtr;
+	}
+	virtual ~IncrementValueListener() {};
+	void call() {
+		*p_value += m_increment;
+	}
 };
 
 template < class T >
@@ -46,8 +51,11 @@ private:
 	T m_decrement;
 public:
 	DecrementValueListener(T* valuePtr, T decrement);
-	virtual ~DecrementValueListener();
-	void call();
+	virtual ~DecrementValueListener() {
+	}
+	void call() {
+		*p_value -= m_decrement;
+	}
 };
 
 template < class T >
@@ -58,9 +66,32 @@ private:
 	std::vector < T& > m_candidates;
 	unsigned int m_activeCandidate;
 public:
-	SwitchThroughValuesListener( T* valuePtr, std::vector< T& > candidates);
-	virtual ~SwitchThroughValuesListener();
-	void call();
+	SwitchThroughValuesListener(T* valuePtr,
+			std::vector< T& > candidates) {
+		m_candidates = candidates;
+		m_activeCandidate = 0;
+		p_value = valuePtr;
+	}
+	virtual ~SwitchThroughValuesListener() {
+	}
+	void call() {
+		if (m_candidates.empty())
+		{
+			return;
+		}
+
+		if (m_activeCandidate < m_candidates.size())
+		{
+			m_activeCandidate++;
+
+		}
+		else
+		{
+			m_activeCandidate = 0;
+		}
+
+		*p_value = m_candidates[ m_activeCandidate ];
+	}
 };
 
 #endif

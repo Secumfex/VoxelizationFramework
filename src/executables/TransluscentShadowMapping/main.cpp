@@ -22,6 +22,8 @@ static bool rotatingBunny = false;
 static int textureAtlasResolution = 512;
 static int voxelGridResolution = 256;
 
+static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
+
 class TransluscentShadowMappingApp: public Application {
 private:
 
@@ -101,7 +103,7 @@ private:
 	CameraRenderPass* createPhongRenderPass( )
 	{
 		DEBUGLOG->indent();
-		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_persp.frag");
+		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong_uniformLight.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_persp.frag");
 		FramebufferObject* fbo = new FramebufferObject(512,512);
 		fbo->addColorAttachments(1);
 
@@ -111,6 +113,7 @@ private:
 		phongPerspectiveRenderPass->addEnable(GL_DEPTH_TEST);
 		phongPerspectiveRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 		phongPerspectiveRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+		phongPerspectiveRenderPass->addUniform( new Uniform<glm::vec3>("uniformLightPos", &lightPosition));
 
 		Camera* camera = new Camera();
 		camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
@@ -383,7 +386,7 @@ public:
 		 * 									SHADOW MAPPING
 		 **************************************************************************************/
 
-		// TODO : Render Scene ( GBUFFER !? )
+		// Render Scene into GBUFFER )
 		Shader* writeGbufferShader = new Shader(SHADERS_PATH "/gbuffer/gbuffer.vert", SHADERS_PATH "/gbuffer/gbuffer_backfaceCulling_persp.frag");
 
 		GLenum internalFormat = FramebufferObject::internalFormat;
@@ -452,11 +455,6 @@ public:
 
 		m_renderManager.addRenderPass(showShadowMappedImage);
 
-		// TODO : project point into shadow map texture
-		// TODO : texture lookup != 0.0 ? --> something is here
-		// TODO : determine amount of surfaces passed through
-		// TODO : light fragment accordingly
-
 		/**************************************************************************************
 		 * 									INPUT
 		 **************************************************************************************/
@@ -470,6 +468,12 @@ public:
 
 		DEBUGLOG->log("Configuring Turntable for root node");
 		Turntable* turntable = SimpleScene::configureTurnTable( scene->getSceneGraph()->getRootNode(), this);
+
+		DEBUGLOG->log("Configuring light movement");
+		m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
+		m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
+		m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
+		m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
 		DEBUGLOG->outdent();
 	}

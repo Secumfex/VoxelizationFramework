@@ -44,7 +44,7 @@ void main() {
 	vec4 shadowMapVal = texture( uniformShadowMap, shadowMapLookup ) * 255.0;
 	
 	// actual depth of fragment in shadow map
-	int depthBit = max( 0, min ( 31, int( LightPerspPos.z  * 32.0 + 0.1) ) );		
+	int depthBit = max( 0, min ( 31, int( LightPerspPos.z  * 31.0 ) ) );		
 	
 	// amount of slices which where set in direction to light source
 	int fullSlices = 0;					
@@ -53,7 +53,7 @@ void main() {
 	for (int i = depthBit; i >= 0; i-- )
 	{
 		// bitmask at this depth
-		float currentDepth  = float(i) / 32.0;
+		float currentDepth  = float(i) / 31.0;
 		vec4 currentBitMask = texture(uniformBitMask, currentDepth) * 255.0;
 
 		//determine r, g, b, or a channel to read	

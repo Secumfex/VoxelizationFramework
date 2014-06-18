@@ -63,6 +63,10 @@ void RenderPass::preRender()
 
 void RenderPass::uploadUniforms()
 {
+	for(unsigned int i = 0; i < m_uniforms.size(); i++)
+	{
+		m_uniforms[i]->uploadUniform( m_shader );
+	}
 	call("UPLOADUNIFORMS");
 }
 
@@ -176,4 +180,8 @@ void RenderPass::restoreStates()
 			glEnable(m_disable[i]);
 		}
 	}
+}
+
+void RenderPass::addUniform(Uploadable* uniform) {
+	m_uniforms.push_back( uniform );
 }

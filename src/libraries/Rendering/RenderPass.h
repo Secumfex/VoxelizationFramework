@@ -5,7 +5,12 @@
 #include "Rendering/Renderable.h"
 #include "Rendering/FramebufferObject.h"
 #include "Rendering/Shader.h"
+#include "Rendering/Uniform.h"
 #include "Utility/SubjectListenerPattern.h"
+
+template<typename T>
+struct vecUniform : public std::vector< Uniform<T>* > {};
+
 
 class RenderPass : public Subject
 {
@@ -21,6 +26,8 @@ protected:
 	std::vector< GLenum > m_disable;
 	std::vector< bool > m_enableTEMP;
 	std::vector< bool > m_disableTEMP;
+
+	std::vector< Uploadable* > m_uniforms;
 
 public:
 	RenderPass(Shader* shader = 0, FramebufferObject* fbo = 0);
@@ -53,6 +60,7 @@ public:
 	void addEnable(GLenum state);
 	void addDisable(GLenum state);
 
+	void addUniform(Uploadable* uniform);
 };
 
 #endif
