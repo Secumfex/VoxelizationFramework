@@ -30,5 +30,13 @@ namespace ShaderTools {
 	 */
 	GLuint makeShaderProgram(const char* vertexShaderName, const char* fragmentShaderName);
 
+
+	/**
+	 * A method to load and compile a compute shader.
+	 * @param computeShaderName path to the compute shader file
+	 * @return The id of a created the shader program
+	 */
+	GLuint makeComputeShaderProgram(const char* computeShaderName);
+
 }
 

@@ -68,4 +68,20 @@ namespace ShaderTools {
 
         return programHandle;
     }
+
+    GLuint makeComputeShaderProgram(const char* computeShaderName) {
+        //compile vertex shader
+        GLuint computeShaderHandle = glCreateShader(GL_COMPUTE_SHADER);
+        loadShaderSource(computeShaderHandle, computeShaderName);
+
+        glCompileShader(computeShaderHandle);
+        checkShader(computeShaderHandle);
+
+        //link shader programs
+        GLuint programHandle = glCreateProgram();
+        glAttachShader(programHandle, computeShaderHandle);
+        glLinkProgram(programHandle);
+
+        return programHandle;
+    }
 }

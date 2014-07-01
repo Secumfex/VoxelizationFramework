@@ -10,8 +10,6 @@
 
 
 class Shader : public Subject{
-private:
-	void makeShaderProgram(std::string vert, std::string frag); 
 protected:
 	std::map<std::string, GLuint> m_uniformHandles;	
 	std::vector<std::string> m_uniformNames;			
@@ -93,8 +91,63 @@ public:
 	 *
 	 */
 	void useProgram();
+};
 
-										
+class ComputeShader : public Subject{
+private:
+	void makeShaderProgram(std::string vert, std::string frag);
+protected:
+
+	GLuint m_programHandle;
+
+	int m_num_groups_x;
+	int m_num_groups_y;
+	int m_num_groups_z;
+public:
+
+	/** \brief constructor
+	 *
+	 * @param computeShader source path
+	 */
+	ComputeShader(std::string computeShader);
+
+	/** \brief destructor
+	 *
+	 */
+	virtual ~ComputeShader();
+
+	/** \brief getter
+	 *
+	 * @return program handle
+	 */
+	GLuint getProgramHandle();
+
+	/** \brief binds the shader program
+	 *
+	 */
+	void useProgram();
+
+	/** \brief dispatch shader program
+	 * dispatch this shaderProgram using the specified groups
+	 * @param num_groups_x
+	 * @param num_groups_y
+	 * @param num_groups_z
+	 */
+	void dispatch( GLuint num_groups_x, GLuint num_groups_y, GLuint num_groups_z );
+
+	/** \brief dispatch shader program indirectly
+	 *
+	 * @param indirect byte offset to the buffer currently bound to GL_DISPATCH_INDIRECT_BUFFER
+	 */
+	void dispatchIndirect( GLintptr indirect );
+
+	void setProgramHandle(GLuint programHandle);
+	int getNumGroupsX() const;
+	void setNumGroupsX(int numGroupsX);
+	int getNumGroupsY() const;
+	void setNumGroupsY(int numGroupsY);
+	int getNumGroupsZ() const;
+	void setNumGroupsZ(int numGroupsZ);
 };
 
 #endif

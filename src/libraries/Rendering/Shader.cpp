@@ -1,5 +1,7 @@
 #include "Rendering/Shader.h"
 
+#include "Utility/DebugLog.h"
+
 Shader::Shader(std::string vertexShader, std::string fragmentShader)
 {
 	m_programHandle = ShaderTools::makeShaderProgram(vertexShader.c_str(), fragmentShader.c_str());
@@ -82,4 +84,62 @@ bool Shader::uploadUniform(GLint uniformVariable, std::string uniformName){
 		return true;
 	}else
 		return false;
+}
+
+ComputeShader::ComputeShader(std::string computeShader) {
+	m_programHandle = ShaderTools::makeComputeShaderProgram( computeShader.c_str() );
+
+	GLint* params = new GLint[3];
+
+	glGetProgramiv( m_programHandle, GL_COMPUTE_WORK_GROUP_SIZE, params );
+
+	m_num_groups_x = params[0];
+	m_num_groups_y = params[1];
+	m_num_groups_z = params[2];
+
+	DEBUGLOG->log("ComputeShader num_groups_x : ", m_num_groups_x );
+	DEBUGLOG->log("ComputeShader num_groups_y : ", m_num_groups_y );
+	DEBUGLOG->log("ComputeShader num_groups_z : ", m_num_groups_z );
+}
+
+ComputeShader::~ComputeShader() {
+}
+
+GLuint ComputeShader::getProgramHandle() {
+	return m_programHandle;
+}
+
+void ComputeShader::useProgram() {
+}
+
+void ComputeShader::setProgramHandle(GLuint programHandle) {
+	m_programHandle = programHandle;
+}
+
+int ComputeShader::getNumGroupsX() const {
+	return m_num_groups_x;
+}
+
+void ComputeShader::setNumGroupsX(int numGroupsX) {
+	m_num_groups_x = numGroupsX;
+}
+
+int ComputeShader::getNumGroupsY() const {
+	return m_num_groups_y;
+}
+
+void ComputeShader::setNumGroupsY(int numGroupsY) {
+	m_num_groups_y = numGroupsY;
+}
+
+int ComputeShader::getNumGroupsZ() const {
+	return m_num_groups_z;
+}
+
+void ComputeShader::setNumGroupsZ(int numGroupsZ) {
+	m_num_groups_z = numGroupsZ;
+}
+
+void ComputeShader::dispatch(GLuint num_groups_x, GLuint num_groups_y,
+		GLuint num_groups_z) {
 }
