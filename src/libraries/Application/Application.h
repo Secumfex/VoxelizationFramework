@@ -45,6 +45,8 @@ public:
 
 	void run();
 
+	virtual void programCycle();
+
 	/*Getter & Setter*/
 	const DebugLog& getLog();
 

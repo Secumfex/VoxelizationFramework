@@ -91,12 +91,12 @@ private:
 	{
 		DEBUGLOG->log("Creating TextureAtlasRenderPass for provided renderable node");
 		DEBUGLOG->indent();
-			GLenum internalFormat = FramebufferObject::internalFormat;
-			FramebufferObject::internalFormat = GL_RGBA32F_ARB;	// change this first
+			GLenum internalFormat = FramebufferObject::static_internalFormat;
+			FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;	// change this first
 
 			m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderPass( renderableNode, atlasResolution, atlasResolution );
 
-			FramebufferObject::internalFormat = internalFormat;	// restore default
+			FramebufferObject::static_internalFormat = internalFormat;	// restore default
 		DEBUGLOG->outdent();
 
 		return m_textureAtlasRenderer;

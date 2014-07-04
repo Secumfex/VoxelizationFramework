@@ -19,9 +19,56 @@
 
 static bool rotatingBunny = false;
 
-static int voxelGridResolution = 256;
+// static int voxelGridResolution = 256;
+
+// compute shader related information
+static int MAX_COMPUTE_WORK_GROUP_COUNT;
+static int MAX_COMPUTE_WORK_GROUP_SIZE;
+static int MAX_COMPUTE_WORK_GROUP_INVOCATIONS;
+static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
+
+class DispatchImageComputeShader : public DispatchComputeShaderListener
+{
+protected:
+	Texture* p_inputTexture;
+	Texture* p_outputTexture;
+public:
+	DispatchImageComputeShader(ComputeShader* computeShader, Texture* inputTexture, Texture* outputTexture, int x= 0, int y= 0, int z = 0 )
+	: DispatchComputeShaderListener(computeShader, x,y,z)
+{
+		p_inputTexture = inputTexture;
+		p_outputTexture = outputTexture;
+}
+	void call()
+	{
+
+		// TODO upload dat output image
+		glBindImageTexture(1,
+				p_inputTexture->getTextureHandle(),
+				0,
+				GL_FALSE,
+				0,
+				GL_READ_WRITE,
+				GL_RGBA32F);
+
+
+		// TODO bind dat input image
+		glBindImageTexture(0,
+				p_inputTexture->getTextureHandle(),
+				0,
+				GL_FALSE,
+				0,
+				GL_READ_WRITE,
+				GL_RGBA32F);
+
+		// dispatch as usual
+		DispatchComputeShaderListener::call();
+
+		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+	}
+};
 
 class ComputeShaderApp: public Application {
 private:
@@ -53,6 +100,22 @@ private:
 		return phongPerspectiveRenderPass;
 	}
 
+	/**
+	 * print some information from the GPU about compute shader related stuff
+	 */
+	void printComputeShaderInformation()
+	{
+		glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &MAX_COMPUTE_WORK_GROUP_INVOCATIONS);
+		glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_COUNT, &MAX_COMPUTE_WORK_GROUP_COUNT);
+		glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_SIZE, &MAX_COMPUTE_WORK_GROUP_SIZE);
+		glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &MAX_COMPUTE_SHARED_MEMORY_SIZE);
+
+		DEBUGLOG->log("max compute work group invocations : ", MAX_COMPUTE_WORK_GROUP_INVOCATIONS);
+		DEBUGLOG->log("max compute work group size        : ", MAX_COMPUTE_WORK_GROUP_SIZE);
+		DEBUGLOG->log("max compute work group count       : ", MAX_COMPUTE_WORK_GROUP_COUNT);
+		DEBUGLOG->log("max compute shared memory size	  : ", MAX_COMPUTE_SHARED_MEMORY_SIZE);
+	}
+
 public:
 	ComputeShaderApp()
 	{
@@ -62,6 +125,20 @@ public:
 	{
 
 	}
+
+	void postConfigure()
+	{
+		DEBUGLOG->log("Printing some compute shader information");
+		DEBUGLOG->indent();
+			printComputeShaderInformation();
+		DEBUGLOG->outdent();
+	}
+
+	void programCycle()
+	{
+		Application::programCycle(); 	// regular rendering and image presentation
+	}
+
 	void postInitialize()
 	{
 		/**************************************************************************************
@@ -133,7 +210,6 @@ public:
 					showRenderPassPerspective->addUniformTexture( new Texture( phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) ), "uniformTexture" );
 
 					DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
-					// add screen fill render pass now
 					m_renderManager.addRenderPass(showRenderPassPerspective);
 
 				DEBUGLOG->outdent();
@@ -152,17 +228,43 @@ public:
 
 			ComputeShader* simpleComputeShader = new ComputeShader(SHADERS_PATH "/compute/simpleCompute.comp");
 
+			DEBUGLOG->log("Creating a texture to write to ");
+			GLuint output_texture;
+
+			glGenTextures(1, &output_texture);
+			glBindTexture(GL_TEXTURE_2D, output_texture);
+			glTexStorage2D( GL_TEXTURE_2D,
+					1,
+					GL_RGBA32F,
+					512,
+					512);
+			Texture* outputTexture = new Texture( output_texture );
+			Texture* inputTexture  = new Texture( phongPerspectiveRenderPass->getFramebufferObject() ->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) );
+
+			DEBUGLOG->log("Creating a dispatch listener for simple compute shader");
+
+			// dispatch 16 shader groups in x and y direction since window is 512x512 in resolution and group size is 32x32
+			DispatchImageComputeShader* dispatchListener = new DispatchImageComputeShader(
+				simpleComputeShader,
+				inputTexture,
+				outputTexture,
+				16,16,0 );
+
+			DEBUGLOG->log("Attaching dispatch listener to perspective phong renderpass");
+
+			phongPerspectiveRenderPass->attach(dispatchListener, "POSTRENDERPASS");
+
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
-		DEBUGLOG->log("Configuring Voxelization");
-		DEBUGLOG->indent();
-
-			DEBUGLOG->log( " -  TODO - TODO - TODO - TODO ");
-
-		DEBUGLOG->outdent();
+//		DEBUGLOG->log("Configuring Voxelization");
+//		DEBUGLOG->indent();
+//
+//			DEBUGLOG->log( " -  TODO - TODO - TODO - TODO ");
+//
+//		DEBUGLOG->outdent();
 
 		/**************************************************************************************
 		* 								INPUT CONFIGURATION
@@ -191,6 +293,9 @@ int main() {
 	// configure a little bit
 	Application::static_newWindowHeight = 512;
 	Application::static_newWindowWidth = 512;
+
+	FramebufferObject::static_internalFormat = GL_RGBA32F;
+	FramebufferObject::static_format = GL_RGBA;
 
 	ComputeShaderApp myApp;
 

@@ -22,7 +22,9 @@ private:
 	std::vector<GLenum > m_drawBuffers;
 public:
 
-	static GLenum internalFormat;
+	static GLenum static_internalFormat;
+	static GLenum static_format;
+	static GLenum static_type;
 
 	FramebufferObject(int width = 800, int height = 600);
 	~FramebufferObject();

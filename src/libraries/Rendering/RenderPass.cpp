@@ -98,6 +98,8 @@ void RenderPass::render()
 	postRender();
 
 	restoreStates();
+
+	call("POSTRENDERPASS");	// this renderpass is finished
 }
 
 void RenderPass::postRender()

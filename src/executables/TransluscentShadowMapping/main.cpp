@@ -137,12 +137,12 @@ private:
 	{
 		DEBUGLOG->log("Creating TextureAtlasRenderPass for provided renderable node");
 		DEBUGLOG->indent();
-		GLenum internalFormat = FramebufferObject::internalFormat;
-		FramebufferObject::internalFormat = GL_RGBA32F_ARB;	// change this first
+		GLenum internalFormat = FramebufferObject::static_internalFormat;
+		FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;	// change this first
 
 		m_textureAtlasRenderer = new TexAtlas::TextureAtlasRenderPass( renderableNode, atlasResolution, atlasResolution );
 
-		FramebufferObject::internalFormat = internalFormat;// restore default
+		FramebufferObject::static_internalFormat = internalFormat;// restore default
 		DEBUGLOG->outdent();
 
 		return m_textureAtlasRenderer;
@@ -389,14 +389,14 @@ public:
 		// Render Scene into GBUFFER )
 		Shader* writeGbufferShader = new Shader(SHADERS_PATH "/gbuffer/gbuffer.vert", SHADERS_PATH "/gbuffer/gbuffer_backfaceCulling_persp.frag");
 
-		GLenum internalFormat = FramebufferObject::internalFormat;
-		FramebufferObject::internalFormat = GL_RGBA32F_ARB;
+		GLenum internalFormat = FramebufferObject::static_internalFormat;
+		FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;
 
 		FramebufferObject* gbufferFramebufferObject = new FramebufferObject (512,512);
 		// 3 attachments : position, normals, color
 		gbufferFramebufferObject->addColorAttachments(3);
 
-		FramebufferObject::internalFormat = internalFormat;
+		FramebufferObject::static_internalFormat = internalFormat;
 
 		CameraRenderPass* writeGbufferRenderPass = new CameraRenderPass(writeGbufferShader, gbufferFramebufferObject);
 		writeGbufferRenderPass->addEnable(GL_DEPTH_TEST);

@@ -28,7 +28,7 @@ class ObjectLoadingApp : public Application
 	void postConfigure()
 	{
 		// important for stuff
-		FramebufferObject::internalFormat = GL_RGBA;
+		FramebufferObject::static_internalFormat = GL_RGBA;
 	}
 
 	void postInitialize()

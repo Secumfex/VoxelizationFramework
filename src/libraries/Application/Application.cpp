@@ -181,10 +181,7 @@ void Application::run()
 		m_sceneManager.update( (float) m_cycleTimer.getElapsedTime() );	// update with last actual cycle time
 		m_cycleTimer.reset();
 
-		m_renderManager.render();
-
-		glfwSwapBuffers(m_windowManager.getActiveWindow());
-        glfwPollEvents();
+		programCycle();
 
         call("POST_PROGRAM_CYCLE");
 	}
@@ -195,6 +192,15 @@ void Application::run()
 
 	DEBUGLOG->log("Quitting Application main loop ");
 	DEBUGLOG->outdent();
+}
+
+void Application::programCycle()
+{
+	m_renderManager.render();
+
+	glfwSwapBuffers(m_windowManager.getActiveWindow());
+	glfwPollEvents();
+
 }
 
 const DebugLog& Application::getLog()
