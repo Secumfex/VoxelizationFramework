@@ -33,6 +33,9 @@ protected:
 public:
 	TriangleRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* screenFillingTriangle);
 	void addUniformTexture(Texture* texture, std::string uniformTarget);
+
+	void removeUniformTexture(Texture* texture);	// remove uniform that uploads this texture if existent
+	void removeUniformTexture(std::string uniformTarget); // remove uniform that uploads to this target if existent
 	virtual void uploadUniforms();
 };
 

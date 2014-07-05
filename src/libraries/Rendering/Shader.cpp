@@ -110,6 +110,7 @@ GLuint ComputeShader::getProgramHandle() {
 }
 
 void ComputeShader::useProgram() {
+	glUseProgram( m_programHandle );
 }
 
 void ComputeShader::setProgramHandle(GLuint programHandle) {
@@ -142,4 +143,5 @@ void ComputeShader::setNumGroupsZ(int numGroupsZ) {
 
 void ComputeShader::dispatch(GLuint num_groups_x, GLuint num_groups_y,
 		GLuint num_groups_z) {
+	glDispatchCompute( num_groups_x, num_groups_y, num_groups_z);
 }

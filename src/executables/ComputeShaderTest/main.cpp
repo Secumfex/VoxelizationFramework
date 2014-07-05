@@ -43,25 +43,30 @@ public:
 }
 	void call()
 	{
+		p_computeShader->useProgram();
 
-		// TODO upload dat output image
+		p_inputTexture->unbindFromActiveUnit();
+
+		// upload input texture
+		glBindImageTexture(
+				0,
+				p_inputTexture->getTextureHandle(),
+				0,
+				GL_FALSE,
+				0,
+				GL_READ_ONLY,
+				GL_RGBA32F);
+
+		// upload output texture
 		glBindImageTexture(1,
-				p_inputTexture->getTextureHandle(),
+				p_outputTexture->getTextureHandle(),
 				0,
 				GL_FALSE,
 				0,
-				GL_READ_WRITE,
+				GL_WRITE_ONLY,
 				GL_RGBA32F);
 
 
-		// TODO bind dat input image
-		glBindImageTexture(0,
-				p_inputTexture->getTextureHandle(),
-				0,
-				GL_FALSE,
-				0,
-				GL_READ_WRITE,
-				GL_RGBA32F);
 
 		// dispatch as usual
 		DispatchComputeShaderListener::call();
@@ -113,7 +118,7 @@ private:
 		DEBUGLOG->log("max compute work group invocations : ", MAX_COMPUTE_WORK_GROUP_INVOCATIONS);
 		DEBUGLOG->log("max compute work group size        : ", MAX_COMPUTE_WORK_GROUP_SIZE);
 		DEBUGLOG->log("max compute work group count       : ", MAX_COMPUTE_WORK_GROUP_COUNT);
-		DEBUGLOG->log("max compute shared memory size	  : ", MAX_COMPUTE_SHARED_MEMORY_SIZE);
+		DEBUGLOG->log("max compute shared memory size     : ", MAX_COMPUTE_SHARED_MEMORY_SIZE);
 	}
 
 public:
@@ -121,6 +126,7 @@ public:
 	{
 		m_name = "Compute Shader App";
 	}
+
 	virtual ~ComputeShaderApp()
 	{
 
@@ -141,9 +147,11 @@ public:
 
 	void postInitialize()
 	{
+
 		/**************************************************************************************
 		 * 								   OBJECT LOADING
 		 **************************************************************************************/
+
 		Scene* scene = SimpleScene:: createNewScene ( this );
 
 		DEBUGLOG->log("Loading some objects");
@@ -183,6 +191,7 @@ public:
 		/**************************************************************************************
 		 * 									REGULAR RENDERING
 		 **************************************************************************************/
+
 		DEBUGLOG->log("Configuring Rendering");
 		DEBUGLOG->indent();
 
@@ -207,7 +216,8 @@ public:
 					showRenderPassPerspective->addClearBit(GL_COLOR_BUFFER_BIT);
 					showRenderPassPerspective->addClearBit(GL_DEPTH_BUFFER_BIT);
 
-					showRenderPassPerspective->addUniformTexture( new Texture( phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) ), "uniformTexture" );
+					Texture* phongPerspectiveRenderPassOutput = new Texture( phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
+					showRenderPassPerspective->addUniformTexture( phongPerspectiveRenderPassOutput, "uniformTexture" );
 
 					DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
 					m_renderManager.addRenderPass(showRenderPassPerspective);
@@ -217,6 +227,7 @@ public:
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
+
 		/**************************************************************************************
 		 * 								COMPUTE SHADER CREATION
 		 **************************************************************************************/
@@ -239,7 +250,7 @@ public:
 					512,
 					512);
 			Texture* outputTexture = new Texture( output_texture );
-			Texture* inputTexture  = new Texture( phongPerspectiveRenderPass->getFramebufferObject() ->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) );
+			Texture* inputTexture  = phongPerspectiveRenderPassOutput;
 
 			DEBUGLOG->log("Creating a dispatch listener for simple compute shader");
 
@@ -248,7 +259,16 @@ public:
 				simpleComputeShader,
 				inputTexture,
 				outputTexture,
-				16,16,0 );
+				16,16,1 );
+
+			DEBUGLOG->log("Setting compute shader output texture as presentation texture");
+			DEBUGLOG->indent();
+
+				// remove old uniform, then add new uniform
+				showRenderPassPerspective->removeUniformTexture("uniformTexture");
+				showRenderPassPerspective->addUniformTexture(outputTexture, "uniformTexture");
+
+			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Attaching dispatch listener to perspective phong renderpass");
 
@@ -259,6 +279,7 @@ public:
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
+
 //		DEBUGLOG->log("Configuring Voxelization");
 //		DEBUGLOG->indent();
 //
@@ -269,6 +290,7 @@ public:
 		/**************************************************************************************
 		* 								INPUT CONFIGURATION
 		**************************************************************************************/
+
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();
 
@@ -294,6 +316,7 @@ int main() {
 	Application::static_newWindowHeight = 512;
 	Application::static_newWindowWidth = 512;
 
+	// formats to be used whenever a framebuffer object is instantiated
 	FramebufferObject::static_internalFormat = GL_RGBA32F;
 	FramebufferObject::static_format = GL_RGBA;
 

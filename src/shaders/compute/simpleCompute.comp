@@ -3,16 +3,16 @@
 // specify local work group size
 layout (local_size_x = 32, local_size_y = 32) in;
 
-layout(binding = 0, rgba32f) uniform image2D input_image;
-layout(binding = 1) 		 uniform image2D output_image;
+layout(binding = 0, rgba32f) readonly uniform image2D input_image;
+layout(binding = 1) 		 writeonly uniform image2D output_image;
 
 void main()
 {
 	// read x & y index of global invocation as index to read from
-	uvec2 index = gl_GlobalInvocationID.xy;
+	ivec2 index = ivec2( gl_GlobalInvocationID.xy );
 	
 	// read texelfrom input image
-	vec4 texel_color = imageLoad( input_image, ivec2(index));
+	vec4 texel_color = imageLoad( input_image, index );
 	
 	// invert color
 	vec4 result_color = vec4 ( 1.0 - texel_color.rgb, texel_color.a );

@@ -56,6 +56,32 @@ void TriangleRenderPass::addUniformTexture(Texture* texture, std::string uniform
 	m_uniformTextures.push_back( pair<Texture*, std::string> (texture, uniformTarget) );
 }
 
+void TriangleRenderPass::removeUniformTexture(Texture* texture)
+{
+	for ( std::vector<std::pair<Texture*, std::string > >::iterator it = m_uniformTextures.begin(); it != m_uniformTextures.end(); ++it)
+	{
+		if ( ( *it ).first == texture)
+		{
+			DEBUGLOG->log("TRIANGLERENDERPASS : removed uniform texture: " + (*it).second );
+			m_uniformTextures.erase( it );
+			return;
+		}
+	}
+}
+
+void TriangleRenderPass::removeUniformTexture(std::string uniformTarget)
+{
+	for ( std::vector<std::pair<Texture*, std::string > >::iterator it = m_uniformTextures.begin(); it != m_uniformTextures.end(); ++it)
+	{
+		if ( ( *it ).second == uniformTarget)
+		{
+			DEBUGLOG->log("TRIANGLERENDERPASS : removed uniform texture: " + (*it).second );
+			m_uniformTextures.erase( it );
+			return;
+		}
+	}
+}
+
 void TriangleRenderPass::uploadUniforms()
 {
 	for (unsigned int i = 0; i < m_uniformTextures.size(); i++)
