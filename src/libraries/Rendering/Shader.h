@@ -17,6 +17,10 @@ protected:
 	GLuint m_programHandle;	
 
 public:
+	/** \brief constructor
+	 *
+	 */
+	Shader();
 
 	/** \brief constructor
 	 *
@@ -36,6 +40,16 @@ public:
 	 */
 	GLuint getProgramHandle();
 
+	/** \brief setter
+	 *
+	 * @param handle program handle
+	 */
+	GLuint setProgramHandle(GLuint handle);
+
+	/** \brief requests all active uniforms from this shader program
+	* so they get accessible via uploadUniform etc.
+	 */
+	void requestUniformNames();
 
 	/** \brief this uploads a single uniform to this shader program
 	 *

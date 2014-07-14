@@ -17,6 +17,9 @@ void main()
 	// invert color
 	vec4 result_color = vec4 ( 1.0 - texel_color.rgb, texel_color.a );
 	
+	// do some fun stuff with the color
+	result_color = vec4 ( gl_GlobalInvocationID.xy * 1.0 / 512.0, texel_color.b, texel_color.a);
+	
 	// write into texture
 	imageStore( output_image, ivec2(index), result_color );
 }

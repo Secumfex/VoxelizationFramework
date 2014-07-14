@@ -1,11 +1,20 @@
 #include "Rendering/Shader.h"
 
 #include "Utility/DebugLog.h"
+Shader::Shader()
+{
+	m_programHandle = -1;
+}
 
 Shader::Shader(std::string vertexShader, std::string fragmentShader)
 {
 	m_programHandle = ShaderTools::makeShaderProgram(vertexShader.c_str(), fragmentShader.c_str());
 
+	requestUniformNames();
+}
+
+void Shader::requestUniformNames()
+{
 	int total = -1;
 
 	glGetProgramiv( m_programHandle, GL_ACTIVE_UNIFORMS, &total );
@@ -35,6 +44,11 @@ Shader::~Shader()
 GLuint Shader::getProgramHandle()
 {
 	return m_programHandle;
+}
+
+GLuint Shader::setProgramHandle(GLuint handle)
+{
+	m_programHandle = handle;
 }
 
 void Shader::useProgram()
