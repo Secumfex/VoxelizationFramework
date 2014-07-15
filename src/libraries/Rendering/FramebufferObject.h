@@ -24,6 +24,7 @@ public:
 
 	static GLenum static_internalFormat;
 	static GLenum static_format;
+	static bool static_useTexStorage2D;
 	static GLenum static_type;
 
 	FramebufferObject(int width = 800, int height = 600);

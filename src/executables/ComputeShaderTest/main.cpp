@@ -345,6 +345,7 @@ int main() {
 	// formats to be used whenever a framebuffer object is instantiated
 	FramebufferObject::static_internalFormat = GL_RGBA32F;
 	FramebufferObject::static_format = GL_RGBA;
+	FramebufferObject::static_useTexStorage2D = true;
 
 	ComputeShaderApp myApp;
 
