@@ -237,7 +237,33 @@ public:
 
 			DEBUGLOG->log("Loading and Compiling simple compute shader program");
 
-			ComputeShader* simpleComputeShader = new ComputeShader(SHADERS_PATH "/compute/simpleCompute.comp");
+			ComputeShader* simpleComputeShader = new ComputeShader(SHADERS_PATH "/compute/simpleCompute_topDown.comp");
+			
+			GLint numBlocks;
+			glGetProgramiv(simpleComputeShader->getProgramHandle(), GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
+
+			DEBUGLOG->log( "Active Uniform blocks : ", numBlocks);
+
+			std::vector<std::string> nameList;
+			nameList.reserve(numBlocks);
+
+			for ( int blockIx = 0; blockIx < numBlocks; ++blockIx)
+			{
+				GLint nameLen;
+				glGetActiveUniformBlockiv(simpleComputeShader->getProgramHandle(),blockIx,GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLen);
+
+				std::vector<GLchar> name;
+				name.resize(nameLen);
+				glGetActiveUniformBlockName(simpleComputeShader->getProgramHandle(), blockIx, nameLen, 0, &name[0]);
+
+				nameList.push_back(std::string());
+				nameList.back().assign(name.begin(),name.end() -1);
+			}
+
+			for( unsigned int i = 0; i < nameList.size(); i++)
+			{
+				DEBUGLOG->log( "Uniform : " + nameList[i] );
+			}
 
 			DEBUGLOG->log("Creating a texture to write to ");
 			GLuint output_texture;

@@ -19,6 +19,9 @@ void Shader::requestUniformNames()
 
 	glGetProgramiv( m_programHandle, GL_ACTIVE_UNIFORMS, &total );
 
+	DEBUGLOG->log("Uniforms in this Shader: ", total);
+	DEBUGLOG->log("Shader ProgramHandle : ", m_programHandle);
+
 	int i= 0;
 	for(i=0; i<total; ++i)  {
 		int name_len=-1, num=-1;
@@ -100,6 +103,11 @@ bool Shader::uploadUniform(GLint uniformVariable, std::string uniformName){
 		return false;
 }
 
+std::vector<std::string> Shader::getUniformNames()
+{
+	return m_uniformNames;
+}
+
 ComputeShader::ComputeShader(std::string computeShader) {
 	m_programHandle = ShaderTools::makeComputeShaderProgram( computeShader.c_str() );
 
@@ -114,6 +122,8 @@ ComputeShader::ComputeShader(std::string computeShader) {
 	DEBUGLOG->log("ComputeShader num_groups_x : ", m_num_groups_x );
 	DEBUGLOG->log("ComputeShader num_groups_y : ", m_num_groups_y );
 	DEBUGLOG->log("ComputeShader num_groups_z : ", m_num_groups_z );
+
+	requestUniformNames();
 }
 
 ComputeShader::~ComputeShader() {

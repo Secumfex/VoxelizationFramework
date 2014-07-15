@@ -24,7 +24,7 @@ namespace ShaderTools {
         }
     }
 
-    void loadShaderSource(GLint shaderHandle, const char* fileName) {
+    void loadShaderSource(GLuint shaderHandle, const char* fileName) {
         std::string fileContent;
         std::string line;
 
@@ -48,7 +48,7 @@ namespace ShaderTools {
     }
 
     GLuint makeShaderProgram(const char* vertexShaderName, const char* fragmentShaderName) {
-        //compile vertex shader
+        //compile vertex shade
         GLuint vertexShaderHandle = glCreateShader(GL_VERTEX_SHADER);
         loadShaderSource(vertexShaderHandle, vertexShaderName);
         glCompileShader(vertexShaderHandle);

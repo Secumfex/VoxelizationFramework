@@ -107,7 +107,7 @@ public:
 	void useProgram();
 };
 
-class ComputeShader : public Subject{
+class ComputeShader : public Shader{
 private:
 	void makeShaderProgram(std::string vert, std::string frag);
 protected:
