@@ -15,7 +15,7 @@ namespace Grid
 		bool m_occupied;
 		float m_size;
 	public:
-		GridCell(bool occupied = false, float size = 1.0f);
+		GridCell(bool occupied = false, float size = 1.0f, int x = 0, int y = 0, int z = 0);
 		virtual ~GridCell();
 		bool isOccupied() const;
 		void setOccupied(bool occupied);
@@ -24,7 +24,13 @@ namespace Grid
 
 		void render();
 		void uploadUniforms(Shader* shader);
-	};
+	int getX() const;
+	void setX(int x);
+	int getY() const;
+	void setY(int y);
+	int getZ() const;
+	void setZ(int z);
+};
 
 
 	class VoxelGrid : public Object{
@@ -62,9 +68,9 @@ namespace Grid
 	public:
 		/**
 		 *
-		 * @param x start coordinate x
-		 * @param y start coordinate y
-		 * @param z start coordinate z
+		 * @param x start world coordinate x
+		 * @param y start world coordinate y
+		 * @param z start world coordinate z
 		 * @param width amount of grid cells in x diraction
 		 * @param height amount of grid cells in y direction
 		 * @param depth amount of grid cells in z direction
@@ -72,15 +78,21 @@ namespace Grid
 		 */
 		AxisAlignedVoxelGrid(float x, float y, float z, int width, int height, int depth, float cellSize);
 		virtual ~AxisAlignedVoxelGrid();
-		glm::vec3 getGridCellCenter(glm::vec3 position);
-		GridCell* getGridCell(glm::vec3 position);
+		glm::vec3 getGridCellCenter(const glm::vec3& position);
+		glm::vec3 getGridCellCenter(const GridCell& gridCell);
+		GridCell* getGridCell(const glm::vec3& position);
 		std::vector < std::pair < GridCell* , glm::vec3 > > getGridCellsForFace(std::vector < glm::vec3 > facePositions);
+		std::vector < std::pair < GridCell* , glm::vec3 > > getGridCellsForTriangle(const std::vector < glm::vec3 >& trianglePositions);
 	float getX() const;
 	void setX(float x);
 	float getY() const;
 	void setY(float y);
 	float getZ() const;
 	void setZ(float z);
-};
+	};
+
+	bool static testIntersection( const glm::vec3& center, float cellSize, const std::vector< glm::vec3 >& positions );
+	bool static triangleOverlapsCross( const glm::vec3& cross, float halfExtent, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2 );
+	bool static triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const glm::vec3& v0);
 }
 #endif

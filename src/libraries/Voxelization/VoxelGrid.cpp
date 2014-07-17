@@ -142,102 +142,92 @@ void Grid::AxisAlignedVoxelGrid::setZ(float z) {
 	m_z = z;
 }
 
-GridCell* AxisAlignedVoxelGrid::getGridCell(glm::vec3 position)
+// retrieve grid cell corresponding to this world position
+GridCell* AxisAlignedVoxelGrid::getGridCell(const glm::vec3& position)
 {
 	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
 	return VoxelGrid::getGridCell( (int) gridPos.x, (int) gridPos.y, (int) gridPos.z);
 }
 
-std::vector < std::pair < GridCell* , glm::vec3 > > AxisAlignedVoxelGrid::getGridCellsForFace(std::vector < glm::vec3 > facePositions)
+std::vector < std::pair < GridCell* , glm::vec3 > > AxisAlignedVoxelGrid::getGridCellsForTriangle(const std::vector < glm::vec3 >& trianglePositions)
 {
 	std::vector<std::pair< GridCell*, glm::vec3 > > result;
 
-	// for every edge, interpolate and check sample points.. (oh god this is horrible) TODO
-	for (float t = 0.0f; t < 1.0f ; t+=0.05f)
+	if ( trianglePositions.size() != 3)
 	{
-		// TODO find a better way instead of this...
-		glm::vec3 currentSamplePoint = facePositions[0] + ( t * ( facePositions[1] - facePositions[0] ) );
+		DEBUGLOG->log("ERROR : Triangle positions were not sufficient. Aborting intersection testing");
+		return result;
+	}
 
-		GridCell* intersectedGridCell =  getGridCell( currentSamplePoint );
-		if (intersectedGridCell != 0)
+	// TODO build an Axis Aligned Bounding Box around the Triangle ( find min / max values )
+	const glm::vec3& pos1 = trianglePositions[0];
+	const glm::vec3& pos2 = trianglePositions[1];
+	const glm::vec3& pos3 = trianglePositions[2];
+
+	glm::vec3 min = glm::min ( pos3, glm::min ( pos1, pos2 ) );
+	glm::vec3 max = glm::max ( pos3, glm::max ( pos1, pos2 ) );
+
+//	DEBUGLOG->log("pos1 : " , pos1);
+//	DEBUGLOG->log("pos2 : " , pos2);
+//	DEBUGLOG->log("pos3 : " , pos3);
+//	DEBUGLOG->log("min  : " , min);
+//	DEBUGLOG->log("max  : " , max);
+
+	// TODO compute amount of voxels to test in each direction
+	glm::vec3 minToMax = max - min;
+	int xSteps = ( minToMax.x / m_cellSize ) + 1;
+	int ySteps = ( minToMax.y / m_cellSize ) + 1;
+	int zSteps = ( minToMax.z / m_cellSize ) + 1;
+
+	// test each voxel against polygon
+	for ( int x = 0; x < xSteps; x++ )
+	{
+		for ( int y = 0; y < ySteps; y++ )
 		{
-			bool alreadyInList = false;
-			// check whether this cell is already in the list
-			for (unsigned int i = 0; i < result.size(); i++)
+			for ( int z = 0; z < zSteps; z++ )
 			{
-				if ( result[i].first == intersectedGridCell )
+				glm::vec3 currentSamplePoint = min + glm::vec3(x * m_cellSize, y * m_cellSize, z * m_cellSize);
+
+				// retrieve grid Cell to be tested against
+				GridCell* gridCellCandidate = getGridCell( currentSamplePoint );
+
+				if (gridCellCandidate != 0)
 				{
-					alreadyInList = true;
+					glm::vec3 gridCellCenter = getGridCellCenter( currentSamplePoint );
+
+					// perform the test
+					bool intersectsPolygon = testIntersection( gridCellCenter, m_cellSize, trianglePositions );
+
+					// if intersects push back
+					if ( intersectsPolygon )
+					{
+						bool alreadyInList = false;
+
+						// check whether this cell is already in the list
+						for (unsigned int i = 0; i < result.size(); i++)
+						{
+							if ( result[i].first == gridCellCandidate )
+							{
+								alreadyInList = true;
+							}
+						}
+
+						if( !alreadyInList )
+						{
+							result.push_back( std::pair <GridCell*, glm::vec3 >(gridCellCandidate, currentSamplePoint ) );
+						}
+					}
 				}
-			}
-
-			if( !alreadyInList )
-			{
-				result.push_back( std::pair <GridCell*, glm::vec3 >(intersectedGridCell, currentSamplePoint ) );
-
 			}
 		}
 	}
-
-	for (float t = 0.0f; t < 1.0f ; t+=0.05f)
-	{
-		// TODO find a better way instead of this...
-		glm::vec3 currentSamplePoint = facePositions[1] + ( t * ( facePositions[2] - facePositions[1] ) );
-
-		GridCell* intersectedGridCell =  getGridCell( currentSamplePoint );
-		if (intersectedGridCell != 0)
-		{
-			bool alreadyInList = false;
-			// check whether this cell is already in the list
-			for (unsigned int i = 0; i < result.size(); i++)
-			{
-				if ( result[i].first == intersectedGridCell )
-				{
-					alreadyInList = true;
-				}
-			}
-
-			if( !alreadyInList )
-			{
-				result.push_back( std::pair <GridCell*, glm::vec3 >(intersectedGridCell, currentSamplePoint ) );
-
-			}
-		}
-	}
-
-	for (float t = 0.0f; t < 1.0f ; t+=0.05f)
-	{
-		// TODO find a better way instead of this...
-		glm::vec3 currentSamplePoint = facePositions[2] + ( t * ( facePositions[0] - facePositions[2] ) );
-
-		GridCell* intersectedGridCell =  getGridCell( currentSamplePoint );
-		if (intersectedGridCell != 0)
-		{
-			bool alreadyInList = false;
-			// check whether this cell is already in the list
-			for (unsigned int i = 0; i < result.size(); i++)
-			{
-				if ( result[i].first == intersectedGridCell )
-				{
-					alreadyInList = true;
-				}
-			}
-
-			if( !alreadyInList )
-			{
-				result.push_back( std::pair <GridCell*, glm::vec3 >(intersectedGridCell, currentSamplePoint ) );
-
-			}
-		}
-	}
-
 	return result;
 }
 
 #include <cmath>
 
 // return the center of the affected grid cell
-glm::vec3 AxisAlignedVoxelGrid::getGridCellCenter(glm::vec3 position)
+glm::vec3 AxisAlignedVoxelGrid::getGridCellCenter(const glm::vec3& position)
 {
 	// position in grid space
 	glm::vec3 gridPos = ( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
@@ -250,13 +240,27 @@ glm::vec3 AxisAlignedVoxelGrid::getGridCellCenter(glm::vec3 position)
 	return glm::vec3 ( x , y, z );
 }
 
-GridCell::GridCell(bool occupied, float size)
+// return the world position of the center of the grid cell
+glm::vec3 AxisAlignedVoxelGrid::getGridCellCenter(const GridCell& gridCell)
+{
+	// position in grid space
+	glm::vec3 gridPos = glm::vec3 ( gridCell.getX() * m_cellSize, gridCell.getY() * m_cellSize, gridCell.getZ() * m_cellSize );
+
+	// round to bottom left front corner of cell and add half a cell and compute world position
+	float x = trunc( gridPos.x ) * m_cellSize + ( m_cellSize / 2.0f ) + m_x;
+	float y = trunc( gridPos.y ) * m_cellSize + ( m_cellSize / 2.0f ) + m_y;
+	float z = trunc( gridPos.z ) * m_cellSize + ( m_cellSize / 2.0f ) + m_z;
+
+	return glm::vec3 ( x , y, z );
+}
+
+GridCell::GridCell(bool occupied, float size, int x, int y, int z)
 {
 	m_occupied = occupied;
 	m_size = size;
-	m_x = 0;
-	m_y = 0;
-	m_z = 0;
+	m_x = x;
+	m_y = y;
+	m_z = z;
 }
 
 bool GridCell::isOccupied() const {
@@ -280,6 +284,30 @@ GridCell::~GridCell()
 
 }
 
+int GridCell::getX() const {
+return m_x;
+}
+
+void GridCell::setX(int x) {
+m_x = x;
+}
+
+int GridCell::getY() const {
+return m_y;
+}
+
+void GridCell::setY(int y) {
+m_y = y;
+}
+
+int GridCell::getZ() const {
+return m_z;
+}
+
+void GridCell::setZ(int z) {
+m_z = z;
+}
+
 /*******   RENDERING METHODS   *********/
 
 void GridCell::uploadUniforms(Shader* shader)
@@ -292,4 +320,217 @@ void GridCell::render()
 	//TODO render a Cube
 }
 
+/**
+ * as stated by Fast 3D Triangle-Box Overlap Testing
+ * @param center
+ * @param cellSize
+ * @param positions
+ * @return
+ */
+bool Grid::testIntersection(const glm::vec3& center, float cellSize,
+		const std::vector<glm::vec3>& positions) {
 
+	// move triangle as if box was in origin
+	glm::vec3 v0 = positions[0] - center;
+	glm::vec3 v1 = positions[1] - center;
+	glm::vec3 v2 = positions[2] - center;
+
+	// AABB of triangle
+	glm::vec3 min = glm::min ( v0, glm::min( v1, v2 ) );
+	glm::vec3 max = glm::max ( v0, glm::max( v1, v2 ) );
+
+	// compute edge vectors
+	glm::vec3 f0 = v1 - v0;
+	glm::vec3 f1 = v2 - v1;
+	glm::vec3 f2 = v0 - v2;
+
+	// compute normal of triangle, whatever edge
+	glm::vec3 n_t = glm::normalize( glm::cross( f0, f1 ) );
+
+	float halfExtent = cellSize / 2.0f;
+
+	// use Separating Axis Theorem to test
+
+	// 1st : 3 tests - normals of AABB against minmal AABB of triangle
+
+	if ( min.x > halfExtent || max.x < - halfExtent )
+	{
+		return false;
+	}
+
+	if ( min.y > halfExtent || max.y < - halfExtent )
+	{
+		return false;
+	}
+
+	if ( min.z > halfExtent || max.z < - halfExtent )
+	{
+		return false;
+	}
+
+	// if program reaches this point, all axis overlap
+	// 2nd : 1 test - normal of Triangle
+	bool overlapPlane = triangleOverlapsPlane(n_t, halfExtent, v0);
+	if (!overlapPlane)
+	{
+		return false;
+	}
+
+//	// 3rd : 9 tests - cross products of edges
+//	glm::vec3 e0(1.0f, 0.0f, 0.0f);
+//	glm::vec3 e1(0.0f, 1.0f, 0.0f);
+//	glm::vec3 e2(0.0f, 0.0f, 1.0f);
+//
+//	glm::vec3 cross = glm::cross(e0, f0);
+//	bool overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e0, f1);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e0, f2);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e1, f0);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e1, f1);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e1, f2);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e2, f0);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e2, f1);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+//
+//	cross = glm::cross(e2, f2);
+//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
+//	if ( !overlaps)
+//	{
+//		return false;
+//	}
+
+	// if program reaches this pont, all failed to find a separating axis
+	return true;
+}
+
+bool Grid::triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const glm::vec3& v0)
+{
+	float d = glm::dot( n_t, v0 );
+	float negD = -d;
+
+	glm::vec3 diagMax;	// diagonal vector with maximal matching with normal
+	glm::vec3 diagMin;	// diagonal vector with minimal matching with normal ( i.e. opposite direction )
+
+	if ( n_t.x > 0.0f )
+	{
+		diagMin.x = - halfExtent;
+		diagMax.x = halfExtent;
+	}
+	else
+	{
+		diagMin.x = halfExtent;
+		diagMax.x = - halfExtent;
+	}
+
+	if ( n_t.y > 0.0f )
+	{
+		diagMin.y = - halfExtent;
+		diagMax.y = halfExtent;
+	}
+	else
+	{
+		diagMin.y = halfExtent;
+		diagMax.y = - halfExtent;
+	}
+
+	if ( n_t.z > 0.0f )
+	{
+		diagMin.z = - halfExtent;
+		diagMax.z = halfExtent;
+	}
+	else
+	{
+		diagMin.z = halfExtent;
+		diagMax.z = - halfExtent;
+	}
+
+
+	float dotMax = glm::dot ( n_t, diagMax );
+	float dotMin = glm::dot( n_t, diagMin);
+
+	// SOME ASSERTIONS CAN BE MADE :
+
+	// dotMin ALWAYS <= 0.0   cuz always facing in the opposite direction of n
+	// dotMax ALWAYS >= 0.0   cuz always facing in the same direction of n
+	// d negative if normal direction and vertex vector facing in opposite directions
+	// d positive if normal direction and vertex vector facing in same directions
+
+	if ( dotMin + negD > 0.0f )
+	{
+		return false;	// thus, there must be a seperating plane here
+	}
+
+
+	if ( dotMax, + negD >= 0.0f)
+	{
+		return true;
+	}
+
+	// only possible thing now
+	return false;
+}
+
+bool Grid::triangleOverlapsCross ( const glm::vec3& cross, float halfExtent, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2 )
+{
+	float neg_x,neg_y,neg_z;
+
+	( cross.x < 0.0f ) ? neg_x = -1.0f : neg_x = 1.0f;
+	( cross.y < 0.0f ) ? neg_y = -1.0f : neg_y = 1.0f;
+	( cross.z < 0.0f ) ? neg_z = -1.0f : neg_z = 1.0f;
+
+	float radius = halfExtent * glm::abs( cross.x ) + halfExtent * glm::abs( cross.y ) + halfExtent * glm::abs( cross.z );
+
+	float dotV0		 = glm::dot( v0, cross );
+	float dotV1		 = glm::dot( v1, cross );
+	float dotV2		 = glm::dot( v2, cross );
+
+	float minTriangle = glm::min( dotV0, glm::min ( dotV1, dotV2) );
+	float maxTriangle = glm::max( dotV0, glm::max ( dotV1, dotV2) );
+
+	return ( minTriangle < radius && maxTriangle >= - radius);
+}

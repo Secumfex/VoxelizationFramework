@@ -36,7 +36,7 @@ void DebugLog::log(std::string msg, unsigned int value)
 	log(msg + ss.str());
 }
 
-void DebugLog::log(std::string msg, glm::vec3 vector)
+void DebugLog::log(std::string msg, const glm::vec3& vector)
 {
 	std::stringstream ss;
 	ss << vector.x << ", ";
@@ -45,7 +45,7 @@ void DebugLog::log(std::string msg, glm::vec3 vector)
 	log(msg + ss.str());
 }
 
-void DebugLog::log(std::string msg, glm::vec4 vector)
+void DebugLog::log(std::string msg, const glm::vec4& vector)
 {
 	std::stringstream ss;
 	ss << vector.x << ", ";

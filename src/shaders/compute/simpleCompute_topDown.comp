@@ -22,16 +22,8 @@ void main()
 	// do some fun stuff with the color
 	result_color = vec4 ( gl_GlobalInvocationID.xy * ( 1.0f / 512.0f ), texel_color.b, texel_color.a);
 	
-	// lololol
+	// invert lolol
 	index.y = 512 - index.y;
-
-	float someothervalue = uniformKartoffel + 10;
-
-	result_color *= uniformKartoffel;
-	result_color += uniformKartoffel;	
-	result_color += uniformKartoffel;
-	result_color += uniformKartoffel;
-	result_color *= someothervalue;
 
 	// write into texture, but invert stuff
 	imageStore( output_image, ivec2(index), result_color );

@@ -217,7 +217,7 @@ class UniformVoxelGridApp : public Application
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid object");
 			DEBUGLOG->indent();
-				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f, -5.0f, -5.0f, 32, 32, 32, 0.3125f);
+				Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid = new Grid::AxisAlignedVoxelGrid(-5.0f, -5.0f, -5.0f, 16, 16, 16, 0.625f);
 				DEBUGLOG->log("Grid width    : ", axisAlignedVoxelGrid->getWidth());
 				DEBUGLOG->log("Grid height   : ", axisAlignedVoxelGrid->getHeight());
 				DEBUGLOG->log("Grid depth    : ", axisAlignedVoxelGrid->getDepth());
@@ -269,10 +269,8 @@ class UniformVoxelGridApp : public Application
 								worldSpaceFaceVertices.push_back( glm::vec3(worldSpaceVertex) );
 							}
 
-//							Grid::GridCell* gridCell = axisAlignedVoxelGrid->getGridCell(glm::vec3(worldSpaceVertex.x,worldSpaceVertex.y,worldSpaceVertex.z) );
-
 							// retrieve intersected grid cells of voxel grid
-							std::vector< std::pair< Grid::GridCell*, glm::vec3 > > gridCells = axisAlignedVoxelGrid->getGridCellsForFace( worldSpaceFaceVertices );
+							std::vector< std::pair< Grid::GridCell*, glm::vec3 > > gridCells = axisAlignedVoxelGrid->getGridCellsForTriangle( worldSpaceFaceVertices );
 
 							// for every intersected grid cell : check occupation and set if empty
 							for (unsigned int k = 0; k < gridCells.size(); k++)
