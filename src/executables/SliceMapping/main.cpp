@@ -270,6 +270,10 @@ class ObjectLoadingApp : public Application
 
 		DEBUGLOG->outdent();
 
+		/**************************************************************************************
+		* 								INPUT CONFIGURATION
+		**************************************************************************************/
+
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Configuring camera movement");

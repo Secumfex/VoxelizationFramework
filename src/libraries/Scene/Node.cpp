@@ -16,7 +16,10 @@ Node::Node(Node* parent)
 
 Node::~Node()
 {
-
+	for ( std::vector<Node*>::iterator it = m_children.begin(); it != m_children.end(); ++it)
+	{
+		(*it)->setParent(0);
+	}
 }
 
 void Node::addChild(Node* node)
@@ -112,3 +115,16 @@ void Node::setObject(Object* object)
 	m_object = object;
 }
 
+void Node::removeChild(Node* node) {
+	std::vector<Node* >::iterator it = m_children.begin();
+	while ( it != m_children.end() )
+	{
+		if ( ( *it ) == node )
+		{
+			(*it)->setParent( 0 );
+			m_children.erase(it);
+			return;
+		}
+		++it;
+	}
+}

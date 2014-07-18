@@ -1,6 +1,7 @@
 #include "Object.h"
 
 #include "Utility/DebugLog.h"
+#include "Rendering/RenderState.h"
 
 Object::Object( Model* model, Material* material)
 {
@@ -36,7 +37,10 @@ Material* Object::getMaterial()
 
 void Object::render()
 {
-	glBindVertexArray(m_model->getVAOHandle());
+	if ( m_model )
+	{
+		RenderState::getInstance()->bindVertexArrayObjectIfDifferent( m_model->getVAOHandle() );
+	}
 	glDrawElements(m_renderMode, ( m_model != 0 ) ? m_model->getNumIndices() : 0, GL_UNSIGNED_INT, 0);
 }
 

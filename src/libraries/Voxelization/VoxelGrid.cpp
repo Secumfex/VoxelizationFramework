@@ -25,7 +25,7 @@ VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
 			m_voxelGrid[i][j].resize(depth);
 			for (unsigned int k = 0; k < m_voxelGrid[i][j].size(); k++)
 			{
-				m_voxelGrid[i][j][k] = new GridCell(false, m_cellSize);
+				m_voxelGrid[i][j][k] = new GridCell(false, m_cellSize, i, j, k);
 			}
 		}
 	}
@@ -143,13 +143,13 @@ void Grid::AxisAlignedVoxelGrid::setZ(float z) {
 }
 
 // retrieve grid cell corresponding to this world position
-GridCell* AxisAlignedVoxelGrid::getGridCell(const glm::vec3& position)
+GridCell* Grid::AxisAlignedVoxelGrid::getGridCell(const glm::vec3& position)
 {
 	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
 	return VoxelGrid::getGridCell( (int) gridPos.x, (int) gridPos.y, (int) gridPos.z);
 }
 
-std::vector < std::pair < GridCell* , glm::vec3 > > AxisAlignedVoxelGrid::getGridCellsForTriangle(const std::vector < glm::vec3 >& trianglePositions)
+std::vector < std::pair < GridCell* , glm::vec3 > > Grid::AxisAlignedVoxelGrid::getGridCellsForTriangle(const std::vector < glm::vec3 >& trianglePositions)
 {
 	std::vector<std::pair< GridCell*, glm::vec3 > > result;
 
@@ -173,30 +173,35 @@ std::vector < std::pair < GridCell* , glm::vec3 > > AxisAlignedVoxelGrid::getGri
 //	DEBUGLOG->log("min  : " , min);
 //	DEBUGLOG->log("max  : " , max);
 
-	// TODO compute amount of voxels to test in each direction
+	// compute amount of voxels to test in each direction
 	glm::vec3 minToMax = max - min;
-	int xSteps = ( minToMax.x / m_cellSize ) + 1;
-	int ySteps = ( minToMax.y / m_cellSize ) + 1;
-	int zSteps = ( minToMax.z / m_cellSize ) + 1;
+	int xSteps = ( (int) minToMax.x / m_cellSize ) + 1;
+	int ySteps = ( (int) minToMax.y / m_cellSize ) + 1;
+	int zSteps = ( (int) minToMax.z / m_cellSize ) + 1;
 
-	// test each voxel against polygon
+	// indices of min - voxel
+	int indexMinX = ( min.x - m_x ) / m_cellSize;
+	int indexMinY = ( min.y - m_y ) / m_cellSize;
+	int indexMinZ = ( min.z - m_z ) / m_cellSize;
+
+	glm::vec3 minCellCenter = getGridCellCenter( min );
+
+	// test voxels against polygon
 	for ( int x = 0; x < xSteps; x++ )
 	{
 		for ( int y = 0; y < ySteps; y++ )
 		{
 			for ( int z = 0; z < zSteps; z++ )
 			{
-				glm::vec3 currentSamplePoint = min + glm::vec3(x * m_cellSize, y * m_cellSize, z * m_cellSize);
+				glm::vec3 currentSamplePoint = minCellCenter + glm::vec3(x * m_cellSize, y * m_cellSize, z * m_cellSize ) + 0.5f * m_cellSize;
 
 				// retrieve grid Cell to be tested against
-				GridCell* gridCellCandidate = getGridCell( currentSamplePoint );
+				GridCell* gridCellCandidate = VoxelGrid::getGridCell(indexMinX + x, indexMinY + y, indexMinZ + z );
 
 				if (gridCellCandidate != 0)
 				{
-					glm::vec3 gridCellCenter = getGridCellCenter( currentSamplePoint );
-
 					// perform the test
-					bool intersectsPolygon = testIntersection( gridCellCenter, m_cellSize, trianglePositions );
+					bool intersectsPolygon = testIntersection( currentSamplePoint, m_cellSize, trianglePositions );
 
 					// if intersects push back
 					if ( intersectsPolygon )
@@ -214,7 +219,7 @@ std::vector < std::pair < GridCell* , glm::vec3 > > AxisAlignedVoxelGrid::getGri
 
 						if( !alreadyInList )
 						{
-							result.push_back( std::pair <GridCell*, glm::vec3 >(gridCellCandidate, currentSamplePoint ) );
+							result.push_back( std::pair <GridCell*, glm::vec3 >( gridCellCandidate, currentSamplePoint ) );
 						}
 					}
 				}
@@ -489,7 +494,6 @@ bool Grid::triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const 
 		diagMax.z = - halfExtent;
 	}
 
-
 	float dotMax = glm::dot ( n_t, diagMax );
 	float dotMin = glm::dot( n_t, diagMin);
 
@@ -505,8 +509,8 @@ bool Grid::triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const 
 		return false;	// thus, there must be a seperating plane here
 	}
 
-
-	if ( dotMax, + negD >= 0.0f)
+	// dunno what this means for anyone
+	if ( dotMax + negD >= 0.0f)
 	{
 		return true;
 	}

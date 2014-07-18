@@ -187,3 +187,18 @@ void RenderPass::restoreStates()
 void RenderPass::addUniform(Uploadable* uniform) {
 	m_uniforms.push_back( uniform );
 }
+
+void RenderPass::removeRenderable(Renderable* renderable) {
+	for ( std::vector<Renderable* >::iterator it = m_renderables.begin(); it != m_renderables.end(); ++it)
+	{
+		if ( (*it) == renderable )
+		{
+			m_renderables.erase( it );
+			return;
+		}
+	}
+}
+
+void RenderPass::clearRenderables() {
+	m_renderables.clear();
+}

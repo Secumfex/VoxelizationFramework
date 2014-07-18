@@ -152,7 +152,7 @@ Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 	}
 }
 
-std::vector<glm::vec4> ResourceManager::getAssimpMeshForModel(Model* model)
+const std::vector<glm::vec4>& ResourceManager::getAssimpMeshForModel(Model* model)
 {
 	if( m_loadedMeshes.find(model) != m_loadedMeshes.end())
 		{
@@ -163,7 +163,7 @@ std::vector<glm::vec4> ResourceManager::getAssimpMeshForModel(Model* model)
 	}
 }
 
-std::vector<std::vector< unsigned int > > ResourceManager::getAssimpMeshFacesForModel(Model* model)
+const std::vector<std::vector< unsigned int > >& ResourceManager::getAssimpMeshFacesForModel(Model* model)
 {
 	if( m_loadedMeshesFaces.find(model) != m_loadedMeshesFaces.end())
 		{

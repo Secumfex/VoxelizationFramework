@@ -50,6 +50,8 @@ public:
 	void setShader(Shader* shader);
 
 	void addRenderable(Renderable* renderable);
+	void removeRenderable( Renderable* renderable );
+	void clearRenderables();
 
 	std::vector< Renderable* > getRenderables();
 

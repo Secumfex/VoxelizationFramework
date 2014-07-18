@@ -19,6 +19,7 @@ public:
 	void setParent(Node* parent);
 	Node* getParent();
 	void addChild(Node* node);
+	void removeChild( Node* node );
 
 	void setObject(Object* object);
 	Object* getObject();

@@ -37,8 +37,8 @@ public:
 	bool checkTexture(std::string path);
 	bool checkFile(std::string file);
 
-	std::vector<glm::vec4> getAssimpMeshForModel(Model* model);
-	std::vector<std::vector <unsigned int> > getAssimpMeshFacesForModel(Model* model);
+	const std::vector<glm::vec4>& getAssimpMeshForModel(Model* model);
+	const std::vector<std::vector <unsigned int> >& getAssimpMeshFacesForModel(Model* model);
 
 	Renderable* getScreenFillingTriangle();
 	Object* getCube();

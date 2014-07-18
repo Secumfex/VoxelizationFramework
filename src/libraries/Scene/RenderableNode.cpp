@@ -6,7 +6,9 @@ RenderableNode::RenderableNode(Node* parent)
 
 }
 
-RenderableNode::~RenderableNode() {
+RenderableNode::~RenderableNode()
+{
+
 }
 
 void RenderableNode::render()
