@@ -156,7 +156,7 @@ public:
 	 * sets/changes direction
 	 * @param dir
 	 */
-	void setDirection(glm::vec3 dir);
+	virtual void setDirection(glm::vec3 dir);
 
 	/** \brief setter
 	 *

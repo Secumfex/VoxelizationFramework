@@ -14,7 +14,7 @@ protected:
 	Object* m_object;
 public:
 	Node(Node* parent = 0);
-	~Node();
+	virtual ~Node();
 
 	void setParent(Node* parent);
 	Node* getParent();
@@ -27,12 +27,12 @@ public:
 	std::vector< Node* > getChildren();
 	glm::mat4 getModelMatrix();
 	glm::mat4 getAccumulatedModelMatrix();
-	void setModelMatrix(glm::mat4 modelMatrix);
+	virtual void setModelMatrix(glm::mat4 modelMatrix);
 
-	void multiply(glm::mat4 transform);	// multiplies the transform matrix from left
-	void translate(glm::vec3 translate);
-	void scale(glm::vec3 scale);
-	void rotate(float angle, glm::vec3 axis);
+	virtual void multiply(glm::mat4 transform);	// multiplies the transform matrix from left
+	virtual void translate(glm::vec3 translate);
+	virtual void scale(glm::vec3 scale);
+	virtual void rotate(float angle, glm::vec3 axis);
 
 	Node* findObjectNode(Object* object);
 };

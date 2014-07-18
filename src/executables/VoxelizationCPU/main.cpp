@@ -13,6 +13,7 @@
 #include <Misc/MiscListeners.h>
 #include <Misc/Turntable.h>
 #include <Misc/RotatingNode.h>
+#include <Scene/CameraNode.h>
 
 class GridRenderPass : public CameraRenderPass
 {
@@ -266,6 +267,9 @@ class UniformVoxelGridApp : public Application
 				testRoomNode->scale( glm::vec3(0.9f, 0.9f, 0.9f) );
 				testRoomNode->setObject(testRoom[0]);
 
+				DEBUGLOG->log("Creating camera parent node");
+				Node* 		cameraParentNode = new Node( scene->getSceneGraph()->getRootNode() );
+
 			DEBUGLOG->outdent();
 		DEBUGLOG->outdent();
 		
@@ -288,7 +292,7 @@ class UniformVoxelGridApp : public Application
 				phongOrthoRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 				phongOrthoRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 
-				Camera* orthographicCamera = new Camera();
+				CameraNode* orthographicCamera = new CameraNode(cameraParentNode);
 				orthographicCamera->setProjectionMatrix(glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 20.0f));
 				orthographicCamera->setPosition(0.0f,0.0f,5.0f);
 				phongOrthoRenderPass->setCamera(orthographicCamera);
@@ -307,7 +311,7 @@ class UniformVoxelGridApp : public Application
 				phongPerspectiveRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 				phongPerspectiveRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 
-				Camera* perspectiveCamera = new Camera();
+				CameraNode* perspectiveCamera = new CameraNode(cameraParentNode);
 				perspectiveCamera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
 				perspectiveCamera->setPosition(0.0f,0.0f,5.0f);
 				phongPerspectiveRenderPass->setCamera(perspectiveCamera);
@@ -464,20 +468,26 @@ class UniformVoxelGridApp : public Application
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, -1.0f),GLFW_KEY_A, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
 
-			// VOXELIZATION INPUT
+			// voxelize on key press : V
 			m_inputManager.attachListenerOnKeyPress( voxelizer, GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Adding updatable camera to scene");
 			scene->addUpdatable(movableCam);
 			scene->addUpdatable(movableCamClone);
 
-			DEBUGLOG->log("Configuring Turntable for root node");
+			DEBUGLOG->log("Configuring Turntable for scene node");
 			Turntable* turntable = new Turntable( sceneNode, &m_inputManager);
 			turntable->setSensitivity(0.05f);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
 			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
-
 			scene->addUpdatable(turntable);
+
+			Turntable* turntableCamera = new Turntable( cameraParentNode, &m_inputManager);
+			turntableCamera->setSensitivity(0.05f);
+			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntableCamera), GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
+			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntableCamera), GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE);
+			scene->addUpdatable( turntableCamera );
+
 		DEBUGLOG->outdent();
 
 	}
