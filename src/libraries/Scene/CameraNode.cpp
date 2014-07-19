@@ -17,8 +17,8 @@ CameraNode::~CameraNode()
 void CameraNode::updatePosition( float deltaTime )
 {
 	// compute translation
-	glm::vec3 translation = getSpeedRight() * deltaTime * glm::vec3(1.0f, 0.0f, 0.0f);
-	translation += getSpeedForward() * deltaTime * glm::vec3(0.0f, 0.0f, -1.0f);
+	glm::vec3 translation = getSpeedRight() * deltaTime * glm::vec3 (m_modelMatrix *  glm::vec4(1.0f, 0.0f, 0.0f, 0.0f) );
+	translation += getSpeedForward() * deltaTime * glm::vec3 ( m_modelMatrix * glm::vec4(0.0f, 0.0f, -1.0f, 0.0f) );
 
 	translate(translation);
 }

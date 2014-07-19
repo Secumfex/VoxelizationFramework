@@ -16,6 +16,10 @@ Node::Node(Node* parent)
 
 Node::~Node()
 {
+	if ( m_parent && m_parent != this)
+	{
+		m_parent->removeChild(this);
+	}
 	for ( std::vector<Node*>::iterator it = m_children.begin(); it != m_children.end(); ++it)
 	{
 		(*it)->setParent(0);
