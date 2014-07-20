@@ -44,7 +44,7 @@ public:
 	 *
 	 * @param handle program handle
 	 */
-	GLuint setProgramHandle(GLuint handle);
+	void setProgramHandle(GLuint handle);
 
 	/** \brief requests all active uniforms from this shader program
 	* so they get accessible via uploadUniform etc.
@@ -111,12 +111,9 @@ class ComputeShader : public Shader{
 private:
 	void makeShaderProgram(std::string vert, std::string frag);
 protected:
-
-	GLuint m_programHandle;
-
-	int m_num_groups_x;
-	int m_num_groups_y;
-	int m_num_groups_z;
+	int m_local_group_size_x;
+	int m_local_group_size_y;
+	int m_local_group_size_z;
 public:
 
 	/** \brief constructor
@@ -156,12 +153,9 @@ public:
 	void dispatchIndirect( GLintptr indirect );
 
 	void setProgramHandle(GLuint programHandle);
-	int getNumGroupsX() const;
-	void setNumGroupsX(int numGroupsX);
-	int getNumGroupsY() const;
-	void setNumGroupsY(int numGroupsY);
-	int getNumGroupsZ() const;
-	void setNumGroupsZ(int numGroupsZ);
+	int getLocalGroupSizeX() const;
+	int getLocalGroupSizeY() const;
+	int getLocalGroupSizeZ() const;
 };
 
 #endif

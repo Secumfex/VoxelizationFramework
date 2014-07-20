@@ -36,6 +36,7 @@ public:
 	void addColorAttachments(int amount);
 
 	GLuint getColorAttachmentTextureHandle(GLenum attachment);
+	void setColorAttachmentTextureHandle(GLenum attachment, GLuint textureHandle);
 
 	GLuint getFramebufferHandle();
 

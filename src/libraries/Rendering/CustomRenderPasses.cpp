@@ -53,6 +53,8 @@ TriangleRenderPass::TriangleRenderPass(Shader* shader, FramebufferObject* fbo, R
 
 void TriangleRenderPass::addUniformTexture(Texture* texture, std::string uniformTarget)
 {
+	DEBUGLOG->log("TRIANGLERENDERPASS : added uniform texture:" + uniformTarget);
+
 	m_uniformTextures.push_back( pair<Texture*, std::string> (texture, uniformTarget) );
 }
 
@@ -90,4 +92,23 @@ void TriangleRenderPass::uploadUniforms()
 		m_shader->uploadUniform( (int) i,  m_uniformTextures[i].second);
 	}
 	RenderPass::uploadUniforms();
+}
+
+void TriangleRenderPass::setUniformTexture(Texture* texture,
+		std::string uniformTarget) {
+	for ( unsigned int i = 0; i < m_uniformTextures.size(); i++)
+	{
+		// find uniform string
+		if ( m_uniformTextures[i].second == uniformTarget)
+		{
+			DEBUGLOG->log("TRIANGLERENDERPASS : replaced uniform texture: " + uniformTarget);
+			// overwrite handle
+			m_uniformTextures[i].first = texture;
+			return;
+		}
+	}
+
+	// if method reaches this position, add as usual
+	addUniformTexture( texture, uniformTarget );
+
 }

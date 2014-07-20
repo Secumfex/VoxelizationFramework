@@ -3,7 +3,7 @@
 #include "Utility/DebugLog.h"
 Shader::Shader()
 {
-	m_programHandle = -1;
+	m_programHandle = 0;
 }
 
 Shader::Shader(std::string vertexShader, std::string fragmentShader)
@@ -19,8 +19,8 @@ void Shader::requestUniformNames()
 
 	glGetProgramiv( m_programHandle, GL_ACTIVE_UNIFORMS, &total );
 
-	DEBUGLOG->log("Uniforms in this Shader: ", total);
 	DEBUGLOG->log("Shader ProgramHandle : ", m_programHandle);
+	DEBUGLOG->log("Uniforms in this Shader: ", total);
 
 	int i= 0;
 	for(i=0; i<total; ++i)  {
@@ -49,7 +49,7 @@ GLuint Shader::getProgramHandle()
 	return m_programHandle;
 }
 
-GLuint Shader::setProgramHandle(GLuint handle)
+void Shader::setProgramHandle(GLuint handle)
 {
 	m_programHandle = handle;
 }
@@ -115,13 +115,13 @@ ComputeShader::ComputeShader(std::string computeShader) {
 
 	glGetProgramiv( m_programHandle, GL_COMPUTE_WORK_GROUP_SIZE, params );
 
-	m_num_groups_x = params[0];
-	m_num_groups_y = params[1];
-	m_num_groups_z = params[2];
+	m_local_group_size_x = params[0];
+	m_local_group_size_y = params[1];
+	m_local_group_size_z = params[2];
 
-	DEBUGLOG->log("ComputeShader num_groups_x : ", m_num_groups_x );
-	DEBUGLOG->log("ComputeShader num_groups_y : ", m_num_groups_y );
-	DEBUGLOG->log("ComputeShader num_groups_z : ", m_num_groups_z );
+	DEBUGLOG->log("ComputeShader local_group_size_x : ", m_local_group_size_x );
+	DEBUGLOG->log("ComputeShader local_group_size_y : ", m_local_group_size_y );
+	DEBUGLOG->log("ComputeShader local_group_size_z : ", m_local_group_size_z );
 
 	requestUniformNames();
 }
@@ -141,28 +141,16 @@ void ComputeShader::setProgramHandle(GLuint programHandle) {
 	m_programHandle = programHandle;
 }
 
-int ComputeShader::getNumGroupsX() const {
-	return m_num_groups_x;
+int ComputeShader::getLocalGroupSizeX() const {
+	return m_local_group_size_x;
 }
 
-void ComputeShader::setNumGroupsX(int numGroupsX) {
-	m_num_groups_x = numGroupsX;
+int ComputeShader::getLocalGroupSizeY() const {
+	return m_local_group_size_y;
 }
 
-int ComputeShader::getNumGroupsY() const {
-	return m_num_groups_y;
-}
-
-void ComputeShader::setNumGroupsY(int numGroupsY) {
-	m_num_groups_y = numGroupsY;
-}
-
-int ComputeShader::getNumGroupsZ() const {
-	return m_num_groups_z;
-}
-
-void ComputeShader::setNumGroupsZ(int numGroupsZ) {
-	m_num_groups_z = numGroupsZ;
+int ComputeShader::getLocalGroupSizeZ() const {
+	return m_local_group_size_z;
 }
 
 void ComputeShader::dispatch(GLuint num_groups_x, GLuint num_groups_y,

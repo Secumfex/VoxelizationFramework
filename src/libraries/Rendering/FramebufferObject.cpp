@@ -46,6 +46,8 @@ GLuint FramebufferObject::createFramebufferTexture()
 	{
 		// for testing purposes
 		glTexStorage2D(GL_TEXTURE_2D, 1, static_internalFormat, m_width, m_height);	
+
+		//TODO what else must be used to ensure same behaviour as TexImage2D ?
 	}
 	else
 	{
@@ -87,6 +89,34 @@ void FramebufferObject::addColorAttachments(int amount)
 		m_numColorAttachments = m_colorAttachments.size();
 		glDrawBuffers(m_drawBuffers.size(), &m_drawBuffers[0]);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+}
+
+void FramebufferObject::setColorAttachmentTextureHandle( GLenum attachment, GLuint textureHandle )
+{
+	int width, height;
+	glGetIntegerv(GL_TEXTURE_WIDTH, &width);
+	glGetIntegerv(GL_TEXTURE_HEIGHT, &height);
+	if (  width != m_width || height != m_height )
+	{
+		DEBUGLOG->log("ERROR : size of texture differs from frame buffer size");
+		return;
+	}
+	if ( m_colorAttachments.find( attachment ) != m_colorAttachments.end() )
+	{
+		GLuint oldAttachment = m_colorAttachments[ attachment ];
+		DEBUGLOG->log("WARNING : remember to delete the old texture handle", oldAttachment);
+
+		m_colorAttachments[ attachment ] = textureHandle;
+		glBindFramebuffer( GL_FRAMEBUFFER, m_framebufferHandle);
+
+		glBindTexture(GL_TEXTURE_2D, textureHandle);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, textureHandle, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	else
+	{
+		DEBUGLOG->log("ERROR : specified color attachment does not exist");
 	}
 }
 

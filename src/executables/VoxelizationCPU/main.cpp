@@ -15,6 +15,8 @@
 #include <Misc/RotatingNode.h>
 #include <Scene/CameraNode.h>
 
+#include <Misc/SimpleSceneTools.h>
+
 class SceneGraphState : public Listener
 {
 protected:
@@ -105,7 +107,7 @@ public:
 /**
  * class that resets and voxelizes a set of objects upon call
  */
-class Voxelizer : public Listener
+class CPUVoxelizer : public Listener
 {
 protected:
 	ResourceManager* p_resourceManager;
@@ -117,7 +119,7 @@ protected:
 	std::vector < RenderableNode* > m_renderableNodes;	// vector consisiting of all generated renderable nodes
 	std::vector < RenderPass* > p_gridCellRenderPasses; 	// renderpasses to be updated with the renderablenodes
 public:
-	Voxelizer(Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid, Scene* scene, ResourceManager* resourceManager, const std::vector<Object* >& objects, Node* parentNode, std::vector <RenderPass* > gridCellRenderPasses = std::vector<RenderPass* >())
+	CPUVoxelizer(Grid::AxisAlignedVoxelGrid* axisAlignedVoxelGrid, Scene* scene, ResourceManager* resourceManager, const std::vector<Object* >& objects, Node* parentNode, std::vector <RenderPass* > gridCellRenderPasses = std::vector<RenderPass* >())
 	{
 		p_axisAlignedVoxelGrid = axisAlignedVoxelGrid;
 		p_resourceManager = resourceManager;
@@ -166,7 +168,6 @@ public:
 
 		DEBUGLOG->log("Filled voxel grid cells: ", filledCells);
 		DEBUGLOG->outdent();
-
 	}
 
 	int voxelizeObject( Object* object )
@@ -180,6 +181,10 @@ public:
 		if (objectNode)
 		{
 			modelMatrix = objectNode->getAccumulatedModelMatrix();
+		}
+		else
+		{
+			DEBUGLOG->log("ERROR : no model objectNode could be retrieved");
 		}
 
 		const std::vector < glm::vec4 >& assimpMesh = p_resourceManager->getAssimpMeshForModel(model);
@@ -252,16 +257,20 @@ public:
 
 	virtual void call()
 	{
+		// clear old voxelizations if any
 		clear();
 
+		// voxelize scene
 		voxelize();
 
+		// generate nodes
 		generateRenderableNodes();
 
+		// update renderpasses with new geometry
 		updateRenderPasses();
 	}
 
-	virtual ~Voxelizer()
+	virtual ~CPUVoxelizer()
 	{
 
 	}
@@ -476,7 +485,7 @@ class UniformVoxelGridApp : public Application
 				gridCellRenderPasses.push_back( gridOrthoRenderPass );
 				gridCellRenderPasses.push_back( gridPerspectiveRenderPass );
 				// create voxelizer
-				Voxelizer* voxelizer = new Voxelizer(axisAlignedVoxelGrid, scene, &m_resourceManager, objects, voxelGridNode, gridCellRenderPasses);
+				CPUVoxelizer* voxelizer = new CPUVoxelizer(axisAlignedVoxelGrid, scene, &m_resourceManager, objects, voxelGridNode, gridCellRenderPasses);
 
 				// configure display of cells
 				m_resourceManager.getCube()->getMaterial()->setAttribute("uniformRed", 0.5f);
@@ -516,23 +525,9 @@ class UniformVoxelGridApp : public Application
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = phongOrthoRenderPass->getCamera();
 			Camera* movableCamClone = phongPerspectiveRenderPass->getCamera();
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 2.5f),GLFW_KEY_W, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_W, GLFW_RELEASE);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 2.5f),GLFW_KEY_D, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_D, GLFW_RELEASE);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, -2.5f),GLFW_KEY_S, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_S, GLFW_RELEASE);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, -2.5f),GLFW_KEY_A, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
 
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, 2.5f),GLFW_KEY_W, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_W, GLFW_RELEASE);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, 2.5f),GLFW_KEY_D, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_D, GLFW_RELEASE);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, -2.5f),GLFW_KEY_S, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::FORWARD, 0.0f),GLFW_KEY_S, GLFW_RELEASE);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, -2.5f),GLFW_KEY_A, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCamClone, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
+			SimpleScene::configureSimpleCameraMovement( movableCam , this, 2.5);
+			SimpleScene::configureSimpleCameraMovement( movableCamClone, this , 2.5);
 
 			// voxelize on key press : V
 			m_inputManager.attachListenerOnKeyPress( voxelizer, GLFW_KEY_V, GLFW_PRESS);
@@ -540,22 +535,9 @@ class UniformVoxelGridApp : public Application
 			// restore on key press  : R
 			m_inputManager.attachListenerOnKeyPress( new SceneGraphState(scene->getSceneGraph()), GLFW_KEY_R, GLFW_PRESS);
 
-			DEBUGLOG->log("Adding updatable camera to scene");
-			scene->addUpdatable(movableCam);
-			scene->addUpdatable(movableCamClone);
-
 			DEBUGLOG->log("Configuring Turntable for scene node");
-			Turntable* turntable = new Turntable( sceneNode, &m_inputManager);
-			turntable->setSensitivity(0.05f);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
-			scene->addUpdatable(turntable);
-
-			Turntable* turntableCamera = new Turntable( cameraParentNode, &m_inputManager);
-			turntableCamera->setSensitivity(0.05f);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntableCamera), GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
-			m_inputManager.attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntableCamera), GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE);
-			scene->addUpdatable( turntableCamera );
+			Turntable* turntable = SimpleScene::configureTurnTable(sceneNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT);
+			Turntable* turntableCamera = SimpleScene::configureTurnTable(cameraParentNode, this, 0.05f, GLFW_MOUSE_BUTTON_RIGHT);
 
 		DEBUGLOG->outdent();
 

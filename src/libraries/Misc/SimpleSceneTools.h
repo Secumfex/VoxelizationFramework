@@ -21,7 +21,7 @@ namespace SimpleScene
 
 	void configureSimpleCameraMovement(Camera* movableCam, Application* app, float speed = 2.0f);
 
-	Turntable* configureTurnTable( Node* node, Application* app, float sensitivity = 0.1f);
+	Turntable* configureTurnTable( Node* node, Application* app, float sensitivity = 0.1f, int key = GLFW_MOUSE_BUTTON_LEFT);
 }
 
 #endif

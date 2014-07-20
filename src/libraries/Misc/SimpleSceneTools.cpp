@@ -66,7 +66,7 @@ RenderableNode* SimpleScene::loadOverlappingGeometry( Application* app )
 	return overlappingGeometryNode;
 }
 
-// returns a pair < root, rotatingnode >
+// returns a pair < root-position, rotatingnode >
 std::pair<Node*, Node* > SimpleScene::createRotatingNodes(Application* app, float angularVelocityXY, float angularVelocityY)
 {
 	std::pair<Node*, Node*> result;
@@ -127,13 +127,13 @@ void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,
 	}
 }
 
-Turntable* SimpleScene::configureTurnTable(Node* node, Application* app, float sensitivity)
+Turntable* SimpleScene::configureTurnTable(Node* node, Application* app, float sensitivity, int key)
 {
-	Turntable* turntable = new Turntable( app->getSceneManager().getActiveScene()->getSceneGraph()->getRootNode(), &(app->getInputManager() ));
+	Turntable* turntable = new Turntable( node, &(app->getInputManager() ));
 	turntable->setSensitivity(sensitivity);
 
-	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
-	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), key, GLFW_PRESS);
+	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), key, GLFW_RELEASE);
 
 	app->getSceneManager().getActiveScene()->addUpdatable(turntable);
 	return turntable;

@@ -5,7 +5,9 @@
 #include <Rendering/Shader.h>
 #include <Rendering/FramebufferObject.h>
 #include <Rendering/CustomRenderPasses.h>
+#include <Rendering/RenderState.h>
 
+#include <Scene/CameraNode.h>
 #include <Scene/RenderableNode.h>
 #include <Utility/Updatable.h>
 #include <Voxelization/TextureAtlas.h>
@@ -19,7 +21,7 @@
 
 static bool rotatingBunny = false;
 
-// static int voxelGridResolution = 256;
+ static int voxelGridResolution = 256;
 
 // compute shader related information
 static int MAX_COMPUTE_WORK_GROUP_COUNT[3];
@@ -29,55 +31,85 @@ static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
 
-class DispatchImageComputeShader : public DispatchComputeShaderListener
+class DispatchVoxelizeComputeShader : public DispatchComputeShaderListener
 {
 protected:
-	Texture* p_inputTexture;
-	Texture* p_outputTexture;
+
+	std::vector<std::pair<Object*, RenderableNode* > > m_objects;
+
+	glm::mat4 m_voxelizeView;
+	glm::mat4 m_voxelizeProjection;
+	Texture* p_voxelGridTexture;
 public:
-	DispatchImageComputeShader(ComputeShader* computeShader, Texture* inputTexture, Texture* outputTexture, int x= 0, int y= 0, int z = 0 )
+	DispatchVoxelizeComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, RenderableNode*> > objects, glm::mat4 voxelizeView, glm::mat4 voxelizeProjection, Texture* voxelGridTexture, int x= 0, int y= 0, int z = 0 )
 	: DispatchComputeShaderListener(computeShader, x,y,z)
 {
-		p_inputTexture = inputTexture;
-		p_outputTexture = outputTexture;
+		m_objects = objects;
+		m_voxelizeView = voxelizeView;
+		m_voxelizeProjection = voxelizeProjection;
+		p_voxelGridTexture = voxelGridTexture;
 }
 	void call()
 	{
+		// use compute program
 		p_computeShader->useProgram();
 
-		p_inputTexture->unbindFromActiveUnit();
-
-		// upload input texture
-		glBindImageTexture(
-				0,
-				p_inputTexture->getTextureHandle(),
-				0,
-				GL_FALSE,
-				0,
-				GL_READ_ONLY,
-				GL_RGBA32F);
+		// unbind output texture
+		p_voxelGridTexture->unbindFromActiveUnit();
 
 		// upload output texture
 		glBindImageTexture(1,
-				p_outputTexture->getTextureHandle(),
-				0,
-				GL_FALSE,
-				0,
-				GL_WRITE_ONLY,
-				GL_RGBA32F);
+		p_voxelGridTexture->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_WRITE,							// allow both
+		GL_RGBA32F);							// TODO must be just like texture and stuff
+
+		// dispatch this shader once per object
+		for ( unsigned int i = 0; i < m_objects.size(); i++)
+		{
+			Object* object = m_objects[i].first;
+			RenderableNode* objectNode = m_objects[i].second;
 
 
+			if ( object->getModel() )
+			{
+				RenderState::getInstance()->bindVertexArrayObjectIfDifferent(object->getModel()->getVAOHandle());
+			}
+			else
+			{
+				continue;
+			}
 
-		// dispatch as usual
-		DispatchComputeShaderListener::call();
 
+			glm::mat4 modelMatrix = glm::mat4(1.0f);
+			if (objectNode)
+			{
+				modelMatrix = objectNode->getAccumulatedModelMatrix();
+			}
+
+			// upload uniform model matrix
+			p_computeShader->uploadUniform( modelMatrix, "uniformModel");
+
+			// upload uniform voxel grid matrices
+			p_computeShader->uploadUniform( m_voxelizeView, "uniformVoxelizeView");
+			p_computeShader->uploadUniform( m_voxelizeProjection, "uniformVoxelizeProjection");
+
+			// dispatch as usual
+			DispatchComputeShaderListener::call();
+		}
+
+		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
 		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );	// cuz why not
 	}
 };
 
 class ComputeShaderApp: public Application {
 private:
-
+	Node* m_cameraParentNode;
+	Node* m_objectsNode;
 	CameraRenderPass* createPhongRenderPass( )
 	{
 		DEBUGLOG->indent();
@@ -93,7 +125,8 @@ private:
 		phongPerspectiveRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 		phongPerspectiveRenderPass->addUniform( new Uniform<glm::vec3>("uniformLightPos", &lightPosition));
 
-		Camera* camera = new Camera();
+		m_cameraParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
+		CameraNode* camera = new CameraNode( m_cameraParentNode );
 		camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
 		camera->setPosition(0.0f,0.0f,5.0f);
 		phongPerspectiveRenderPass->setCamera(camera);
@@ -133,6 +166,8 @@ public:
 	ComputeShaderApp()
 	{
 		m_name = "Compute Shader App";
+		m_objectsNode = 0;
+		m_cameraParentNode = 0;
 	}
 
 	virtual ~ComputeShaderApp()
@@ -166,6 +201,7 @@ public:
 		DEBUGLOG->indent();
 
 			std::vector<Renderable* > renderables;
+			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
 			renderables.push_back(testRoomNode);
@@ -182,16 +218,16 @@ public:
 					if ( rotatingBunny )
 					{
 						std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this, 0.1f, 0.1f);
-						rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
+						rotatingNodes.first->setParent( m_objectsNode );
 
 						bunnyNode->setParent( rotatingNodes.second );
 					}
 					else
 					{
-						bunnyNode->setParent(scene->getSceneGraph()->getRootNode() );
+						bunnyNode->setParent( m_objectsNode );
 					}
 
-					testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
+					testRoomNode->setParent( m_objectsNode );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -237,19 +273,28 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
+		 * 								TEXTURE ATLAS VAO CREATION
+		 **************************************************************************************/
+
+		DEBUGLOG->log("Configuring texture atlas objects");
+		DEBUGLOG->indent();
+			DEBUGLOG->log("TODO TODO TODO TODO TODO "); // TODO
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
 		 * 								COMPUTE SHADER CREATION
 		 **************************************************************************************/
 
-		DEBUGLOG->log("Configuring Compute Shader");
+		DEBUGLOG->log("Configuring compute shader");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Loading and Compiling simple compute shader program");
+			DEBUGLOG->log("Loading and compiling voxelize compute shader program");
 			DEBUGLOG->indent();
 
-			ComputeShader* simpleComputeShader = new ComputeShader(SHADERS_PATH "/compute/simpleCompute_topDown.comp");
+			ComputeShader* voxelizeComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeCompute.comp");
 			
 			GLint numBlocks;
-			glGetProgramiv(simpleComputeShader->getProgramHandle(), GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
+			glGetProgramiv(voxelizeComputeShader->getProgramHandle(), GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
 
 			DEBUGLOG->log( "Active Uniform blocks : ", numBlocks);
 
@@ -259,11 +304,11 @@ public:
 			for ( int blockIx = 0; blockIx < numBlocks; ++blockIx)
 			{
 				GLint nameLen;
-				glGetActiveUniformBlockiv(simpleComputeShader->getProgramHandle(),blockIx,GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLen);
+				glGetActiveUniformBlockiv(voxelizeComputeShader->getProgramHandle(),blockIx,GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLen);
 
 				std::vector<GLchar> name;
 				name.resize(nameLen);
-				glGetActiveUniformBlockName(simpleComputeShader->getProgramHandle(), blockIx, nameLen, 0, &name[0]);
+				glGetActiveUniformBlockName(voxelizeComputeShader->getProgramHandle(), blockIx, nameLen, 0, &name[0]);
 
 				nameList.push_back(std::string());
 				nameList.back().assign(name.begin(),name.end() -1);
@@ -276,41 +321,12 @@ public:
 
 			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Creating a texture to write to ");
-			GLuint output_texture;
-
-			glGenTextures(1, &output_texture);
-			glBindTexture(GL_TEXTURE_2D, output_texture);
-			glTexStorage2D( GL_TEXTURE_2D,
-					1,
-					GL_RGBA32F,
-					512,
-					512);
-			Texture* outputTexture = new Texture( output_texture );
-			Texture* inputTexture  = phongPerspectiveRenderPassOutput;
-
-			DEBUGLOG->log("Creating a dispatch listener for simple compute shader");
-
-			// dispatch 16 shader groups in x and y direction since window is 512x512 in resolution and group size is 32x32
-			DispatchImageComputeShader* dispatchListener = new DispatchImageComputeShader(
-				simpleComputeShader,
-				inputTexture,
-				outputTexture,
-				16,16,1 );
-
-			DEBUGLOG->log("Setting compute shader output texture as presentation texture");
-			DEBUGLOG->indent();
-
-				// replace old uniform
-				showRenderPassPerspective->setUniformTexture(outputTexture, "uniformTexture");
-
-			DEBUGLOG->outdent();
-
-			DEBUGLOG->log("Attaching dispatch listener to perspective phong renderpass");
-
-			phongPerspectiveRenderPass->attach(dispatchListener, "POSTRENDERPASS");
-
 		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 							COMPUTE SHADER VOXELIZATION CONFIGURATION
+		 **************************************************************************************/
+
 
 		/**************************************************************************************
 		 * 								VOXELIZATION
@@ -332,10 +348,11 @@ public:
 
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
-			SimpleScene::configureSimpleCameraMovement(movableCam, this);
+			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
 
-			DEBUGLOG->log("Configuring Turntable for root node");
-			Turntable* turntable = SimpleScene::configureTurnTable( scene->getSceneGraph()->getRootNode(), this);
+			DEBUGLOG->log("Configuring Turntable for root node and camera");
+			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f );
+			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT);
 
 			DEBUGLOG->log("Configuring light movement");
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
