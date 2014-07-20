@@ -64,7 +64,7 @@ public:
 		GL_FALSE,
 		0,
 		GL_READ_WRITE,							// allow both
-		GL_RGBA32F);							// TODO must be just like texture and stuff
+		GL_RGBA32F);							// TODO find most suitable format
 
 		// dispatch this shader once per object
 		for ( unsigned int i = 0; i < m_objects.size(); i++)
@@ -72,10 +72,12 @@ public:
 			Object* object = m_objects[i].first;
 			RenderableNode* objectNode = m_objects[i].second;
 
+			int numVertices = 0;
 
 			if ( object->getModel() )
 			{
 				RenderState::getInstance()->bindVertexArrayObjectIfDifferent(object->getModel()->getVAOHandle());
+				numVertices = object->getModel()->getNumVertices();
 			}
 			else
 			{
@@ -96,13 +98,16 @@ public:
 			p_computeShader->uploadUniform( m_voxelizeView, "uniformVoxelizeView");
 			p_computeShader->uploadUniform( m_voxelizeProjection, "uniformVoxelizeProjection");
 
+			// upload uniform vertices amount
+			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
+
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
 		}
 
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
 		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );	// cuz why not
+		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
 	}
 };
 

@@ -1,0 +1,36 @@
+#version 430 core
+
+// specify local work group size
+
+// TODO work group size should be in a suitable relation to num of vertices
+// TODO find suitable local size z 
+layout (local_size_x = 32, local_size_y = 32) in;
+
+// layout(binding = 0 ) vertices...
+
+// voxel grid texture
+layout(binding = 1, rgba32f) uniform image2D voxel_grid_texture;
+
+// uniforms
+uniform mat4 uniformModel;
+
+uniform mat4 uniformVoxelizeView;
+uniform mat4 uniformVoxelizeProjection;
+
+uniform int uniformNumVertices;
+
+void main()
+{
+	// determine which vertex to read from
+	ivec3 global_index = ivec3( gl_GlobalInvocationID.xyz );
+	
+	//TODO read vertex data
+	
+	//TODO compute world position
+	
+	//TODO compute grid position
+	
+	//TODO compute BYTE-value from GlobalInvocationID.Z
+	
+	//TODO OR with byte currently written in voxel grid texture
+}
