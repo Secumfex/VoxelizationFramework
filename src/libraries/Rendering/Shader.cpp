@@ -129,18 +129,6 @@ ComputeShader::ComputeShader(std::string computeShader) {
 ComputeShader::~ComputeShader() {
 }
 
-GLuint ComputeShader::getProgramHandle() {
-	return m_programHandle;
-}
-
-void ComputeShader::useProgram() {
-	glUseProgram( m_programHandle );
-}
-
-void ComputeShader::setProgramHandle(GLuint programHandle) {
-	m_programHandle = programHandle;
-}
-
 int ComputeShader::getLocalGroupSizeX() const {
 	return m_local_group_size_x;
 }

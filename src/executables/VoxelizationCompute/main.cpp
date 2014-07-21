@@ -113,10 +113,6 @@ public:
 			// upload uniform vertices amount
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
 
-			// TODO do samplers still work !?
-			// upload uniform  bit mask
-			//p_computeShader->uploadUniform( 8, "uniformBitMask");
-
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
 		}
@@ -401,6 +397,9 @@ int main() {
 	myApp.configure();
 
 	myApp.initialize();
+
+	SliceMap::get32BitUintMask();
+
 	myApp.run();
 
 	return 0;

@@ -127,17 +127,6 @@ public:
 	 */
 	virtual ~ComputeShader();
 
-	/** \brief getter
-	 *
-	 * @return program handle
-	 */
-	GLuint getProgramHandle();
-
-	/** \brief binds the shader program
-	 *
-	 */
-	void useProgram();
-
 	/** \brief dispatch shader program
 	 * dispatch this shaderProgram using the specified groups
 	 * @param num_groups_x
@@ -152,7 +141,6 @@ public:
 	 */
 	void dispatchIndirect( GLintptr indirect );
 
-	void setProgramHandle(GLuint programHandle);
 	int getLocalGroupSizeX() const;
 	int getLocalGroupSizeY() const;
 	int getLocalGroupSizeZ() const;

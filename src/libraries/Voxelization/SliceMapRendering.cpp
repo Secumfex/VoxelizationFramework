@@ -99,20 +99,24 @@ Texture* SliceMap::get32BitUintMask()
 		// 32 bit values
 		unsigned long int bitMaskData[32] =
 	// z =   0 ,      1 ,        2 ,       3 ,       4 ,        5 ,        6 ,         7,
-		{    1,       2,         4,        8,        16,       32,        64,         128,
+		{    1u,       2u,         4u,        8u,        16u,       32u,        64u,         128u,
 	// z =   8  ,     9 ,       10 ,      11 ,      12 ,       13 ,       14 ,        15,
-		    256,     512,      1024,     2048,     4096,      8192,     16384,      32768,
+		    256u,     512u,      1024u,     2048u,     4096u,      8192u,     16384u,      32768u,
 	// z =   16 ,     17 ,      18 ,      19 ,      20 ,       21 ,       22 ,        23,
-		   65536,    131072,   262144,   524288,  1048576,  2097152,   4194304,     8388608,
+		   65536u,    131072u,   262144u,   524288u,  1048576u,  2097152u,   4194304u,     8388608u,
 	// z =   24 ,     25 ,      26 ,      27 ,      28 ,       29 ,       30 ,        31,
-		  16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648
+		  16777216u, 33554432u, 67108864u, 134217728u, 268435456u, 536870912u, 1073741824u, 2147483648u
 		};
 
 		glGenTextures(1, &bitMaskHandle);
 		glBindTexture(GL_TEXTURE_1D, bitMaskHandle);
 
-		//                1D Texture,  1 level,   long uint format (32bit)
-		glTexStorage1D( GL_TEXTURE_1D, 1		, GL_R32UI					, &bitMaskData);
+		// allocate mem:  1D Texture,  1 level,   long uint format (32bit)
+		glTexStorage1D( GL_TEXTURE_1D, 1		, GL_R32UI					, sizeof( bitMaskData ) );
+
+		// buffer data to GPU
+		glTexSubImage1D( GL_TEXTURE_1D, 0, 0, sizeof(bitMaskData), GL_RED, GL_UNSIGNED_INT, &bitMaskData);
+
 		glBindTexture(GL_TEXTURE_1D, 0);
 
 		bitMask->setTextureHandle(bitMaskHandle);
