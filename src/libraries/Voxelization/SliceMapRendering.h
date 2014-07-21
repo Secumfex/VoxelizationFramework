@@ -37,7 +37,13 @@ namespace SliceMap
 	 * Compute a 8 bit mask which simply holds information about which depth value corresponds with which RGBA bit combination
 	 * @return bit mask
 	 */
-	Texture* get8BitMask();
+	Texture* get8BitRGBAMask();
+
+	/**
+	 * Compute a 32 bit mask which simply holds information about which depth value corresponds with which 32bit uint value
+	 * @return bit mask
+	 */
+	Texture* get32BitUintMask();
 
 	enum ShaderType{ BITMASK_MULTIPLETARGETS, BITMASK_SINGLETARGET, COMPUTATION };
 

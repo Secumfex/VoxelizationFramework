@@ -40,14 +40,16 @@ protected:
 	glm::mat4 m_voxelizeView;
 	glm::mat4 m_voxelizeProjection;
 	Texture* p_voxelGridTexture;
+	Texture* p_bitMask;
 public:
-	DispatchVoxelizeComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, RenderableNode*> > objects, glm::mat4 voxelizeView, glm::mat4 voxelizeProjection, Texture* voxelGridTexture, int x= 0, int y= 0, int z = 0 )
+	DispatchVoxelizeComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, RenderableNode*> > objects, glm::mat4 voxelizeView, glm::mat4 voxelizeProjection, Texture* voxelGridTexture, Texture* bitMask, int x= 0, int y= 0, int z = 0 )
 	: DispatchComputeShaderListener(computeShader, x,y,z)
 {
 		m_objects = objects;
 		m_voxelizeView = voxelizeView;
 		m_voxelizeProjection = voxelizeProjection;
 		p_voxelGridTexture = voxelGridTexture;
+		p_bitMask = bitMask;
 }
 	void call()
 	{
@@ -65,6 +67,17 @@ public:
 		0,
 		GL_READ_WRITE,							// allow both
 		GL_RGBA32F);							// TODO find most suitable format
+
+		// upload bit mask
+		glBindImageTexture(2,
+		p_bitMask->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_ONLY,
+		GL_R32UI
+		);
+
 
 		// dispatch this shader once per object
 		for ( unsigned int i = 0; i < m_objects.size(); i++)
@@ -84,7 +97,6 @@ public:
 				continue;
 			}
 
-
 			glm::mat4 modelMatrix = glm::mat4(1.0f);
 			if (objectNode)
 			{
@@ -101,9 +113,9 @@ public:
 			// upload uniform vertices amount
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
 
+			// TODO do samplers still work !?
 			// upload uniform  bit mask
-			SliceMap::get8BitMask()->bindToTextureUnit( 8 );
-			p_computeShader->uploadUniform( 8, "uniformBitMask");
+			//p_computeShader->uploadUniform( 8, "uniformBitMask");
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();

@@ -69,7 +69,7 @@ void SliceMap::SliceMapRenderPass::setBitMask(Texture* bitMask)
 	m_bitMask = bitMask;
 }
 
-Texture* SliceMap::get8BitMask()
+Texture* SliceMap::get8BitRGBAMask()
 {
 		Texture* bitMask = new Texture();
 		GLuint bitMaskHandle;
@@ -85,6 +85,34 @@ Texture* SliceMap::get8BitMask()
 		glTexImage1D( GL_TEXTURE_1D, 0, GL_RGBA, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, &bitMaskData);
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_1D, 0);
+
+		bitMask->setTextureHandle(bitMaskHandle);
+		return bitMask;
+}
+
+
+Texture* SliceMap::get32BitUintMask()
+{
+		Texture* bitMask = new Texture();
+		GLuint bitMaskHandle = 0;
+		// 32 bit values
+		unsigned long int bitMaskData[32] =
+	// z =   0 ,      1 ,        2 ,       3 ,       4 ,        5 ,        6 ,         7,
+		{    1,       2,         4,        8,        16,       32,        64,         128,
+	// z =   8  ,     9 ,       10 ,      11 ,      12 ,       13 ,       14 ,        15,
+		    256,     512,      1024,     2048,     4096,      8192,     16384,      32768,
+	// z =   16 ,     17 ,      18 ,      19 ,      20 ,       21 ,       22 ,        23,
+		   65536,    131072,   262144,   524288,  1048576,  2097152,   4194304,     8388608,
+	// z =   24 ,     25 ,      26 ,      27 ,      28 ,       29 ,       30 ,        31,
+		  16777216, 33554432, 67108864, 134217728, 268435456, 536870912, 1073741824, 2147483648
+		};
+
+		glGenTextures(1, &bitMaskHandle);
+		glBindTexture(GL_TEXTURE_1D, bitMaskHandle);
+
+		//                1D Texture,  1 level,   long uint format (32bit)
+		glTexStorage1D( GL_TEXTURE_1D, 1		, GL_R32UI					, &bitMaskData);
 		glBindTexture(GL_TEXTURE_1D, 0);
 
 		bitMask->setTextureHandle(bitMaskHandle);
@@ -130,7 +158,7 @@ SliceMap::SliceMapRenderPass* SliceMap::getSliceMapRenderPass(float width, float
 	sliceMapRenderPass->addEnable(GL_COLOR_LOGIC_OP);			// enable logic operations to be able to use OR operations
 
 	/*init bit mask*/
-	Texture* bitMask = get8BitMask();
+	Texture* bitMask = get8BitRGBAMask();
 	sliceMapRenderPass->setBitMask(bitMask);
 
 	/*Init Camera*/

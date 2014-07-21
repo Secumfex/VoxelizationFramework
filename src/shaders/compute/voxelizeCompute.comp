@@ -7,14 +7,17 @@ struct vertex {
 
 // specify local work group size
 // TODO work group size should be in a suitable relation to num of vertices
-// TODO find suitable local size z 
+// TODO find suitable local size 
 layout (local_size_x = 1024) in;
 
 // vertex buffer access
 layout(std430, binding = 0 ) buffer vertices { vertex v[ ]; };
 
-// voxel grid texture
-layout(binding = 1, rgba32f) uniform image2D voxel_grid_texture;
+// voxel grid texture ( format MUST be unsigned integer to make atomic operations work )
+layout(binding = 1, r32ui) uniform image2D voxel_grid_texture;
+
+// bit mask
+layout(binding = 2, r32ui) uniform image1D bitmaskTexture;
 
 // uniforms
 uniform mat4 uniformModel;
@@ -23,8 +26,6 @@ uniform mat4 uniformVoxelizeView;
 uniform mat4 uniformVoxelizeProjection;
 
 uniform int uniformNumVertices;
-
-uniform sampler1D uniformBitMask;
 
 void main()
 {
@@ -44,6 +45,9 @@ void main()
 	vec4 gridPos = perspGridPos / perspGridPos.w;
 	
 	//TODO compute BYTE-value from GlobalInvocationID.Z
+//	uint byte = texture(bitmaskTexture, gridPos.z);			
 	
 	//TODO OR with byte currently written in voxel grid texture
+//	imageStore( voxel_grid_texture, gridPos.xy, byte);
+	imageAtomicOr(voxel_grid_texture, gridPos.xy, byte);
 }

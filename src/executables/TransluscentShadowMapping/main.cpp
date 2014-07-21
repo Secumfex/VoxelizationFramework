@@ -428,7 +428,7 @@ public:
 				m_resourceManager.getScreenFillingTriangle(),
 				voxelizeWithTextureAtlas->getCamera(),
 				writeGbufferRenderPass->getCamera(),
-				SliceMap::get8BitMask());
+				SliceMap::get8BitRGBAMask());
 		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformPositionMap" );// position map
 		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1 ) ), "uniformNormalMap" );// normal   map
 		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT2 ) ), "uniformColorMap" );// color    map
