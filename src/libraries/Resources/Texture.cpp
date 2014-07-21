@@ -27,7 +27,10 @@ void Texture::setTextureHandle(GLuint textureHandle)
 
 void Texture::bindToTextureUnit( int unit )
 {
-	unbindFromActiveUnit();
+	if ( unit != m_activeUnit)
+	{
+		unbindFromActiveUnit();
+	}
 
 	glActiveTexture(GL_TEXTURE0 + unit);	//bind to unit
 	glBindTexture(GL_TEXTURE_2D, m_texturehandle);

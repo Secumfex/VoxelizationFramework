@@ -1,12 +1,17 @@
 #version 430 core
 
-// specify local work group size
+// struct type of values accessed through vertex buffer
+struct vertex {
+	vec4 position;
+};
 
+// specify local work group size
 // TODO work group size should be in a suitable relation to num of vertices
 // TODO find suitable local size z 
-layout (local_size_x = 32, local_size_y = 32) in;
+layout (local_size_x = 1024) in;
 
-// layout(binding = 0 ) vertices...
+// vertex buffer access
+layout(std430, binding = 0 ) buffer vertices { vertex v[ ]; };
 
 // voxel grid texture
 layout(binding = 1, rgba32f) uniform image2D voxel_grid_texture;
@@ -19,16 +24,24 @@ uniform mat4 uniformVoxelizeProjection;
 
 uniform int uniformNumVertices;
 
+uniform sampler1D uniformBitMask;
+
 void main()
 {
-	// determine which vertex to read from
-	ivec3 global_index = ivec3( gl_GlobalInvocationID.xyz );
+// determine which vertex to read from
+	uint gid = gl_GlobalInvocationID.x ;
 	
-	//TODO read vertex data
+//	// read vertex data
+	vertex vert = v[ gid ];
 	
-	//TODO compute world position
+	// compute world position
+	vec4 pos = uniformModel * vert.position;
 	
-	//TODO compute grid position
+	// compute grid position
+	vec4 perspGridPos = uniformVoxelizeProjection * uniformVoxelizeView * pos;
+	
+	// divide by homo coordinate
+	vec4 gridPos = perspGridPos / perspGridPos.w;
 	
 	//TODO compute BYTE-value from GlobalInvocationID.Z
 	

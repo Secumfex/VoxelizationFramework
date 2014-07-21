@@ -101,6 +101,10 @@ public:
 			// upload uniform vertices amount
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
 
+			// upload uniform  bit mask
+			SliceMap::get8BitMask()->bindToTextureUnit( 8 );
+			p_computeShader->uploadUniform( 8, "uniformBitMask");
+
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
 		}
@@ -108,6 +112,7 @@ public:
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
 		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
 		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+		glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT );	// put this aswell, since
 	}
 };
 
