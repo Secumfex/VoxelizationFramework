@@ -78,7 +78,6 @@ public:
 		GL_R32UI
 		);
 
-
 		// dispatch this shader once per object
 		for ( unsigned int i = 0; i < m_objects.size(); i++)
 		{
@@ -89,7 +88,13 @@ public:
 
 			if ( object->getModel() )
 			{
-				RenderState::getInstance()->bindVertexArrayObjectIfDifferent(object->getModel()->getVAOHandle());
+
+				// TODO umm... what
+
+//				RenderState::getInstance()->bindVertexArrayObjectIfDifferent(object->getModel()->getVAOHandle());
+
+				// bind VAO to shader storage buffer
+				glBindBuffer( GL_SHADER_STORAGE_BUFFER, object->getModel()->getVAOHandle() );
 				numVertices = object->getModel()->getNumVertices();
 			}
 			else
@@ -112,6 +117,11 @@ public:
 
 			// upload uniform vertices amount
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
+
+			// set local group amount suitable for object size:
+			m_num_groups_x = numVertices / 1024 + 1;
+			m_num_groups_y = 1;
+			m_num_groups_z = 1;
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -291,6 +301,29 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
+		 * 								VOXELGRID CREATION
+		 **************************************************************************************/
+		DEBUGLOG->log("Configuring voxel grid");
+		DEBUGLOG->indent();
+			DEBUGLOG->log("Creating voxel grid view matrix");
+			glm::mat4 voxelizeView = glm::lookAt(glm::vec3( 0.0f, 0.0f, 5.0f), glm::vec3( 0.0f , 0.0f , 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f) );
+
+			DEBUGLOG->log("Creating voxel grid projection matrix");
+			glm::mat4 voxelizeProj = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f);
+
+			DEBUGLOG->log("Creating slice map texture");
+
+			GLuint voxelGridHandle;
+			glGenTextures(1, &voxelGridHandle);
+			glBindTexture(GL_TEXTURE_2D, voxelGridHandle);
+			glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, voxelGridResolution, voxelGridResolution);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			Texture* voxelGridTexture = new Texture(voxelGridHandle);
+		DEBUGLOG->outdent();
+
+
+		/**************************************************************************************
 		 * 								TEXTURE ATLAS VAO CREATION
 		 **************************************************************************************/
 
@@ -345,7 +378,28 @@ public:
 		 * 							COMPUTE SHADER VOXELIZATION CONFIGURATION
 		 **************************************************************************************/
 
+		DEBUGLOG->log("Configuring compute shader dispatcher");
+		DEBUGLOG->indent();
 
+			DEBUGLOG->log("Configuring object vector");
+			std::vector<std::pair < Object*, RenderableNode*> > objects;
+			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
+			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
+
+			DEBUGLOG->log("Creating compute shader dispatcher");
+			DEBUGLOG->indent();
+
+			DispatchVoxelizeComputeShader* dispatchVoxelizeComputeShader = new DispatchVoxelizeComputeShader(voxelizeComputeShader,
+					objects,
+					voxelizeView,
+					voxelizeProj,
+					voxelGridTexture,
+					SliceMap::get32BitUintMask()
+					);
+
+			DEBUGLOG->outdent();
+
+		DEBUGLOG->outdent();
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
@@ -363,6 +417,9 @@ public:
 
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();
+
+			DEBUGLOG->log("Voxelize Scene on key press : V");
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();

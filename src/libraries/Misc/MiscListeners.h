@@ -37,6 +37,14 @@ public:
 	int* getNumGroupsZPointer();
 
 	virtual void call();
+	int getNumGroupsX() const;
+	void setNumGroupsX(int numGroupsX);
+	int getNumGroupsY() const;
+	void setNumGroupsY(int numGroupsY);
+	int getNumGroupsZ() const;
+	void setNumGroupsZ(int numGroupsZ);
+	ComputeShader* getComputeShader();
+	void setComputeShader(ComputeShader* computeShader);
 };
 
 #endif

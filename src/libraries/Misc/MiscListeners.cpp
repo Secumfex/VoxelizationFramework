@@ -48,3 +48,36 @@ void DispatchComputeShaderListener::call() {
 	p_computeShader->useProgram();
 	p_computeShader->dispatch(m_num_groups_x, m_num_groups_y, m_num_groups_z);
 }
+
+int DispatchComputeShaderListener::getNumGroupsX() const {
+	return m_num_groups_x;
+}
+
+void DispatchComputeShaderListener::setNumGroupsX(int numGroupsX) {
+	m_num_groups_x = numGroupsX;
+}
+
+int DispatchComputeShaderListener::getNumGroupsY() const {
+	return m_num_groups_y;
+}
+
+void DispatchComputeShaderListener::setNumGroupsY(int numGroupsY) {
+	m_num_groups_y = numGroupsY;
+}
+
+int DispatchComputeShaderListener::getNumGroupsZ() const {
+	return m_num_groups_z;
+}
+
+void DispatchComputeShaderListener::setNumGroupsZ(int numGroupsZ) {
+	m_num_groups_z = numGroupsZ;
+}
+
+ComputeShader* DispatchComputeShaderListener::getComputeShader() {
+	return p_computeShader;
+}
+
+void DispatchComputeShaderListener::setComputeShader(
+		ComputeShader* computeShader) {
+	p_computeShader = computeShader;
+}
