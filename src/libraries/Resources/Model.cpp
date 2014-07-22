@@ -2,6 +2,17 @@
 
 Model::Model()
 {
+	m_VAOHandle = 0;
+	m_indexBufferHandle = 0;
+	m_vertexBufferHandle = 0;
+	m_normalBufferHandle = 0;
+	m_tangentBufferHandle = 0;
+	m_uvBufferHandle = 0;
+	m_numFaces = 0;
+	m_numVertices = 0;
+	m_numFaces = 0;
+	m_path = "";
+	m_numIndices = 0;
 }
 
 Model::~Model()
@@ -46,4 +57,52 @@ int Model::getNumIndices()
 int Model::getNumVertices()
 {
 	return m_numVertices;
+}
+
+GLuint Model::getIndexBufferHandle() const {
+	return m_indexBufferHandle;
+}
+
+void Model::setIndexBufferHandle(GLuint indexBufferHandle) {
+	m_indexBufferHandle = indexBufferHandle;
+}
+
+GLuint Model::getNormalBufferHandle() const {
+	return m_normalBufferHandle;
+}
+
+void Model::setNormalBufferHandle(GLuint normalBufferHandle) {
+	m_normalBufferHandle = normalBufferHandle;
+}
+
+GLuint Model::getPositionBufferHandle() const {
+	return m_vertexBufferHandle;
+}
+
+void Model::setVertexBufferHandle(GLuint vertexBufferHandle) {
+	m_vertexBufferHandle = vertexBufferHandle;
+}
+
+GLuint Model::getUvBufferHandle() const {
+	return m_uvBufferHandle;
+}
+
+void Model::setUvBufferHandle(GLuint uvBufferHandle) {
+	m_uvBufferHandle = uvBufferHandle;
+}
+
+GLuint Model::getVaoHandle() const {
+	return m_VAOHandle;
+}
+
+GLuint Model::getTangentBufferHandle() const {
+	return m_tangentBufferHandle;
+}
+
+void Model::setTangentBufferHandle(GLuint tangentBufferHandle) {
+	m_tangentBufferHandle = tangentBufferHandle;
+}
+
+void Model::setVaoHandle(GLuint vaoHandle) {
+	m_VAOHandle = vaoHandle;
 }

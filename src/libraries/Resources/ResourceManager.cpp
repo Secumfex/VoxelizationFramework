@@ -271,6 +271,7 @@ Renderable* ResourceManager::getScreenFillingTriangle(){
 		GLuint indexBufferHandle;
 		glGenBuffers(1, &indexBufferHandle);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+		triangle->setIndexBufferHandle( indexBufferHandle );
 
 		GLint indices[] = {0, 1, 2};
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -278,6 +279,7 @@ Renderable* ResourceManager::getScreenFillingTriangle(){
 		GLuint vertexBufferHandle;
 		glGenBuffers(1, &vertexBufferHandle);
 		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
+		triangle->setVertexBufferHandle(vertexBufferHandle);
 
 		GLfloat vertices[] = {-1, -1,   3, -1,   -1,  3};
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -348,6 +350,9 @@ Object* ResourceManager::getCube(){
 		glEnableVertexAttribArray(0);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+
+		cube->setVertexBufferHandle( vertexBufferHandle );
+		cube->setIndexBufferHandle( indexBufferHandle );
 		cube->setVAOHandle(cubeVertexArrayHandle);
 		cube->setNumIndices(sizeof(indices));
 		cube->setNumVertices(sizeof(vertices));
@@ -449,6 +454,7 @@ Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth
 	// buffer indices
 	GLuint indexBufferHandle;
 	glGenBuffers(1, &indexBufferHandle);
+	voxelGrid->setIndexBufferHandle( indexBufferHandle );
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
 
 	glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW );
@@ -457,6 +463,7 @@ Model* ResourceManager::generateVoxelGridModel( int width, int height, int depth
 	// buffer vertices
 	GLuint vertexBufferHandle;
 	glGenBuffers(1, &vertexBufferHandle);
+	voxelGrid->setVertexBufferHandle( vertexBufferHandle );
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
 
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), &vertices[0], GL_STATIC_DRAW	);

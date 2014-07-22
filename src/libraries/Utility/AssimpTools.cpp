@@ -156,6 +156,7 @@ namespace AssimpTools
 			glGenBuffers(1, &buffer);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW);
+			model->setIndexBufferHandle( buffer );
 
 			// generate vertex position buffer
 			buffer = 0;
@@ -167,6 +168,7 @@ namespace AssimpTools
 				//vertexLoc wurde hier ersetzt
 				glEnableVertexAttribArray(0);
 				glVertexAttribPointer(0, 3, GL_FLOAT, 0, 0, 0);
+				model->setVertexBufferHandle( buffer );
 			}
 			else
 			{
@@ -199,6 +201,7 @@ namespace AssimpTools
 	        
 			glEnableVertexAttribArray(1);
 			glVertexAttribPointer(1, 2, GL_FLOAT, 0, 0, 0);
+			model->setUvBufferHandle( buffer );
 
 			// generate vertex normals buffer
 			buffer = 0;
@@ -209,6 +212,7 @@ namespace AssimpTools
 
 				glEnableVertexAttribArray(2);
 				glVertexAttribPointer(2, 3, GL_FLOAT, 0, 0, 0);
+				model->setNormalBufferHandle( buffer );
 			}
 			else
 			{
@@ -224,6 +228,7 @@ namespace AssimpTools
 
 				glEnableVertexAttribArray(3);
 				glVertexAttribPointer(3, 3, GL_FLOAT, 0, 0, 0);
+				model->setTangentBufferHandle( buffer );
 			}
 			else
 			{

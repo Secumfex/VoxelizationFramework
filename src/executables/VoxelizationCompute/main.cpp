@@ -94,7 +94,10 @@ public:
 //				RenderState::getInstance()->bindVertexArrayObjectIfDifferent(object->getModel()->getVAOHandle());
 
 				// bind VAO to shader storage buffer
-				glBindBuffer( GL_SHADER_STORAGE_BUFFER, object->getModel()->getVAOHandle() );
+//				glBindBuffer( GL_SHADER_STORAGE_BUFFER, object->getModel()->getVAOHandle() );
+
+				// bind positions VBO to shader storage buffer
+				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getModel()->getPositionBufferHandle() );
 				numVertices = object->getModel()->getNumVertices();
 			}
 			else
