@@ -30,6 +30,7 @@ static int MAX_COMPUTE_WORK_GROUP_INVOCATIONS;
 static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
+static glm::vec4 voxelGridClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -91,6 +92,9 @@ public:
 		0,
 		GL_WRITE_ONLY,						// only write
 		GL_R32UI);							// 1 channel 32 bit unsigned int
+
+		// upload uniform clear color
+		p_computeShader->uploadUniform( voxelGridClearColor , "uniformClearColor" );
 
 		// set suitable amount of work groups
 		m_num_groups_x = voxelGridResolution / 32 + 1;
@@ -376,16 +380,16 @@ public:
 			DEBUGLOG->log("Creating voxel grid view matrix");
 			// create view matrix
 			glm::mat4 voxelizeView = glm::lookAt(
-					glm::vec3( 0.0f, 0.0f, 5.0f),	// eye
+					glm::vec3( 0.0f, 0.0f, 2.5f),	// eye
 					glm::vec3( 0.0f , 0.0f , 0.0f ),// center
 					glm::vec3( 0.0f, 1.0f, 0.0f) ); // up
 
 			DEBUGLOG->log("Creating voxel grid projection matrix");
 			// create projection matrix
 			glm::mat4 voxelizeProj = glm::ortho(
-					-5.0f, 5.0f,	// left,   right
-					-5.0f, 5.0f,	// bottom, top
-					0.0f, 10.0f);	// front,  back
+					-2.5f, 2.5f,	// left,   right
+					-2.5f, 2.5f,	// bottom, top
+					0.0f, 5.0f);	// front,  back
 
 			DEBUGLOG->log("Creating voxel grid texture");
 			// generate Texture
@@ -525,6 +529,10 @@ public:
 			DEBUGLOG->log("Clear and Voxelize Scene on key press : V");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
+
+			DEBUGLOG->log("Increase / Decrease clear color       : N / M ");
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_N, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
 
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();

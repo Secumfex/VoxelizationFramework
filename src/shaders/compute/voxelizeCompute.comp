@@ -13,7 +13,7 @@ layout (local_size_x = 1024) in;
 // vertex buffer access
 layout( std140, binding = 0 ) buffer destBuffer { Vert v[ ]; } vertices;
 
-// voxel grid texture ( format MUST be unsigned integer to make atomic operations work )
+// voxel grid texture ( format MUST be signle channel unsigned integer to make atomic operations work )
 layout( r32ui, binding = 1 ) uniform uimage2D voxel_grid_texture;
 
 // bit mask
@@ -33,6 +33,11 @@ void main()
 	uint gid = gl_GlobalInvocationID.x ;
 	
 	// read vertex data
+	if ( gid > uniformNumVertices )
+	{
+		return;
+	}
+	
 	Vert vertex = vertices.v[ gid ];
 	
 	// compute world position
@@ -48,18 +53,12 @@ void main()
 	gridPos.xyz = gridPos.xyz * 0.5 + 0.5;
 	
 	// retrieve depth component
-	float depth = ( gridPos.z ) * 32.0;
+	int depth = int( gridPos.z * 31.0 );
 	
 	// compute BYTE-value from depth value of grid position
-//	uvec4 bitMask = imageLoad( bitmaskTexture, int( depth * 32 ) );			
-//	uint  byte = bitMask.r;
-//	
-	
-	// for testing purposes
-//	uint byte = 0xFFFFFFFF;
-//	uint byte = 2147483648u;
-	uint byte = 255;
-	
+	uvec4 bitMask = imageLoad( bitmaskTexture, depth );			
+	uint  byte = bitMask.r ;	
+		
 	// retrieve x / y coordinates
 	ivec2 gridSize = imageSize( voxel_grid_texture );
 	int x = int( float( gridSize.x ) * gridPos.x );

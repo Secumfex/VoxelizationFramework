@@ -112,14 +112,23 @@ Texture* SliceMap::get32BitUintMask()
 		glBindTexture(GL_TEXTURE_1D, bitMaskHandle);
 
 		// allocate mem:  1D Texture,  1 level,   long uint format (32bit)
-		glTexStorage1D( GL_TEXTURE_1D, 1		, GL_R32UI					, sizeof( bitMaskData ) );
+		glTexStorage1D( GL_TEXTURE_1D, 1		, GL_R32UI					, 32 );
 
 		// buffer data to GPU
-		glTexSubImage1D( GL_TEXTURE_1D, 0, 0, sizeof(bitMaskData), GL_RED, GL_UNSIGNED_INT, &bitMaskData);
+		glTexSubImage1D( GL_TEXTURE_1D, 0, 0, 32, GL_RED_INTEGER, GL_UNSIGNED_INT, &bitMaskData);
 		
 		// set filter parameters so samplers can work
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+		// retrieve the image and save as an array
+//		GLuint* pixels = new GLuint[ 32 ];
+//		glGetTexImage(GL_TEXTURE_1D, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, pixels);
+//		// PRINT THE FUCKING TEXTURE
+//		for ( unsigned int i = 0; i < 32; i++)
+//		{
+//			DEBUGLOG->log(" TEXEL : ", pixels[i]);
+//		}
 
 		glBindTexture(GL_TEXTURE_1D, 0);
 
