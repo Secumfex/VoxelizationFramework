@@ -21,7 +21,7 @@
 
 static bool rotatingBunny = false;
 
- static int voxelGridResolution = 256;
+static int voxelGridResolution = 256;
 
 // compute shader related information
 static int MAX_COMPUTE_WORK_GROUP_COUNT[3];
@@ -31,6 +31,85 @@ static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
 
+/**
+ * Renderpass that overlays the slice map ontop of fbo
+ */
+class OverlayR32UITextureRenderPass : public TriangleRenderPass
+{
+private:
+	Texture* p_texture;
+public:
+	OverlayR32UITextureRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* triangle, Texture* baseTexture, Texture* texture)
+	: TriangleRenderPass(shader, fbo, triangle)
+	{
+		addUniformTexture(baseTexture, "uniformBaseTexture");
+		addEnable(GL_BLEND);
+		p_texture = texture;
+	}
+
+	virtual void uploadUniforms()
+	{
+		TriangleRenderPass::uploadUniforms();
+
+		// upload texture
+		glBindImageTexture(1,
+		p_texture->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_ONLY,
+		GL_R32UI
+		);
+	}
+};
+
+/**
+ * Clear voxel grid texture with 0
+ */
+class DispatchClearVoxelGridComputeShader : public DispatchComputeShaderListener
+{
+protected:
+	Texture* p_voxelGridTexture;
+public:
+	DispatchClearVoxelGridComputeShader(ComputeShader* computeShader, Texture* voxelGridTexture, int x = 0, int y = 0, int z = 0 )
+	: DispatchComputeShaderListener(computeShader, x, y, z)
+{
+		p_voxelGridTexture = voxelGridTexture;
+}
+	void call()
+	{
+		p_computeShader->useProgram();
+
+		// unbind output texture
+		p_voxelGridTexture->unbindFromActiveUnit();
+
+		// upload clear texture index binding
+		glBindImageTexture(0,
+		p_voxelGridTexture->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_WRITE_ONLY,						// only write
+		GL_R32UI);							// 1 channel 32 bit unsigned int
+
+		// set suitable amount of work groups
+		m_num_groups_x = voxelGridResolution / 32 + 1;
+		m_num_groups_y = voxelGridResolution / 32 + 1;
+		m_num_groups_z = 1;
+
+		// dispatch as usual
+		DispatchComputeShaderListener::call();
+
+		// but memory barriers for future shader program
+		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+		glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT );
+	}
+};
+
+/**
+ * Voxelize scene
+ */
 class DispatchVoxelizeComputeShader : public DispatchComputeShaderListener
 {
 protected:
@@ -66,7 +145,7 @@ public:
 		GL_FALSE,
 		0,
 		GL_READ_WRITE,							// allow both
-		GL_RGBA32F);							// TODO find most suitable format
+		GL_R32UI);							// 1 channel 32 bit unsigned int to make sure OR-ing works
 
 		// upload bit mask
 		glBindImageTexture(2,
@@ -88,14 +167,6 @@ public:
 
 			if ( object->getModel() )
 			{
-
-				// TODO umm... what
-
-//				RenderState::getInstance()->bindVertexArrayObjectIfDifferent(object->getModel()->getVAOHandle());
-
-				// bind VAO to shader storage buffer
-//				glBindBuffer( GL_SHADER_STORAGE_BUFFER, object->getModel()->getVAOHandle() );
-
 				// bind positions VBO to shader storage buffer
 				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getModel()->getPositionBufferHandle() );
 				numVertices = object->getModel()->getNumVertices();
@@ -214,11 +285,6 @@ public:
 		DEBUGLOG->outdent();
 	}
 
-	void programCycle()
-	{
-		Application::programCycle(); 	// regular rendering and image presentation
-	}
-
 	void postInitialize()
 	{
 
@@ -296,7 +362,6 @@ public:
 
 					DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
 					m_renderManager.addRenderPass(showRenderPassPerspective);
-
 				DEBUGLOG->outdent();
 
 			DEBUGLOG->outdent();
@@ -309,17 +374,38 @@ public:
 		DEBUGLOG->log("Configuring voxel grid");
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid view matrix");
-			glm::mat4 voxelizeView = glm::lookAt(glm::vec3( 0.0f, 0.0f, 5.0f), glm::vec3( 0.0f , 0.0f , 0.0f ), glm::vec3( 0.0f, 1.0f, 0.0f) );
+			// create view matrix
+			glm::mat4 voxelizeView = glm::lookAt(
+					glm::vec3( 0.0f, 0.0f, 5.0f),	// eye
+					glm::vec3( 0.0f , 0.0f , 0.0f ),// center
+					glm::vec3( 0.0f, 1.0f, 0.0f) ); // up
 
 			DEBUGLOG->log("Creating voxel grid projection matrix");
-			glm::mat4 voxelizeProj = glm::ortho(-5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f);
+			// create projection matrix
+			glm::mat4 voxelizeProj = glm::ortho(
+					-5.0f, 5.0f,	// left,   right
+					-5.0f, 5.0f,	// bottom, top
+					0.0f, 10.0f);	// front,  back
 
-			DEBUGLOG->log("Creating slice map texture");
-
+			DEBUGLOG->log("Creating voxel grid texture");
+			// generate Texture
 			GLuint voxelGridHandle;
 			glGenTextures(1, &voxelGridHandle);
 			glBindTexture(GL_TEXTURE_2D, voxelGridHandle);
-			glTexStorage2D(GL_TEXTURE_2D, 1, GL_R32UI, voxelGridResolution, voxelGridResolution);
+
+			// allocate memory
+			glTexStorage2D(
+					GL_TEXTURE_2D,			// 2D Texture
+					1,						// 1 level
+					GL_R32UI,				// 1 channel 32 bit unsigned int
+					voxelGridResolution,	// res X
+					voxelGridResolution);	// rex Y
+			
+			// set filter parameters for samplers
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		
+			// unbind
 			glBindTexture(GL_TEXTURE_2D, 0);
 
 			Texture* voxelGridTexture = new Texture(voxelGridHandle);
@@ -342,37 +428,21 @@ public:
 		DEBUGLOG->log("Configuring compute shader");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Loading and compiling voxelize compute shader program");
+			DEBUGLOG->log("Loading and compiling voxel grid clearing compute shader program");
 			DEBUGLOG->indent();
 
+			// shader that clears a r32ui texture with 0
+			ComputeShader* clearVoxelGridComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeClearCompute.comp");
+
+			DEBUGLOG->outdent();
+
+
+			DEBUGLOG->log("Loading and compiling voxel grid filling compute shader program");
+			DEBUGLOG->indent();
+
+			// shader that voxelizes an object
 			ComputeShader* voxelizeComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeCompute.comp");
 			
-			GLint numBlocks;
-			glGetProgramiv(voxelizeComputeShader->getProgramHandle(), GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
-
-			DEBUGLOG->log( "Active Uniform blocks : ", numBlocks);
-
-			std::vector<std::string> nameList;
-			nameList.reserve(numBlocks);
-
-			for ( int blockIx = 0; blockIx < numBlocks; ++blockIx)
-			{
-				GLint nameLen;
-				glGetActiveUniformBlockiv(voxelizeComputeShader->getProgramHandle(),blockIx,GL_UNIFORM_BLOCK_NAME_LENGTH, &nameLen);
-
-				std::vector<GLchar> name;
-				name.resize(nameLen);
-				glGetActiveUniformBlockName(voxelizeComputeShader->getProgramHandle(), blockIx, nameLen, 0, &name[0]);
-
-				nameList.push_back(std::string());
-				nameList.back().assign(name.begin(),name.end() -1);
-			}
-
-			for( unsigned int i = 0; i < nameList.size(); i++)
-			{
-				DEBUGLOG->log( "Uniform : " + nameList[i] );
-			}
-
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -384,15 +454,26 @@ public:
 		DEBUGLOG->log("Configuring compute shader dispatcher");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Configuring object vector");
+			DEBUGLOG->log("Configuring objects to voxelize");
 			std::vector<std::pair < Object*, RenderableNode*> > objects;
 			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
 			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
 
-			DEBUGLOG->log("Creating compute shader dispatcher");
+			DEBUGLOG->log("Creating voxel grid clearing compute shader dispatcher");
 			DEBUGLOG->indent();
 
-			DispatchVoxelizeComputeShader* dispatchVoxelizeComputeShader = new DispatchVoxelizeComputeShader(voxelizeComputeShader,
+			DispatchClearVoxelGridComputeShader* dispatchClearVoxelGridComputeShader = new DispatchClearVoxelGridComputeShader(
+					clearVoxelGridComputeShader,
+					voxelGridTexture
+			);
+
+			DEBUGLOG->outdent();
+
+			DEBUGLOG->log("Creating voxel grid filling compute shader dispatcher");
+			DEBUGLOG->indent();
+
+			DispatchVoxelizeComputeShader* dispatchVoxelizeComputeShader = new DispatchVoxelizeComputeShader(
+					voxelizeComputeShader,
 					objects,
 					voxelizeView,
 					voxelizeProj,
@@ -407,13 +488,33 @@ public:
 		 * 								VOXELIZATION
 		 **************************************************************************************/
 
-//		DEBUGLOG->log("Configuring Voxelization");
-//		DEBUGLOG->indent();
-//
-//			DEBUGLOG->log( " -  TODO - TODO - TODO - TODO ");
-//
-//		DEBUGLOG->outdent();
+		DEBUGLOG->log("Configuring Voxelization");
+		DEBUGLOG->indent();
 
+			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
+			// voxelize in every frame
+			attach(dispatchClearVoxelGridComputeShader, "VOXELIZE");
+			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
+
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 								VOXELIZATION DISPLAY RENDERING
+		 **************************************************************************************/
+		DEBUGLOG->log("Configuring display of voxelized scene");
+		DEBUGLOG->indent();
+
+			Shader* 			showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
+			TriangleRenderPass* showSliceMap = new OverlayR32UITextureRenderPass(
+					showSliceMapShader,
+					0,
+					m_resourceManager.getScreenFillingTriangle(),
+					phongPerspectiveRenderPassOutput,
+					voxelGridTexture );
+
+			m_renderManager.addRenderPass( showSliceMap );
+
+		DEBUGLOG->outdent();
 		/**************************************************************************************
 		* 								INPUT CONFIGURATION
 		**************************************************************************************/
@@ -421,7 +522,8 @@ public:
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Voxelize Scene on key press : V");
+			DEBUGLOG->log("Clear and Voxelize Scene on key press : V");
+			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Configuring camera movement");
@@ -440,7 +542,16 @@ public:
 
 		DEBUGLOG->outdent();
 	}
+
+	void programCycle()
+	{
+		call("VOXELIZE");				// call listeners attached to voxelize interface
+
+		Application::programCycle(); 	// regular rendering and image presentation
+	}
+
 };
+
 
 int main() {
 	// configure a little bit

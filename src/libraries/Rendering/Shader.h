@@ -105,6 +105,7 @@ public:
 	 *
 	 */
 	void useProgram();
+	const std::map<std::string, GLuint>& getUniformHandles() const;
 };
 
 class ComputeShader : public Shader{

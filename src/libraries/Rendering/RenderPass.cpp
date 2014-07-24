@@ -1,10 +1,12 @@
 #include "RenderPass.h"
 
+#include "Application/Application.h"
+
 RenderPass::RenderPass(Shader* shader, FramebufferObject* fbo)
 {
 	m_shader = shader;
 	m_fbo = fbo;
-	m_viewport = glm::vec4(0,0,800,600);
+	m_viewport = glm::vec4(0,0,Application::static_newWindowWidth,Application::static_newWindowHeight);
 	m_clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 	if (fbo)
 	{

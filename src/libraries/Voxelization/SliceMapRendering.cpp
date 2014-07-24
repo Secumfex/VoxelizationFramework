@@ -116,6 +116,10 @@ Texture* SliceMap::get32BitUintMask()
 
 		// buffer data to GPU
 		glTexSubImage1D( GL_TEXTURE_1D, 0, 0, sizeof(bitMaskData), GL_RED, GL_UNSIGNED_INT, &bitMaskData);
+		
+		// set filter parameters so samplers can work
+		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 		glBindTexture(GL_TEXTURE_1D, 0);
 

@@ -289,6 +289,9 @@ public:
 			Texture* outputTexture = new Texture( output_texture );
 			Texture* inputTexture  = phongPerspectiveRenderPassOutput;
 
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
 			DEBUGLOG->log("Creating a dispatch listener for simple compute shader");
 
 			// dispatch 16 shader groups in x and y direction since window is 512x512 in resolution and group size is 32x32

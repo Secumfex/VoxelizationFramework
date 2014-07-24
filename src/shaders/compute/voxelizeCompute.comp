@@ -1,17 +1,17 @@
 #version 430 core
 
 // struct type of values accessed through vertex buffer
-struct vertex {
-	vec4 position;
+struct Vert{
+	float x;
+	float y;
+	float z;
 };
 
-// specify local work group size
-// TODO work group size should be in a suitable relation to num of vertices
-// TODO find suitable local size 
+// specify local work group size 
 layout (local_size_x = 1024) in;
 
 // vertex buffer access
-layout( std430, binding = 0 ) buffer vertices { vertex v[ ]; };
+layout( std140, binding = 0 ) buffer destBuffer { Vert v[ ]; } vertices;
 
 // voxel grid texture ( format MUST be unsigned integer to make atomic operations work )
 layout( r32ui, binding = 1 ) uniform uimage2D voxel_grid_texture;
@@ -33,29 +33,38 @@ void main()
 	uint gid = gl_GlobalInvocationID.x ;
 	
 	// read vertex data
-	vertex vert = v[ gid ];
+	Vert vertex = vertices.v[ gid ];
 	
 	// compute world position
-	vec4 pos = uniformModel * vert.position;
+	vec4 pos = uniformModel * vec4 ( vertex.x, vertex.y, vertex.z, 1.0 );
 	
 	// compute grid position
 	vec4 perspGridPos = uniformVoxelizeProjection * uniformVoxelizeView * pos;
 	
 	// divide by homo coordinate
-	vec4 gridPos = perspGridPos / perspGridPos.w;
+	vec3 gridPos = perspGridPos.xyz / perspGridPos.w;
+	
+	// bring into [0,1] in every direction
+	gridPos.xyz = gridPos.xyz * 0.5 + 0.5;
 	
 	// retrieve depth component
-	float depth = ( gridPos.z * 0.5 ) + 0.5;
+	float depth = ( gridPos.z ) * 32.0;
 	
 	// compute BYTE-value from depth value of grid position
-	uvec4 bitMask = imageLoad( bitmaskTexture, int( depth * 32 ) );			
-	uint  byte = bitMask.r;
+//	uvec4 bitMask = imageLoad( bitmaskTexture, int( depth * 32 ) );			
+//	uint  byte = bitMask.r;
+//	
+	
+	// for testing purposes
+//	uint byte = 0xFFFFFFFF;
+//	uint byte = 2147483648u;
+	uint byte = 255;
 	
 	// retrieve x / y coordinates
 	ivec2 gridSize = imageSize( voxel_grid_texture );
-	ivec2 writeTo  = ivec2( gridPos.xy );
-	writeTo.x *= gridSize.x;
-	writeTo.y *= gridSize.y;
+	int x = int( float( gridSize.x ) * gridPos.x );
+	int y = int( float( gridSize.y ) * gridPos.y );
+	ivec2 writeTo  = ivec2( x, y );
 	
 	// OR with byte currently written in voxel grid texture
 	uint before = imageAtomicOr( voxel_grid_texture, writeTo , byte );

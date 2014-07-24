@@ -12,7 +12,7 @@ Subject::~Subject()
 	{
 		for (std::list<Listener*>::iterator l = (*i).second.begin(); l != (*i).second.end();++l)
 		{
-			delete (*l);
+//			delete (*l);
 		}
 		(*i).second.clear();
 	}

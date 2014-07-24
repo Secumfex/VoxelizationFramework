@@ -39,7 +39,7 @@ public:
 
 	virtual void preRender();
 	virtual void uploadUniforms();
-	void render();
+	virtual void render();
 	virtual void postRender();
 	virtual void restoreStates();
 

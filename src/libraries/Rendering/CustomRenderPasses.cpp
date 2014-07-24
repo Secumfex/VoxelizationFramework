@@ -1,10 +1,16 @@
 #include "CustomRenderPasses.h"
 
+#include "Application/Application.h"
+
 CameraRenderPass::CameraRenderPass()
 {
 	m_shader = 0;
 	m_fbo = 0;
-	m_viewport = glm::vec4(0,0,800,600);
+	m_viewport = glm::vec4(0,0,Application::static_newWindowWidth,Application::static_newWindowWidth);
+
+	DEBUGLOG->log("height:",Application::static_newWindowHeight);
+	DEBUGLOG->log("width :",Application::static_newWindowWidth);
+
 	m_camera = 0;
 }
 

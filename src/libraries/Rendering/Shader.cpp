@@ -145,3 +145,7 @@ void ComputeShader::dispatch(GLuint num_groups_x, GLuint num_groups_y,
 		GLuint num_groups_z) {
 	glDispatchCompute( num_groups_x, num_groups_y, num_groups_z);
 }
+
+const std::map<std::string, GLuint>& Shader::getUniformHandles() const {
+	return m_uniformHandles;
+}
