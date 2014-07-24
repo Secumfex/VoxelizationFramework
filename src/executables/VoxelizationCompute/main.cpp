@@ -30,7 +30,7 @@ static int MAX_COMPUTE_WORK_GROUP_INVOCATIONS;
 static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
-static glm::vec4 voxelGridClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+static glm::vec4 voxelGridClearColor = glm::vec4(255.0f, 0.0f, 0.0f, 0.0f);
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -104,10 +104,112 @@ public:
 		// dispatch as usual
 		DispatchComputeShaderListener::call();
 
-		// but memory barriers for future shader program
+		// put memory barriers for future shader program
+		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+	}
+};
+
+/**
+ * Voxelize scene via tex atlas
+ */
+class DispatchVoxelizeWithTexAtlasComputeShader : public DispatchComputeShaderListener
+{
+protected:
+
+	std::vector<std::pair<Object*, TexAtlas::TextureAtlas* > > m_objects;
+
+	glm::mat4 m_voxelizeView;
+	glm::mat4 m_voxelizeProjection;
+	Texture* p_voxelGridTexture;
+	Texture* p_bitMask;
+public:
+	DispatchVoxelizeWithTexAtlasComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, TexAtlas::TextureAtlas*> > objects, glm::mat4 voxelizeView, glm::mat4 voxelizeProjection, Texture* voxelGridTexture, Texture* bitMask, int x= 0, int y= 0, int z = 0 )
+	: DispatchComputeShaderListener(computeShader, x,y,z)
+	{
+		m_objects = objects;
+		m_voxelizeView = voxelizeView;
+		m_voxelizeProjection = voxelizeProjection;
+		p_voxelGridTexture = voxelGridTexture;
+		p_bitMask = bitMask;
+	}
+
+	void call()
+	{
+		// use compute program
+		p_computeShader->useProgram();
+
+		// unbind output texture
+		p_voxelGridTexture->unbindFromActiveUnit();
+
+		// upload output texture
+		glBindImageTexture(1,
+		p_voxelGridTexture->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_WRITE,							// allow both
+		GL_R32UI);							// 1 channel 32 bit unsigned int to make sure OR-ing works
+
+		// upload bit mask
+		glBindImageTexture(2,
+		p_bitMask->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_ONLY,
+		GL_R32UI
+		);
+
+		// dispatch this shader once per object
+		for ( unsigned int i = 0; i < m_objects.size(); i++)
+		{
+			Object* object = m_objects[i].first;
+			TexAtlas::TextureAtlas* objectTextureAtlas= m_objects[i].second;
+
+			int numVertices = 0;
+
+			if ( object->getModel() )
+			{
+				// bind positions VBO to shader storage buffer
+				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getModel()->getPositionBufferHandle() );
+				numVertices = object->getModel()->getNumVertices();
+			}
+			else
+			{
+				continue;
+			}
+
+			glm::mat4 modelMatrix = glm::mat4(1.0f);
+			if (objectTextureAtlas)
+			{
+				objectTextureAtlas->unbindFromActiveUnit();
+
+				// bind textureAtlas
+				objectTextureAtlas->bindToTextureUnit(3);
+
+				// upload uniform textureAtlas position
+				p_computeShader->uploadUniform(3 , "uniformTextureAtlas" );
+			}
+
+			// upload uniform voxel grid matrices
+			p_computeShader->uploadUniform( m_voxelizeView, "uniformVoxelizeView");
+			p_computeShader->uploadUniform( m_voxelizeProjection, "uniformVoxelizeProjection");
+
+			// upload uniform vertices amount
+			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
+
+			// set local group amount suitable for object size:
+			m_num_groups_x = numVertices / 1024 + 1;
+			m_num_groups_y = 1;
+			m_num_groups_z = 1;
+
+			// dispatch as usual
+			DispatchComputeShaderListener::call();
+		}
+
+		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
 		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
 		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
-		glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT );
 	}
 };
 
@@ -208,7 +310,6 @@ public:
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
 		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
 		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
-		glMemoryBarrier( GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT );	// put this aswell, since
 	}
 };
 
@@ -375,6 +476,7 @@ public:
 		/**************************************************************************************
 		 * 								VOXELGRID CREATION
 		 **************************************************************************************/
+
 		DEBUGLOG->log("Configuring voxel grid");
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating voxel grid view matrix");
@@ -422,7 +524,48 @@ public:
 
 		DEBUGLOG->log("Configuring texture atlas objects");
 		DEBUGLOG->indent();
-			DEBUGLOG->log("TODO TODO TODO TODO TODO "); // TODO
+
+			DEBUGLOG->log("Creating TextureAtlasRenderPass for provided renderable node");
+			DEBUGLOG->indent();
+				GLenum internalFormat = FramebufferObject::static_internalFormat;
+				FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;// change this first
+
+				// create renderpass that generates a textureAtlas for models
+				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, 512, 512, phongPerspectiveRenderPass->getCamera() );
+
+				FramebufferObject::static_internalFormat = internalFormat;	// restore default
+			DEBUGLOG->outdent();
+
+			DEBUGLOG->log("Adding texture atlas render pass");
+			m_renderManager.addRenderPass( textureAtlasRenderPass );
+
+			DEBUGLOG->log("Creating TextureAtlasVertexGenerator for provided Texture Atlas");
+			DEBUGLOG->indent();
+
+				//create texture atlas vertex generator to generate vertices
+				TexAtlas::TextureAtlasVertexGenerator* textureAtlasVertexGenerator = new TexAtlas::TextureAtlasVertexGenerator( textureAtlasRenderPass->getTextureAtlas());
+			DEBUGLOG->outdent();
+
+		DEBUGLOG->outdent();
+		/**************************************************************************************
+		 * 								TEXTURE ATLAS INITIALIZATION
+		 **************************************************************************************/
+		DEBUGLOG->log("Initializing Texture Atlas functionality");
+		DEBUGLOG->indent();
+
+			DEBUGLOG->log("Generating Texture Atlas valid coordinates");
+			// render texture atlas once so it can be validated
+			textureAtlasRenderPass->render();
+
+			DEBUGLOG->log("Generating Texture Atlas vertex array object");
+			// generate vertices from texture atlas
+			textureAtlasVertexGenerator->call();
+
+			// attach to a Node for rendering
+			RenderableNode* verticesNode = new RenderableNode( m_objectsNode );
+			verticesNode->setObject( textureAtlasVertexGenerator->getPixelsObject() );
+			verticesNode->scale( glm::vec3( 10.0f, 10.0f, 10.0f ) );
+
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
@@ -449,6 +592,14 @@ public:
 			
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Loading and compiling voxel grid filling texture atlas enabled compute shader program");
+			DEBUGLOG->indent();
+
+			// shader that voxelizes an object by its texture atlas
+			ComputeShader* voxelizeWithTexAtlasComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeWithTexAtlasCompute.comp");
+
+			DEBUGLOG->outdent();
+
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
@@ -458,10 +609,14 @@ public:
 		DEBUGLOG->log("Configuring compute shader dispatcher");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Configuring objects to voxelize");
+			DEBUGLOG->log("Configuring list of objects to voxelize");
 			std::vector<std::pair < Object*, RenderableNode*> > objects;
-			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
-			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
+//			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
+//			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
+
+			std::vector<std::pair < Object*, TexAtlas::TextureAtlas* > > texAtlasObjects;
+			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >( verticesNode->getObject(), textureAtlasRenderPass->getTextureAtlas()) );
+
 
 			DEBUGLOG->log("Creating voxel grid clearing compute shader dispatcher");
 			DEBUGLOG->indent();
@@ -487,6 +642,20 @@ public:
 
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Creating voxel grid filling tex atlas enabled compute shader dispatcher");
+			DEBUGLOG->indent();
+
+			DispatchVoxelizeWithTexAtlasComputeShader* dispatchVoxelizeWithTexAtlasComputeShader = new DispatchVoxelizeWithTexAtlasComputeShader(
+					voxelizeComputeShader,
+					texAtlasObjects,
+					voxelizeView,
+					voxelizeProj,
+					voxelGridTexture,
+					SliceMap::get32BitUintMask()
+					);
+
+			DEBUGLOG->outdent();
+
 		DEBUGLOG->outdent();
 		/**************************************************************************************
 		 * 								VOXELIZATION
@@ -498,7 +667,8 @@ public:
 			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
 			// voxelize in every frame
 			attach(dispatchClearVoxelGridComputeShader, "VOXELIZE");
-			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
+//			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
+			attach(dispatchVoxelizeWithTexAtlasComputeShader, "VOXELIZE");
 
 		DEBUGLOG->outdent();
 

@@ -1,0 +1,70 @@
+#version 430 core
+
+// struct type of values accessed through vertex buffer
+struct Vert{
+	float x;
+	float y;
+	float z;
+};
+
+// specify local work group size 
+layout (local_size_x = 1024) in;
+
+// vertex buffer access
+layout( std140, binding = 0 ) buffer destBuffer { Vert v[ ]; } vertices;
+
+// voxel grid texture ( format MUST be signle channel unsigned integer to make atomic operations work )
+layout( r32ui, binding = 1 ) uniform uimage2D voxel_grid_texture;
+
+// bit mask
+layout( r32ui, binding = 2 ) uniform readonly uimage1D bitmaskTexture;
+
+// texture atlas aka world positions
+uniform sampler2D uniformTextureAtlas;
+
+uniform mat4 uniformVoxelizeView;
+uniform mat4 uniformVoxelizeProjection;
+
+uniform int uniformNumVertices;
+
+void main()
+{
+	// determine which vertex to read from
+	uint gid = gl_GlobalInvocationID.x ;
+	
+	// read vertex data
+	if ( gid > uniformNumVertices )
+	{
+		return;
+	}
+	
+	Vert vertex = vertices.v[ gid ];
+	
+	// retrieve corresponding value from texture atlas
+	vec4 pos = texture( uniformTextureAtlas, vec2( vertex.x, vertex.y ) );
+	
+	// compute grid position
+	vec4 perspGridPos = uniformVoxelizeProjection * uniformVoxelizeView * pos;
+	
+	// divide by homo coordinate
+	vec3 gridPos = perspGridPos.xyz / perspGridPos.w;
+	
+	// bring into [0,1] in every direction
+	gridPos.xyz = gridPos.xyz * 0.5 + 0.5;
+	
+	// retrieve depth component
+	int depth = int( gridPos.z * 31.0 );
+	
+	// compute BYTE-value from depth value of grid position
+	uvec4 bitMask = imageLoad( bitmaskTexture, depth );			
+	uint  byte = bitMask.r ;	
+		
+	// retrieve x / y coordinates
+	ivec2 gridSize = imageSize( voxel_grid_texture );
+	int x = int( float( gridSize.x ) * gridPos.x );
+	int y = int( float( gridSize.y ) * gridPos.y );
+	ivec2 writeTo  = ivec2( x, y );
+	
+	// OR with byte currently written in voxel grid texture
+	uint before = imageAtomicOr( voxel_grid_texture, writeTo , byte );
+}

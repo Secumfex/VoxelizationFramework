@@ -24,18 +24,13 @@ void main() {
 	float g = float ( ( byte & 0x00FF0000 ) >> 16u ) / 255.0;
 	float b = float ( ( byte & 0x0000FF00 ) >> 8u  ) / 255.0;
 	float a = float ( ( byte & 0x000000FF ) >> 0u  ) / 255.0;
-
-//	float r = float( sliceTex.r / 255.0 );
-//	float g = float( sliceTex.g / 255.0 );
-//	float b = float( sliceTex.b / 255.0 );
-//	float a = float( sliceTex.a / 255.0 );
 	
+	// base color
 	vec4 baseTex = texture(uniformBaseTexture, passUV);
-	
-//	vec4 sliceAdd = vec4( float ( byte ) / 255.0, float( byte ) / 255.0, float( byte ) / 255.0, 1.0 );
 	
 	// alpha is distributed among r,g,b channels --> white
 	vec4 sliceAdd = vec4( r + a , g + a, b + a, 1.0);
 	
+	// add
     fragmentColor = vec4 ( baseTex.rgb + sliceAdd.rgb, baseTex.a);
 }
