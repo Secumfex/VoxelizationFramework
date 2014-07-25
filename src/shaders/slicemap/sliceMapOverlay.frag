@@ -3,7 +3,7 @@
 in vec2 passUV;
 
 uniform sampler2D uniformBaseTexture;
-uniform usampler2D uniformSliceMapTexture;
+uniform sampler2D uniformSliceMapTexture;
 
 out vec4 fragmentColor;
 

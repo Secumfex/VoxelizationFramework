@@ -38,7 +38,7 @@ void main()
 		return;
 	}
 	
-	Vert vertex = vertices.v[ gid ];
+	Vert vertex = vertices.v[ gid * 3 ];
 	
 	// compute world position
 	vec4 pos = uniformModel * vec4 ( vertex.x, vertex.y, vertex.z, 1.0 );

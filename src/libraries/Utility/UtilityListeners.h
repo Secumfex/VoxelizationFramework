@@ -5,6 +5,9 @@
 #include <vector>
 #include "SubjectListenerPattern.h"
 
+#include <sstream>
+#include "Utility/DebugLog.h"
+
 class InvertBooleanListener : public Listener
 {
 private:
@@ -23,6 +26,17 @@ private:
 public:
 	DebugPrintDoubleListener( double* doublePtr , std::string message);
 	virtual ~DebugPrintDoubleListener();
+	void call();
+};
+
+class DebugPrintVec4Listener : public Listener
+{
+private:
+	glm::vec4* p_vector;
+	std::string m_message;
+public:
+	DebugPrintVec4Listener( glm::vec4* vectorPtr, std::string message);
+	virtual ~DebugPrintVec4Listener();
 	void call();
 };
 
@@ -50,7 +64,10 @@ private:
 	T* p_value;
 	T m_decrement;
 public:
-	DecrementValueListener(T* valuePtr, T decrement);
+	DecrementValueListener(T* valuePtr, T decrement) {
+		m_decrement = decrement;
+		p_value = valuePtr;
+	}
 	virtual ~DecrementValueListener() {
 	}
 	void call() {

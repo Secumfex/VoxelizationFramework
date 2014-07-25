@@ -106,9 +106,11 @@ namespace TexAtlas
 
 		void setPixelsObject(Object* pixelsObject);
 		Object* getPixelsObject();
+		TextureAtlas* getTextureAtlas();
+
 	};
 
-
+// TODO
 	class TextureAtlasVerticesObject : public Object
 	{
 	protected:

@@ -19,7 +19,7 @@ layout( r32ui, binding = 1 ) uniform uimage2D voxel_grid_texture;
 // bit mask
 layout( r32ui, binding = 2 ) uniform readonly uimage1D bitmaskTexture;
 
-// texture atlas aka world positions
+// texture atlas containing world positions
 uniform sampler2D uniformTextureAtlas;
 
 uniform mat4 uniformVoxelizeView;
@@ -38,10 +38,11 @@ void main()
 		return;
 	}
 	
-	Vert vertex = vertices.v[ gid ];
+	Vert vertex = vertices.v[ gid * 3 ];
 	
-	// retrieve corresponding value from texture atlas
+	// retrieve world position from texture atlas
 	vec4 pos = texture( uniformTextureAtlas, vec2( vertex.x, vertex.y ) );
+//	vec4 pos = vec4( vertex.x, vertex.y, vertex.z , 1.0);
 	
 	// compute grid position
 	vec4 perspGridPos = uniformVoxelizeProjection * uniformVoxelizeView * pos;

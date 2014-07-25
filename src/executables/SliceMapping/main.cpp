@@ -36,32 +36,32 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->log("Loading some objects");
 		DEBUGLOG->indent();
 		
-			DEBUGLOG->log("Loading cube dae file");
-			DEBUGLOG->indent();
-				std::vector< Object* > daeCube = m_resourceManager.loadObjectsFromFile(RESOURCES_PATH "/cube.dae");
-				DEBUGLOG->log("Loading custom Texture for dae Cube");
-				daeCube[0]->getMaterial()->setTexture("diffuseTexture", m_resourceManager.loadTexture("cvlogo.png", RESOURCES_PATH "/"));
-			DEBUGLOG->outdent();
+//			DEBUGLOG->log("Loading cube dae file");
+//			DEBUGLOG->indent();
+//				std::vector< Object* > daeCube = m_resourceManager.loadObjectsFromFile(RESOURCES_PATH "/cube.dae");
+//				DEBUGLOG->log("Loading custom Texture for dae Cube");
+//				daeCube[0]->getMaterial()->setTexture("diffuseTexture", m_resourceManager.loadTexture("cvlogo.png", RESOURCES_PATH "/"));
+//			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Loading cube obj file");
-			DEBUGLOG->indent();
-				std::vector< Object* > objCube =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/cube.obj" );
-			DEBUGLOG->outdent();
+//			DEBUGLOG->log("Loading cube obj file");
+//			DEBUGLOG->indent();
+//				std::vector< Object* > objCube =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/cube.obj" );
+//			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Loading background dae file");
-			DEBUGLOG->indent();
-				std::vector< Object* > daeBackground=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/background.dae" );
-			DEBUGLOG->outdent();
+//			DEBUGLOG->log("Loading background dae file");
+//			DEBUGLOG->indent();
+//				std::vector< Object* > daeBackground=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/background.dae" );
+//			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Loading test room dae file");
 			DEBUGLOG->indent();
 				std::vector< Object* > testRoom=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/testRoom.dae" );
 			DEBUGLOG->outdent();
 
-			DEBUGLOG->log("Loading overlapping geometry file");
-			DEBUGLOG->indent();
-				std::vector< Object* > overlappingGeometry =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/overlappingGeometry.dae" );
-			DEBUGLOG->outdent();
+//			DEBUGLOG->log("Loading overlapping geometry file");
+//			DEBUGLOG->indent();
+//				std::vector< Object* > overlappingGeometry =  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/overlappingGeometry.dae" );
+//			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Loading bunny object per SimpleScene tools");
 			DEBUGLOG->indent();
@@ -75,21 +75,21 @@ class ObjectLoadingApp : public Application
 		DEBUGLOG->log("Adding objects to a scene instance");
 		DEBUGLOG->indent();
 			Scene* scene = new Scene();
-			scene->addObjects( daeCube );
-			scene->addObjects( objCube );
-			scene->addObjects( daeBackground );
+//			scene->addObjects( daeCube );
+//			scene->addObjects( objCube );
+//			scene->addObjects( daeBackground );
 			scene->addObjects( testRoom );
-			scene->addObjects( overlappingGeometry );
+//			scene->addObjects( overlappingGeometry );
 			scene->addObject(bunnyNode->getObject());
 
 			DEBUGLOG->log("Creating scene graph nodes");
 			DEBUGLOG->indent();
 
-				DEBUGLOG->log("Creating renderable node for .dae cube");
-				RenderableNode* cubeNode1 = new RenderableNode( scene->getSceneGraph()->getRootNode( ) );
-				cubeNode1->rotate(  60.0f, glm::vec3(0.0f,1.0f,0.0f) );
-				cubeNode1->translate( glm::vec3(1.5f, 0.5f,-1.0f) );
-				cubeNode1->setObject(daeCube[0]);
+//				DEBUGLOG->log("Creating renderable node for .dae cube");
+//				RenderableNode* cubeNode1 = new RenderableNode( scene->getSceneGraph()->getRootNode( ) );
+//				cubeNode1->rotate(  60.0f, glm::vec3(0.0f,1.0f,0.0f) );
+//				cubeNode1->translate( glm::vec3(1.5f, 0.5f,-1.0f) );
+//				cubeNode1->setObject(daeCube[0]);
 
 				DEBUGLOG->log("Creating node tree for rotating node");
 				Node* positionNode = new Node(scene->getSceneGraph()->getRootNode());
@@ -107,21 +107,21 @@ class ObjectLoadingApp : public Application
 				scene->addUpdatable(yAxisRotationNode);
 				scene->addUpdatable(rotatingNode);
 
-				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
-				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
-				overlappingGeometryNode->setObject(overlappingGeometry[0]);
+//				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
+//				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
+//				overlappingGeometryNode->setObject(overlappingGeometry[0]);
 
 				DEBUGLOG->log("Attaching renderable bunny node to rotating node");
 				bunnyNode->setParent(rotatingNode);
 
-				DEBUGLOG->log("Creating renderable node for .obj cube attached to rotating node");
-				RenderableNode* cubeNode_2 = new RenderableNode(rotatingNode);
-				cubeNode_2->setObject(objCube[0]);
+//				DEBUGLOG->log("Creating renderable node for .obj cube attached to rotating node");
+//				RenderableNode* cubeNode_2 = new RenderableNode(rotatingNode);
+//				cubeNode_2->setObject(objCube[0]);
 
-				DEBUGLOG->log("Creating renderable node for background");
-				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
-				backgroundNode->translate( glm::vec3(0.0f, -1.0f ,0.0f) );
-				backgroundNode->setObject(daeBackground[0]);
+//				DEBUGLOG->log("Creating renderable node for background");
+//				RenderableNode* backgroundNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
+//				backgroundNode->translate( glm::vec3(0.0f, -1.0f ,0.0f) );
+//				backgroundNode->setObject(daeBackground[0]);
 
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());

@@ -26,3 +26,16 @@ DebugPrintDoubleListener::~DebugPrintDoubleListener() {
 void DebugPrintDoubleListener::call() {
 	DEBUGLOG->log(m_message, *p_double);
 }
+
+DebugPrintVec4Listener::DebugPrintVec4Listener(glm::vec4* vectorPtr,
+		std::string message) {
+	p_vector = vectorPtr;
+	m_message = message;
+}
+
+DebugPrintVec4Listener::~DebugPrintVec4Listener() {
+}
+
+void DebugPrintVec4Listener::call() {
+	DEBUGLOG->log( m_message, *p_vector );
+}

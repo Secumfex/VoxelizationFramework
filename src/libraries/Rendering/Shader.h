@@ -109,8 +109,6 @@ public:
 };
 
 class ComputeShader : public Shader{
-private:
-	void makeShaderProgram(std::string vert, std::string frag);
 protected:
 	int m_local_group_size_x;
 	int m_local_group_size_y;

@@ -21,6 +21,7 @@ public:
 	DebugLog(bool autoPrint = false);
 	~DebugLog();
 	void log(std::string msg);
+	void log(std::string msg, bool value);
 	void log(std::string msg, int value);
 	void log(std::string msg, unsigned int value);
 	void log(std::string msg, float value);

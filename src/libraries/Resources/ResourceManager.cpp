@@ -19,6 +19,8 @@ std::vector<Object* > ResourceManager::loadObjectsFromFile(std::string path)
 
 	if ( checkFile(path) )
 	{
+		// retrieve file
+		DEBUGLOG->log("ERROR : File already loaded before.");
 		return loadedObjects;
 	}
 	else{

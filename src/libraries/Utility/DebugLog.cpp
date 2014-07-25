@@ -22,6 +22,20 @@ void DebugLog::log(std::string msg)
 	}
 }
 
+void DebugLog::log(std::string msg, bool value)
+{
+	std::stringstream ss;
+	if ( value )
+	{
+		ss<< "TRUE";
+	}
+	else
+	{
+		ss<< "FALSE";
+	}
+	log(msg + ss.str());
+}
+
 void DebugLog::log(std::string msg, int value)
 {
 	std::stringstream ss;

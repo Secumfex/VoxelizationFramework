@@ -21,6 +21,7 @@
 
 static bool rotatingBunny = false;
 
+static int texAtlasResolution  = 512;
 static int voxelGridResolution = 256;
 
 // compute shader related information
@@ -94,7 +95,9 @@ public:
 		GL_R32UI);							// 1 channel 32 bit unsigned int
 
 		// upload uniform clear color
-		p_computeShader->uploadUniform( voxelGridClearColor , "uniformClearColor" );
+		if ( !p_computeShader->uploadUniform( voxelGridClearColor , "uniformClearColor" ) ){
+			DEBUGLOG->log("ERROR : failed to upload uniform clear color : ", voxelGridClearColor);
+		}
 
 		// set suitable amount of work groups
 		m_num_groups_x = voxelGridResolution / 32 + 1;
@@ -147,7 +150,7 @@ public:
 		0,
 		GL_FALSE,
 		0,
-		GL_READ_WRITE,							// allow both
+		GL_READ_WRITE,						// allow both for atomic operations
 		GL_R32UI);							// 1 channel 32 bit unsigned int to make sure OR-ing works
 
 		// upload bit mask
@@ -163,32 +166,35 @@ public:
 		// dispatch this shader once per object
 		for ( unsigned int i = 0; i < m_objects.size(); i++)
 		{
-			Object* object = m_objects[i].first;
-			TexAtlas::TextureAtlas* objectTextureAtlas= m_objects[i].second;
+			Object* pixelsObject = m_objects[i].first;
+			TexAtlas::TextureAtlas* textureAtlas= m_objects[i].second;
 
 			int numVertices = 0;
 
-			if ( object->getModel() )
+			if ( pixelsObject->getModel() )
 			{
 				// bind positions VBO to shader storage buffer
-				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getModel()->getPositionBufferHandle() );
-				numVertices = object->getModel()->getNumVertices();
+				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, pixelsObject->getModel()->getPositionBufferHandle() );
+
+				numVertices = pixelsObject->getModel()->getNumVertices();
 			}
 			else
 			{
 				continue;
 			}
 
-			glm::mat4 modelMatrix = glm::mat4(1.0f);
-			if (objectTextureAtlas)
+			if (textureAtlas)
 			{
-				objectTextureAtlas->unbindFromActiveUnit();
+				textureAtlas->unbindFromActiveUnit();
 
 				// bind textureAtlas
-				objectTextureAtlas->bindToTextureUnit(3);
+				textureAtlas->bindToTextureUnit(3);
 
 				// upload uniform textureAtlas position
-				p_computeShader->uploadUniform(3 , "uniformTextureAtlas" );
+				if ( !p_computeShader->uploadUniform(3 , "uniformTextureAtlas" ) )
+				{
+					DEBUGLOG->log("ERROR : Failed to upload uniform texture atlas");
+				}
 			}
 
 			// upload uniform voxel grid matrices
@@ -406,14 +412,14 @@ public:
 			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
-			renderables.push_back(testRoomNode);
+//			renderables.push_back(testRoomNode);
 
 			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
 
 			DEBUGLOG->log("Scaling bunny up by 25");
 			bunnyNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
 
-			renderables.push_back(bunnyNode);
+//			renderables.push_back(bunnyNode);
 
 			DEBUGLOG->log("Attaching objects to scene graph");
 			DEBUGLOG->indent();
@@ -482,16 +488,16 @@ public:
 			DEBUGLOG->log("Creating voxel grid view matrix");
 			// create view matrix
 			glm::mat4 voxelizeView = glm::lookAt(
-					glm::vec3( 0.0f, 0.0f, 2.5f),	// eye
+					glm::vec3( 0.0f, 0.0f, 3.0f),	// eye
 					glm::vec3( 0.0f , 0.0f , 0.0f ),// center
 					glm::vec3( 0.0f, 1.0f, 0.0f) ); // up
 
 			DEBUGLOG->log("Creating voxel grid projection matrix");
 			// create projection matrix
 			glm::mat4 voxelizeProj = glm::ortho(
-					-2.5f, 2.5f,	// left,   right
-					-2.5f, 2.5f,	// bottom, top
-					0.0f, 5.0f);	// front,  back
+					-3.0f, 3.0f,	// left,   right
+					-3.0f, 3.0f,	// bottom, top
+					0.0f, 6.0f);	// front,  back
 
 			DEBUGLOG->log("Creating voxel grid texture");
 			// generate Texture
@@ -531,7 +537,7 @@ public:
 				FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;// change this first
 
 				// create renderpass that generates a textureAtlas for models
-				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, 512, 512, phongPerspectiveRenderPass->getCamera() );
+				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, texAtlasResolution, texAtlasResolution, phongPerspectiveRenderPass->getCamera() );
 
 				FramebufferObject::static_internalFormat = internalFormat;	// restore default
 			DEBUGLOG->outdent();
@@ -543,13 +549,15 @@ public:
 			DEBUGLOG->indent();
 
 				//create texture atlas vertex generator to generate vertices
-				TexAtlas::TextureAtlasVertexGenerator* textureAtlasVertexGenerator = new TexAtlas::TextureAtlasVertexGenerator( textureAtlasRenderPass->getTextureAtlas());
+				TexAtlas::TextureAtlasVertexGenerator* textureAtlasVertexGenerator = new TexAtlas::TextureAtlasVertexGenerator( textureAtlasRenderPass->getTextureAtlas() );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
+
 		/**************************************************************************************
 		 * 								TEXTURE ATLAS INITIALIZATION
 		 **************************************************************************************/
+
 		DEBUGLOG->log("Initializing Texture Atlas functionality");
 		DEBUGLOG->indent();
 
@@ -565,6 +573,8 @@ public:
 			RenderableNode* verticesNode = new RenderableNode( m_objectsNode );
 			verticesNode->setObject( textureAtlasVertexGenerator->getPixelsObject() );
 			verticesNode->scale( glm::vec3( 10.0f, 10.0f, 10.0f ) );
+
+//			phongPerspectiveRenderPass->addRenderable( verticesNode );
 
 		DEBUGLOG->outdent();
 
@@ -582,7 +592,6 @@ public:
 			ComputeShader* clearVoxelGridComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeClearCompute.comp");
 
 			DEBUGLOG->outdent();
-
 
 			DEBUGLOG->log("Loading and compiling voxel grid filling compute shader program");
 			DEBUGLOG->indent();
@@ -611,11 +620,12 @@ public:
 
 			DEBUGLOG->log("Configuring list of objects to voxelize");
 			std::vector<std::pair < Object*, RenderableNode*> > objects;
-//			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
-//			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
+			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
+			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
+			objects.push_back( std::pair< Object*, RenderableNode* >( textureAtlasVertexGenerator->getPixelsObject(), verticesNode ) );
 
 			std::vector<std::pair < Object*, TexAtlas::TextureAtlas* > > texAtlasObjects;
-			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >( verticesNode->getObject(), textureAtlasRenderPass->getTextureAtlas()) );
+			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >( textureAtlasVertexGenerator->getPixelsObject(), textureAtlasVertexGenerator->getTextureAtlas()) );
 
 
 			DEBUGLOG->log("Creating voxel grid clearing compute shader dispatcher");
@@ -646,7 +656,7 @@ public:
 			DEBUGLOG->indent();
 
 			DispatchVoxelizeWithTexAtlasComputeShader* dispatchVoxelizeWithTexAtlasComputeShader = new DispatchVoxelizeWithTexAtlasComputeShader(
-					voxelizeComputeShader,
+					voxelizeWithTexAtlasComputeShader,
 					texAtlasObjects,
 					voxelizeView,
 					voxelizeProj,
@@ -696,13 +706,21 @@ public:
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Clear and Voxelize Scene on key press : V");
-			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
+//			DEBUGLOG->log("Clear and Voxelize Scene on key press : V");
+//			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_V, GLFW_PRESS);
+
+//			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
 
 			DEBUGLOG->log("Increase / Decrease clear color       : N / M ");
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_N, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_N, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_N, GLFW_PRESS);
+
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_M, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_M, GLFW_PRESS);
 
 			DEBUGLOG->log("Configuring camera movement");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
