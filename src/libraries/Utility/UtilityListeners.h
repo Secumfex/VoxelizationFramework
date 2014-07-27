@@ -58,6 +58,21 @@ public:
 };
 
 template < class T >
+class DoubleValueListener : public Listener
+{
+private:
+	T* p_value;
+public:
+	DoubleValueListener(T* valuePtr ) {
+		p_value = valuePtr;
+	}
+	virtual ~DoubleValueListener() {};
+	void call() {
+		*p_value = *p_value + *p_value;
+	}
+};
+
+template < class T >
 class DecrementValueListener : public Listener
 {
 private:

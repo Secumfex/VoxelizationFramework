@@ -64,6 +64,7 @@ void Listener::detach()
 	if (m_subject)
 	{
 		m_subject->detach(this);
+		m_subject = 0;
 	}
 }
 

@@ -83,7 +83,7 @@ bool Shader :: uploadUniform(glm::vec3 uniformVector, std::string uniformName){
 
 bool Shader :: uploadUniform(glm::vec4 uniformVector, std::string uniformName){
 	if(m_uniformHandles.find(uniformName)!=m_uniformHandles.end()){
-		glUniform3f(m_uniformHandles[uniformName], uniformVector.x, uniformVector.y, uniformVector.z);
+		glUniform4f(m_uniformHandles[uniformName], uniformVector.x, uniformVector.y, uniformVector.z, uniformVector.w);
 		return true;
 	}else
 		return false;

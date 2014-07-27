@@ -2,13 +2,16 @@
 #include "stb_image.h"
 #include "TextureTools.h"
 
+#include "Utility/DebugLog.h"
+
 namespace TextureTools {
     GLuint loadTexture(std::string fileName){
         int width, height, bytesPerPixel;
         unsigned char *data = stbi_load(fileName.c_str(), &width, &height, &bytesPerPixel, 0);
 
         if(data == NULL){
-        	std::cout << "ERROR: Unable to open image "  << fileName << std::endl;
+//        	std::cout << "ERROR: Unable to open image "  << fileName << std::endl;
+        	DEBUGLOG->log("ERROR : Unable to open image " + fileName);
         	  return -1;}
 
         //create new texture
@@ -20,14 +23,16 @@ namespace TextureTools {
      
         //send image data to the new texture
         if (bytesPerPixel < 3) {
-            std::cout << "ERROR: Unable to open image"  << fileName << std::endl;
+        	DEBUGLOG->log("ERROR : Unable to open image " + fileName);
+//            std::cout << "ERROR: Unable to open image"  << fileName << std::endl;
             return -1;
         } else if (bytesPerPixel == 3){
             glTexImage2D(GL_TEXTURE_2D, 0,GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         } else if (bytesPerPixel == 4) {
             glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         } else {
-            std::cout << "Unknown format for bytes per pixel... Changed to \"4\"" << std::endl;
+        	DEBUGLOG->log("Unknown format for bytes per pixel... Changed to \"4\"");
+//            std::cout << "Unknown format for bytes per pixel... Changed to \"4\"" << std::endl;
             glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
         }
 
@@ -40,8 +45,8 @@ namespace TextureTools {
         glBindTexture(GL_TEXTURE_2D, 0);
 
         stbi_image_free(data);
-
-        std::cout << "SUCCESS: image loaded from " << fileName << std::endl;
+        DEBUGLOG->log("SUCCESS: image loaded from " + fileName );
+//        std::cout << "SUCCESS: image loaded from " << fileName << std::endl;
         return textureHandle;
     }
 }

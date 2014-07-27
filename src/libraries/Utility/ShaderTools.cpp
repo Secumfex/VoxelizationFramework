@@ -5,6 +5,8 @@
 
 #include "ShaderTools.h"
 
+#include "Utility/DebugLog.h"
+
 namespace ShaderTools {
     void checkShader(GLuint shaderHandle) {
         GLint status;
@@ -17,10 +19,13 @@ namespace ShaderTools {
             GLchar* infoLog = new GLchar[infoLogLength + 1];
             glGetShaderInfoLog(shaderHandle, infoLogLength, NULL, infoLog);
 
-            std::cout << "ERROR: Unable to compile shader" << std::endl << infoLog << std::endl;
+//            std::cout << "ERROR: Unable to compile shader" << std::endl << infoLog << std::endl;
+            DEBUGLOG->log("ERROR: Unable to compile shader" );
+            DEBUGLOG->log( std::string( infoLog ) );
             delete[] infoLog;
         } else {
-            std::cout << "SUCCESS: Shader compiled" << std::endl;
+//            std::cout << "SUCCESS: Shader compiled" << std::endl;
+        	DEBUGLOG->log("SUCCESS: Shader compiled");
         }
     }
 
@@ -36,10 +41,12 @@ namespace ShaderTools {
                 fileContent += line + "\n";
             }
             file.close();
-            std::cout << "SUCCESS: Opened file " << fileName << std::endl;
+//            std::cout << "SUCCESS: Opened file " << fileName << std::endl;
+            DEBUGLOG->log("SUCCESS: Opened file " + std::string( fileName ) );
         }
         else
-            std::cout << "ERROR: Unable to open file " << fileName << std::endl;
+//            std::cout << "ERROR: Unable to open file " << fileName << std::endl;
+        	DEBUGLOG->log("ERROR: Unable to open file " + std::string(  fileName ) );
 
         const char* source = fileContent.c_str();
         const GLint source_size = strlen(source);

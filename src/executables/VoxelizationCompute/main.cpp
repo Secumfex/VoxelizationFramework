@@ -31,7 +31,7 @@ static int MAX_COMPUTE_WORK_GROUP_INVOCATIONS;
 static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
-static glm::vec4 voxelGridClearColor = glm::vec4(255.0f, 0.0f, 0.0f, 0.0f);
+static glm::vec4 voxelGridClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -109,6 +109,7 @@ public:
 
 		// put memory barriers for future shader program
 		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier( GL_TEXTURE_FETCH_BARRIER_BIT );
 	}
 };
 
@@ -163,11 +164,13 @@ public:
 		GL_R32UI
 		);
 
+		double totalExecutionTime = 0.0;
+
 		// dispatch this shader once per object
 		for ( unsigned int i = 0; i < m_objects.size(); i++)
 		{
 			Object* pixelsObject = m_objects[i].first;
-			TexAtlas::TextureAtlas* textureAtlas= m_objects[i].second;
+			TexAtlas::TextureAtlas* textureAtlas = m_objects[i].second;
 
 			int numVertices = 0;
 
@@ -211,6 +214,16 @@ public:
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
+
+			if ( m_queryTime )
+			{
+				totalExecutionTime += m_executionTime;
+			}
+		}
+
+		if ( m_queryTime )
+		{
+			m_executionTime = totalExecutionTime;
 		}
 
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
@@ -256,7 +269,7 @@ public:
 		0,
 		GL_FALSE,
 		0,
-		GL_READ_WRITE,							// allow both
+		GL_READ_WRITE,						// allow both
 		GL_R32UI);							// 1 channel 32 bit unsigned int to make sure OR-ing works
 
 		// upload bit mask
@@ -268,6 +281,8 @@ public:
 		GL_READ_ONLY,
 		GL_R32UI
 		);
+
+		double totalExecutionTime = 0.0;
 
 		// dispatch this shader once per object
 		for ( unsigned int i = 0; i < m_objects.size(); i++)
@@ -311,6 +326,16 @@ public:
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
+
+			if ( m_queryTime )
+			{
+				totalExecutionTime += m_executionTime;
+			}
+		}
+
+		if ( m_queryTime )
+		{
+			m_executionTime = totalExecutionTime;
 		}
 
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
@@ -419,7 +444,7 @@ public:
 			DEBUGLOG->log("Scaling bunny up by 25");
 			bunnyNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
 
-//			renderables.push_back(bunnyNode);
+			renderables.push_back(bunnyNode);
 
 			DEBUGLOG->log("Attaching objects to scene graph");
 			DEBUGLOG->indent();
@@ -574,7 +599,7 @@ public:
 			verticesNode->setObject( textureAtlasVertexGenerator->getPixelsObject() );
 			verticesNode->scale( glm::vec3( 10.0f, 10.0f, 10.0f ) );
 
-//			phongPerspectiveRenderPass->addRenderable( verticesNode );
+			phongPerspectiveRenderPass->addRenderable( verticesNode );
 
 		DEBUGLOG->outdent();
 
@@ -622,7 +647,7 @@ public:
 			std::vector<std::pair < Object*, RenderableNode*> > objects;
 			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
 			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
-			objects.push_back( std::pair< Object*, RenderableNode* >( textureAtlasVertexGenerator->getPixelsObject(), verticesNode ) );
+//			objects.push_back( std::pair< Object*, RenderableNode* >( textureAtlasVertexGenerator->getPixelsObject(), verticesNode ) );
 
 			std::vector<std::pair < Object*, TexAtlas::TextureAtlas* > > texAtlasObjects;
 			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >( textureAtlasVertexGenerator->getPixelsObject(), textureAtlasVertexGenerator->getTextureAtlas()) );
@@ -666,6 +691,11 @@ public:
 
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Enabling execution time queries");
+			dispatchClearVoxelGridComputeShader->setQueryTime(true);
+			dispatchVoxelizeComputeShader->setQueryTime(true);
+			dispatchVoxelizeWithTexAtlasComputeShader->setQueryTime(true);
+
 		DEBUGLOG->outdent();
 		/**************************************************************************************
 		 * 								VOXELIZATION
@@ -674,11 +704,11 @@ public:
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
+//			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
 			// voxelize in every frame
-			attach(dispatchClearVoxelGridComputeShader, "VOXELIZE");
+//			attach(dispatchClearVoxelGridComputeShader, "CLEAR");
 //			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
-			attach(dispatchVoxelizeWithTexAtlasComputeShader, "VOXELIZE");
+//			attach(dispatchVoxelizeWithTexAtlasComputeShader, "VOXELIZE");
 
 		DEBUGLOG->outdent();
 
@@ -704,16 +734,29 @@ public:
 		**************************************************************************************/
 
 		DEBUGLOG->log("Configuring Input");
+		DEBUGLOG->log("---------------------------------------------------------");
 		DEBUGLOG->indent();
 
-//			DEBUGLOG->log("Clear and Voxelize Scene on key press : V");
+//			DEBUGLOG->log("Voxelize scene on key press           : V");
+//			DEBUGLOG->log("Clear and voxelize scene on key press : V");
 //			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
 //			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
 //			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_V, GLFW_PRESS);
 
-//			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
+			DEBUGLOG->log("Clear voxel grid on key press         : C");
+			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
+			DEBUGLOG->log("Voxelize scene with model voxelizer   : V");
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
+			DEBUGLOG->log("Voxelize scene with texatlas voxelizer: B");
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_B, GLFW_PRESS);
 
-			DEBUGLOG->log("Increase / Decrease clear color       : N / M ");
+
+			DEBUGLOG->log("Print compute shader execution times  : T");
+			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader->getPrintExecutionTimeListener(				"Voxelize Models       "), GLFW_KEY_T, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader->getPrintExecutionTimeListener(	"Voxelize Texture Atlas"), GLFW_KEY_T, GLFW_PRESS);
+
+			DEBUGLOG->log("Increase / decrease clear color       : N / M  ");
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_N, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_N, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_N, GLFW_PRESS);
@@ -722,15 +765,15 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_M, GLFW_PRESS);
 
-			DEBUGLOG->log("Configuring camera movement");
+			DEBUGLOG->log("Configuring camera movement           : MOUSE - RIGHT");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
 			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
 
-			DEBUGLOG->log("Configuring Turntable for root node and camera");
+			DEBUGLOG->log("Configuring Turntable for objects     : MOUSE - LEFT");
 			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f );
 			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT);
 
-			DEBUGLOG->log("Configuring light movement");
+			DEBUGLOG->log("Configuring light movement            : Arrow keys");
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
@@ -741,6 +784,7 @@ public:
 
 	void programCycle()
 	{
+		call("CLEAR");					// call listeners attached to clear interface
 		call("VOXELIZE");				// call listeners attached to voxelize interface
 
 		Application::programCycle(); 	// regular rendering and image presentation

@@ -122,7 +122,7 @@ void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,
 		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, -speed),GLFW_KEY_A, GLFW_PRESS);
 		inputManager.attachListenerOnKeyPress(new SetCameraSpeedListener(movableCam, SetCameraSpeedListener::RIGHT, 0.0f),GLFW_KEY_A, GLFW_RELEASE);
 
-		DEBUGLOG->log("Adding updatable camera to scene");
+//		DEBUGLOG->log("Adding updatable camera to scene");
 		scene->addUpdatable(movableCam);
 	}
 }

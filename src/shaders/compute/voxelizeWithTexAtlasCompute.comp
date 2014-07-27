@@ -38,11 +38,10 @@ void main()
 		return;
 	}
 	
-	Vert vertex = vertices.v[ gid * 3 ];
+	Vert vertex = vertices.v[ gid ];
 	
 	// retrieve world position from texture atlas
 	vec4 pos = texture( uniformTextureAtlas, vec2( vertex.x, vertex.y ) );
-//	vec4 pos = vec4( vertex.x, vertex.y, vertex.z , 1.0);
 	
 	// compute grid position
 	vec4 perspGridPos = uniformVoxelizeProjection * uniformVoxelizeView * pos;
