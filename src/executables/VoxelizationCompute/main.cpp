@@ -33,6 +33,20 @@ static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
 static glm::vec4 voxelGridClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
+static glm::mat4 voxelizePerspective = glm::ortho(
+		-3.0f, 3.0f,	// left,   right
+		-3.0f, 3.0f,	// bottom, top
+		0.0f, 6.0f);	// front,  back
+
+static glm::vec3 voxelizePosition =
+		glm::vec3( 0.0f, 0.0f, 3.0f);	// eye
+
+static glm::mat4 voxelizeLookAt = glm::lookAt(
+		voxelizePosition,
+		glm::vec3( 0.0f , 0.0f , 0.0f ),// center
+
+		glm::vec3( 0.0f, 1.0f, 0.0f) ); // up
+
 /**
  * Renderpass that overlays the slice map ontop of fbo
  */
@@ -351,7 +365,7 @@ private:
 	CameraRenderPass* createPhongRenderPass( )
 	{
 		DEBUGLOG->indent();
-		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong_uniformLight.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_persp.frag");
+		Shader* phongPersp= new Shader(SHADERS_PATH "/myShader/phong_uniformLight.vert", SHADERS_PATH "/myShader/phong_backfaceCulling_ortho.frag");
 		FramebufferObject* fbo = new FramebufferObject(512,512);
 		fbo->addColorAttachments(1);
 
@@ -365,8 +379,10 @@ private:
 
 		m_cameraParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
 		CameraNode* camera = new CameraNode( m_cameraParentNode );
-		camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
-		camera->setPosition(0.0f,0.0f,5.0f);
+//		camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
+		camera->setProjectionMatrix(voxelizePerspective);
+//		camera->setPosition(0.0f,0.0f,5.0f);
+		camera->setPosition( voxelizePosition );
 		phongPerspectiveRenderPass->setCamera(camera);
 		DEBUGLOG->outdent();
 
@@ -599,7 +615,7 @@ public:
 			verticesNode->setObject( textureAtlasVertexGenerator->getPixelsObject() );
 			verticesNode->scale( glm::vec3( 10.0f, 10.0f, 10.0f ) );
 
-			phongPerspectiveRenderPass->addRenderable( verticesNode );
+//			phongPerspectiveRenderPass->addRenderable( verticesNode );
 
 		DEBUGLOG->outdent();
 
@@ -704,11 +720,11 @@ public:
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
 
-//			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
+			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
 			// voxelize in every frame
-//			attach(dispatchClearVoxelGridComputeShader, "CLEAR");
-//			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
-//			attach(dispatchVoxelizeWithTexAtlasComputeShader, "VOXELIZE");
+			attach(dispatchClearVoxelGridComputeShader, "CLEAR");
+			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
+			attach(dispatchVoxelizeWithTexAtlasComputeShader, "VOXELIZE");
 
 		DEBUGLOG->outdent();
 
@@ -737,11 +753,11 @@ public:
 		DEBUGLOG->log("---------------------------------------------------------");
 		DEBUGLOG->indent();
 
-//			DEBUGLOG->log("Voxelize scene on key press           : V");
-//			DEBUGLOG->log("Clear and voxelize scene on key press : V");
-//			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_V, GLFW_PRESS);
+			DEBUGLOG->log("Voxelize scene on key press           : V");
+			DEBUGLOG->log("Clear and voxelize scene on key press : V");
+			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Clear voxel grid on key press         : C");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
@@ -778,7 +794,6 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
-
 		DEBUGLOG->outdent();
 	}
 
