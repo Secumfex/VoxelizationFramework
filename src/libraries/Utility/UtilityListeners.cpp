@@ -27,6 +27,18 @@ void DebugPrintDoubleListener::call() {
 	DEBUGLOG->log(m_message, *p_double);
 }
 
+DebugPrintBooleanListener::DebugPrintBooleanListener(bool* booleanPtr, std::string message) {
+	p_boolean = booleanPtr;
+	m_message = message;
+}
+
+DebugPrintBooleanListener::~DebugPrintBooleanListener() {
+}
+
+void DebugPrintBooleanListener::call() {
+	DEBUGLOG->log(m_message, *p_boolean);
+}
+
 DebugPrintVec4Listener::DebugPrintVec4Listener(glm::vec4* vectorPtr,
 		std::string message) {
 	p_vector = vectorPtr;
@@ -38,4 +50,21 @@ DebugPrintVec4Listener::~DebugPrintVec4Listener() {
 
 void DebugPrintVec4Listener::call() {
 	DEBUGLOG->log( m_message, *p_vector );
+}
+
+ConditionalProxyListener::ConditionalProxyListener(Listener* listener,
+		bool* boolean, bool invert) {
+	p_listener = listener;
+	p_boolean = boolean;
+	m_invert = invert;
+}
+
+ConditionalProxyListener::~ConditionalProxyListener() {
+}
+
+void ConditionalProxyListener::call() {
+	if ( (m_invert) ? !*p_boolean : *p_boolean )
+	{
+		p_listener->call();
+	}
 }

@@ -18,6 +18,18 @@ public:
 	void call();
 };
 
+class ConditionalProxyListener : public Listener
+{
+private:
+	Listener* p_listener;
+	bool* p_boolean;
+	bool m_invert;
+public:
+	ConditionalProxyListener(Listener* listener, bool* boolean, bool invert = false);
+	virtual ~ConditionalProxyListener();
+	void call();
+};
+
 class DebugPrintDoubleListener : public Listener
 {
 private:
@@ -29,6 +41,18 @@ public:
 	void call();
 };
 
+class DebugPrintBooleanListener : public Listener
+{
+private:
+	bool* p_boolean;
+	std::string m_message;
+public:
+	DebugPrintBooleanListener( bool* booleanPtr , std::string message);
+	virtual ~DebugPrintBooleanListener();
+	void call();
+};
+
+
 class DebugPrintVec4Listener : public Listener
 {
 private:
@@ -38,6 +62,23 @@ public:
 	DebugPrintVec4Listener( glm::vec4* vectorPtr, std::string message);
 	virtual ~DebugPrintVec4Listener();
 	void call();
+};
+
+template < class T >
+class SetValueListener : public Listener
+{
+private:
+	T* p_value;
+	T m_value;
+public:
+	SetValueListener(T* valuePtr, T value) {
+		m_value= value;
+		p_value = valuePtr;
+	}
+	virtual ~SetValueListener() {};
+	void call() {
+		*p_value = m_value;
+	}
 };
 
 template < class T >

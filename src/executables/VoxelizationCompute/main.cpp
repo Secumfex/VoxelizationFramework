@@ -21,8 +21,12 @@
 
 static bool rotatingBunny = false;
 
+static bool voxelizeRegularActive = false;
+static bool voxelizeTexAtlasActive = true;
+static bool voxelizeActive = true;
+
 static int texAtlasResolution  = 512;
-static int voxelGridResolution = 256;
+static int voxelGridResolution = 128;
 
 // compute shader related information
 static int MAX_COMPUTE_WORK_GROUP_COUNT[3];
@@ -722,9 +726,27 @@ public:
 
 			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
 			// voxelize in every frame
-			attach(dispatchClearVoxelGridComputeShader, "CLEAR");
-			attach(dispatchVoxelizeComputeShader, "VOXELIZE");
-			attach(dispatchVoxelizeWithTexAtlasComputeShader, "VOXELIZE");
+			attach(new ConditionalProxyListener(
+					dispatchClearVoxelGridComputeShader,
+					&voxelizeActive,
+					false),
+				"CLEAR");
+			attach(new ConditionalProxyListener(
+					new ConditionalProxyListener(
+						dispatchVoxelizeComputeShader,
+						&voxelizeRegularActive,
+						false ),
+					&voxelizeActive,
+					false),
+				"VOXELIZE");
+			attach(new ConditionalProxyListener(
+					new ConditionalProxyListener(
+							dispatchVoxelizeWithTexAtlasComputeShader,
+							&voxelizeTexAtlasActive,
+							false ),
+					&voxelizeActive,
+					false),
+				"VOXELIZE");
 
 		DEBUGLOG->outdent();
 
@@ -753,11 +775,29 @@ public:
 		DEBUGLOG->log("---------------------------------------------------------");
 		DEBUGLOG->indent();
 
-			DEBUGLOG->log("Voxelize scene on key press           : V");
-			DEBUGLOG->log("Clear and voxelize scene on key press : V");
-			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_V, GLFW_PRESS);
+//			DEBUGLOG->log("Clear and voxelize scene on key press : V");
+//			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &voxelizeRegularActive, false), GLFW_KEY_V, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &voxelizeTexAtlasActive, false), GLFW_KEY_V, GLFW_PRESS);
+
+			DEBUGLOG->log("Switch active Voxelization Method     : X");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeRegularActive ), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeRegularActive, "Voxelize regular  mode     : "), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeTexAtlasActive ), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeTexAtlasActive,  "Voxelize texatlas mode     : "), GLFW_KEY_X, GLFW_PRESS);
+
+			DEBUGLOG->log("Disable/Enable real-time voxelization : Y");
+			// first switch active / inactive
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeActive ), GLFW_KEY_Y, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeActive,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
+
+			// then set enabled or disabled
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new SetValueListener<bool>( &voxelizeRegularActive, false  ), &voxelizeActive, true), GLFW_KEY_Y, GLFW_PRESS ) ;
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new SetValueListener<bool>( &voxelizeTexAtlasActive, false ), &voxelizeActive, true  ), GLFW_KEY_Y, GLFW_PRESS ) ;
+
+			// only enable one of both
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new SetValueListener<bool>( &voxelizeRegularActive, true ), &voxelizeActive, false), GLFW_KEY_Y, GLFW_PRESS ) ;
+
 
 			DEBUGLOG->log("Clear voxel grid on key press         : C");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
@@ -766,20 +806,19 @@ public:
 			DEBUGLOG->log("Voxelize scene with texatlas voxelizer: B");
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_B, GLFW_PRESS);
 
-
 			DEBUGLOG->log("Print compute shader execution times  : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader->getPrintExecutionTimeListener(				"Voxelize Models       "), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader->getPrintExecutionTimeListener(	"Voxelize Texture Atlas"), GLFW_KEY_T, GLFW_PRESS);
 
-			DEBUGLOG->log("Increase / decrease clear color       : N / M  ");
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_N, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_N, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_N, GLFW_PRESS);
-
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_M, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_M, GLFW_PRESS);
+//			DEBUGLOG->log("Increase / decrease clear color       : N / M  ");
+//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_N, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_N, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_N, GLFW_PRESS);
+//
+//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_M, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
+//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_M, GLFW_PRESS);
 
 			DEBUGLOG->log("Configuring camera movement           : MOUSE - RIGHT");
 			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
