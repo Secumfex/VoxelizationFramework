@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <Rendering/Shader.h>
+#include <Rendering/ShaderInfo.h>
 #include <Rendering/FramebufferObject.h>
 #include <Rendering/CustomRenderPasses.h>
 #include <Rendering/RenderState.h>
@@ -19,37 +20,19 @@
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
 
+#include "VoxelGridTools.h"
+#include "VoxelizerTools.h"
+
 static bool rotatingBunny = false;
 
-static bool voxelizeRegularActive = false;
-static bool voxelizeTexAtlasActive = true;
+static bool voxelizeRegularActive = true;
+static bool voxelizeTexAtlasActive = false;
 static bool voxelizeActive = true;
 
 static int texAtlasResolution  = 512;
-static int voxelGridResolution = 128;
-
-// compute shader related information
-static int MAX_COMPUTE_WORK_GROUP_COUNT[3];
-static int MAX_COMPUTE_WORK_GROUP_SIZE[3];
-static int MAX_COMPUTE_WORK_GROUP_INVOCATIONS;
-static int MAX_COMPUTE_SHARED_MEMORY_SIZE;
+static int voxelGridResolution = 64;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
-static glm::vec4 voxelGridClearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
-
-static glm::mat4 voxelizePerspective = glm::ortho(
-		-3.0f, 3.0f,	// left,   right
-		-3.0f, 3.0f,	// bottom, top
-		0.0f, 6.0f);	// front,  back
-
-static glm::vec3 voxelizePosition =
-		glm::vec3( 0.0f, 0.0f, 3.0f);	// eye
-
-static glm::mat4 voxelizeLookAt = glm::lookAt(
-		voxelizePosition,
-		glm::vec3( 0.0f , 0.0f , 0.0f ),// center
-
-		glm::vec3( 0.0f, 1.0f, 0.0f) ); // up
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -111,11 +94,6 @@ public:
 		0,
 		GL_WRITE_ONLY,						// only write
 		GL_R32UI);							// 1 channel 32 bit unsigned int
-
-		// upload uniform clear color
-		if ( !p_computeShader->uploadUniform( voxelGridClearColor , "uniformClearColor" ) ){
-			DEBUGLOG->log("ERROR : failed to upload uniform clear color : ", voxelGridClearColor);
-		}
 
 		// set suitable amount of work groups
 		m_num_groups_x = voxelGridResolution / 32 + 1;
@@ -261,16 +239,19 @@ protected:
 
 	glm::mat4 m_voxelizeView;
 	glm::mat4 m_voxelizeProjection;
-	Texture* p_voxelGridTexture;
+	VoxelGridGPU* p_voxelGrid;
 	Texture* p_bitMask;
 public:
-	DispatchVoxelizeComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, RenderableNode*> > objects, glm::mat4 voxelizeView, glm::mat4 voxelizeProjection, Texture* voxelGridTexture, Texture* bitMask, int x= 0, int y= 0, int z = 0 )
+	DispatchVoxelizeComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, RenderableNode*> > objects,
+			glm::mat4 voxelizeView, glm::mat4 voxelizeProjection,
+			VoxelGridGPU* voxelGrid, Texture* bitMask,
+			int x= 0, int y= 0, int z = 0 )
 	: DispatchComputeShaderListener(computeShader, x,y,z)
 {
 		m_objects = objects;
 		m_voxelizeView = voxelizeView;
 		m_voxelizeProjection = voxelizeProjection;
-		p_voxelGridTexture = voxelGridTexture;
+		p_voxelGrid = voxelGrid;
 		p_bitMask = bitMask;
 }
 	void call()
@@ -279,11 +260,11 @@ public:
 		p_computeShader->useProgram();
 
 		// unbind output texture
-		p_voxelGridTexture->unbindFromActiveUnit();
+		p_voxelGrid->texture->unbindFromActiveUnit();
 
 		// upload output texture
-		glBindImageTexture(1,
-		p_voxelGridTexture->getTextureHandle(),
+		glBindImageTexture(0,
+		p_voxelGrid->handle,
 		0,
 		GL_FALSE,
 		0,
@@ -291,7 +272,7 @@ public:
 		GL_R32UI);							// 1 channel 32 bit unsigned int to make sure OR-ing works
 
 		// upload bit mask
-		glBindImageTexture(2,
+		glBindImageTexture(1,
 		p_bitMask->getTextureHandle(),
 		0,
 		GL_FALSE,
@@ -309,12 +290,27 @@ public:
 			RenderableNode* objectNode = m_objects[i].second;
 
 			int numVertices = 0;
+			int numIndices = 0;
+			int numFaces = 0;
 
 			if ( object->getModel() )
 			{
 				// bind positions VBO to shader storage buffer
-				glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, object->getModel()->getPositionBufferHandle() );
+				glBindBufferBase(
+						GL_SHADER_STORAGE_BUFFER,   // target
+						0,							// target binding index
+						object->getModel()->getPositionBufferHandle() );	// buffer
+
 				numVertices = object->getModel()->getNumVertices();
+
+				// bind index buffer
+				glBindBufferBase(
+						GL_SHADER_STORAGE_BUFFER,	// target
+						1,							// target binding index
+						object->getModel()->getIndexBufferHandle() ); // buffer
+
+				numIndices = object->getModel()->getNumIndices();
+				numFaces = object->getModel()->getNumFaces();
 			}
 			else
 			{
@@ -330,15 +326,19 @@ public:
 			// upload uniform model matrix
 			p_computeShader->uploadUniform( modelMatrix, "uniformModel");
 
-			// upload uniform voxel grid matrices
+			// upload voxel grid info
 			p_computeShader->uploadUniform( m_voxelizeView, "uniformVoxelizeView");
 			p_computeShader->uploadUniform( m_voxelizeProjection, "uniformVoxelizeProjection");
+			p_computeShader->uploadUniform( p_voxelGrid->cellSize, "uniformCellSize");
+			p_computeShader->uploadUniform( p_voxelGrid->worldToVoxel, "uniformWorldToVoxel");
 
-			// upload uniform vertices amount
+			// upload geometric info
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
+			p_computeShader->uploadUniform( numIndices, "uniformNumIndices");
+			p_computeShader->uploadUniform( numFaces, "uniformNumFaces");
 
 			// set local group amount suitable for object size:
-			m_num_groups_x = numVertices / 1024 + 1;
+			m_num_groups_x =  numFaces / 1024 + 1;
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
 
@@ -384,9 +384,8 @@ private:
 		m_cameraParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
 		CameraNode* camera = new CameraNode( m_cameraParentNode );
 //		camera->setProjectionMatrix(glm::perspective(60.0f, 1.0f, 0.1f, 100.0f));
-		camera->setProjectionMatrix(voxelizePerspective);
-//		camera->setPosition(0.0f,0.0f,5.0f);
-		camera->setPosition( voxelizePosition );
+//		camera->setProjectionMatrix(voxelizePerspective);
+//		camera->setPosition( voxelizePosition );
 		phongPerspectiveRenderPass->setCamera(camera);
 		DEBUGLOG->outdent();
 
@@ -401,23 +400,7 @@ private:
 	 */
 	void printComputeShaderInformation()
 	{
-		glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &MAX_COMPUTE_WORK_GROUP_INVOCATIONS);
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,0 ,  &( MAX_COMPUTE_WORK_GROUP_COUNT[0]) );
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,1 ,  &( MAX_COMPUTE_WORK_GROUP_COUNT[1]) );
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT,2 ,  &( MAX_COMPUTE_WORK_GROUP_COUNT[2]) );
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &( MAX_COMPUTE_WORK_GROUP_SIZE[0] ));
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &( MAX_COMPUTE_WORK_GROUP_SIZE[1] ));
-		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &( MAX_COMPUTE_WORK_GROUP_SIZE[2] ));
-		glGetIntegerv(GL_MAX_COMPUTE_SHARED_MEMORY_SIZE, &MAX_COMPUTE_SHARED_MEMORY_SIZE);
-
-		DEBUGLOG->log("max compute work group invocations : ", MAX_COMPUTE_WORK_GROUP_INVOCATIONS);
-		DEBUGLOG->log("max compute work group size x      : ", MAX_COMPUTE_WORK_GROUP_SIZE[0]);
-		DEBUGLOG->log("max compute work group size y      : ", MAX_COMPUTE_WORK_GROUP_SIZE[1]);
-		DEBUGLOG->log("max compute work group size z      : ", MAX_COMPUTE_WORK_GROUP_SIZE[2]);
-		DEBUGLOG->log("max compute work group count x     : ", MAX_COMPUTE_WORK_GROUP_COUNT[0]);
-		DEBUGLOG->log("max compute work group count y     : ", MAX_COMPUTE_WORK_GROUP_COUNT[1]);
-		DEBUGLOG->log("max compute work group count z     : ", MAX_COMPUTE_WORK_GROUP_COUNT[2]);
-		DEBUGLOG->log("max compute shared memory size     : ", MAX_COMPUTE_SHARED_MEMORY_SIZE);
+		ShaderInfo::printGlobalInfo();
 	}
 
 public:
@@ -530,19 +513,9 @@ public:
 
 		DEBUGLOG->log("Configuring voxel grid");
 		DEBUGLOG->indent();
-			DEBUGLOG->log("Creating voxel grid view matrix");
-			// create view matrix
-			glm::mat4 voxelizeView = glm::lookAt(
-					glm::vec3( 0.0f, 0.0f, 3.0f),	// eye
-					glm::vec3( 0.0f , 0.0f , 0.0f ),// center
-					glm::vec3( 0.0f, 1.0f, 0.0f) ); // up
+			VoxelGridGPU* voxelGrid = new VoxelGridGPU();
 
-			DEBUGLOG->log("Creating voxel grid projection matrix");
-			// create projection matrix
-			glm::mat4 voxelizeProj = glm::ortho(
-					-3.0f, 3.0f,	// left,   right
-					-3.0f, 3.0f,	// bottom, top
-					0.0f, 6.0f);	// front,  back
+			voxelGrid->setUniformCellSizeFromResolutionAndMapping(10.0f,10.0f,voxelGridResolution, voxelGridResolution, 32);
 
 			DEBUGLOG->log("Creating voxel grid texture");
 			// generate Texture
@@ -558,14 +531,37 @@ public:
 					voxelGridResolution,	// res X
 					voxelGridResolution);	// rex Y
 			
+			// buffer empty data, i.e. clear memory
+			glBufferData( GL_TEXTURE_2D, // target
+					voxelGridResolution * voxelGridResolution, // amount
+					NULL,				// data = 0
+					GL_STATIC_DRAW );	// usage of buffer
+
+			// clear texture
+			std::vector < GLuint > emptyData( voxelGridResolution * voxelGridResolution , 0);
+			glTexSubImage2D(
+					GL_TEXTURE_2D,	// target
+					0,				// level
+					0,				// xOffset
+					0,				// yOffset
+					voxelGridResolution, // width
+					voxelGridResolution, // height
+					GL_RED,			// format
+					GL_UNSIGNED_INT,// type
+					&emptyData[0] );// data
+
 			// set filter parameters for samplers
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		
+			// save handle
+			voxelGrid->handle = voxelGridHandle;
+			voxelGrid->texture = new Texture(voxelGridHandle);
 			// unbind
 			glBindTexture(GL_TEXTURE_2D, 0);
 
-			Texture* voxelGridTexture = new Texture(voxelGridHandle);
+			// for other use (i.e. tex atlas)
+			Texture* voxelGridTexture = voxelGrid->texture;
 		DEBUGLOG->outdent();
 
 
@@ -642,7 +638,7 @@ public:
 			DEBUGLOG->indent();
 
 			// shader that voxelizes an object
-			ComputeShader* voxelizeComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeCompute.comp");
+			ComputeShader* voxelizeComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeComputeGPUPro.comp");
 			
 			DEBUGLOG->outdent();
 
@@ -666,8 +662,7 @@ public:
 			DEBUGLOG->log("Configuring list of objects to voxelize");
 			std::vector<std::pair < Object*, RenderableNode*> > objects;
 			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
-			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
-//			objects.push_back( std::pair< Object*, RenderableNode* >( textureAtlasVertexGenerator->getPixelsObject(), verticesNode ) );
+//			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
 
 			std::vector<std::pair < Object*, TexAtlas::TextureAtlas* > > texAtlasObjects;
 			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >( textureAtlasVertexGenerator->getPixelsObject(), textureAtlasVertexGenerator->getTextureAtlas()) );
@@ -689,9 +684,9 @@ public:
 			DispatchVoxelizeComputeShader* dispatchVoxelizeComputeShader = new DispatchVoxelizeComputeShader(
 					voxelizeComputeShader,
 					objects,
-					voxelizeView,
-					voxelizeProj,
-					voxelGridTexture,
+					voxelGrid->view,
+					voxelGrid->perspective,
+					voxelGrid,
 					SliceMap::get32BitUintMask()
 					);
 
@@ -703,8 +698,8 @@ public:
 			DispatchVoxelizeWithTexAtlasComputeShader* dispatchVoxelizeWithTexAtlasComputeShader = new DispatchVoxelizeWithTexAtlasComputeShader(
 					voxelizeWithTexAtlasComputeShader,
 					texAtlasObjects,
-					voxelizeView,
-					voxelizeProj,
+					voxelGrid->view,
+					voxelGrid->perspective,
 					voxelGridTexture,
 					SliceMap::get32BitUintMask()
 					);
@@ -755,6 +750,10 @@ public:
 		 **************************************************************************************/
 		DEBUGLOG->log("Configuring display of voxelized scene");
 		DEBUGLOG->indent();
+
+			// Align Camera with voxelization view
+			phongPerspectiveRenderPass->getCamera()->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 10.0f) );
+			phongPerspectiveRenderPass->getCamera()->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
 
 			Shader* 			showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
 			TriangleRenderPass* showSliceMap = new OverlayR32UITextureRenderPass(

@@ -33,7 +33,7 @@ namespace Grid
 };
 
 
-	class VoxelGrid : public Object{
+	class VoxelGridCPU : public Object{
 	protected:
 		int m_width;
 		int m_height;
@@ -41,8 +41,8 @@ namespace Grid
 		float m_cellSize;
 		std::vector< std::vector< std::vector < GridCell* > > > m_voxelGrid;
 	public:
-		VoxelGrid(int width = 0, int height = 0, int depth = 0, float cellSize = 1.0f);
-		virtual ~VoxelGrid();
+		VoxelGridCPU(int width = 0, int height = 0, int depth = 0, float cellSize = 1.0f);
+		virtual ~VoxelGridCPU();
 
 		inline bool checkCoordinates(int x, int y, int z);
 
@@ -59,7 +59,7 @@ namespace Grid
 		void setWidth(int width);
 	};
 
-	class AxisAlignedVoxelGrid : public VoxelGrid
+	class AxisAlignedVoxelGrid : public VoxelGridCPU
 	{
 	protected:
 		float m_x;
@@ -92,7 +92,7 @@ namespace Grid
 	};
 
 	bool static testIntersection( const glm::vec3& center, float cellSize, const std::vector< glm::vec3 >& positions );
-	bool static triangleOverlapsCross( const glm::vec3& cross, float halfExtent, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2 );
-	bool static triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const glm::vec3& v0);
+	bool static triangleOverlapsCross( const glm::vec3& axis, const glm::vec3& edge, float halfExtent, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2 );
+	bool static boxOverlapsPlane( const glm::vec3& n_t, float halfExtent, const glm::vec3& v0);
 }
 #endif

@@ -3,9 +3,8 @@
 // specify local work group size
 layout (local_size_x = 32, local_size_y = 32) in;
 
+// specify image to clear
 layout(binding = 0, r32ui) writeonly uniform uimage2D clear_image;
-
-uniform vec4 uniformClearColor;
 
 void main()
 {
@@ -13,8 +12,7 @@ void main()
 	ivec2 index = ivec2( gl_GlobalInvocationID.xy );
 		
 	// set clear color
-//	uvec4 clear_color = uvec4 ( 0, 0, 0, 0);
-	uvec4 clear_color = uvec4 ( uniformClearColor );
+	uvec4 clear_color = uvec4 ( 0, 0, 0, 0);
 	
 	// write into texture
 	imageStore( clear_image, ivec2(index), clear_color );

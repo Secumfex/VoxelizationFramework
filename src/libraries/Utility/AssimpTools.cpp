@@ -141,21 +141,25 @@ namespace AssimpTools
 			model->setVAOHandle(	buffer );
 
 			// generate index buffer
-			vector<unsigned int> indices;
+			vector< GLuint > indices;
 
 			// read index list
 			int indicesCounter = 0;
 			for (unsigned int t = 0; t < mesh->mNumFaces; ++t) {
 				unsigned int i=0;
 				for (i = 0; i < mesh->mFaces[t].mNumIndices; ++i) {
-					indices.push_back(mesh->mFaces[t].mIndices[i]);
+					indices.push_back( mesh->mFaces[t].mIndices[i]);
 					indicesCounter++;
 				}
 			}
 			buffer = 0;
 			glGenBuffers(1, &buffer);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * indices.size(), &indices[0], GL_STATIC_DRAW);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof( GLuint ) * indices.size(), &indices[0], GL_STATIC_DRAW);
+
+			DEBUGLOG->log("Buffered indices        : " , indices.size());
+			DEBUGLOG->log("Bytes per entry (uint)  : " ,  sizeof( GLuint ) );
+
 			model->setIndexBufferHandle( buffer );
 
 			// generate vertex position buffer
@@ -169,6 +173,8 @@ namespace AssimpTools
 				glEnableVertexAttribArray(0);
 				glVertexAttribPointer(0, 3, GL_FLOAT, 0, 0, 0);
 				model->setVertexBufferHandle( buffer );
+				DEBUGLOG->log("Buffered vertices       : " , mesh->mNumVertices);
+				DEBUGLOG->log("Bytes per entry (vec3)  : " ,  sizeof(aiVector3D) );
 			}
 			else
 			{

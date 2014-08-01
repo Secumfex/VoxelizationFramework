@@ -8,7 +8,7 @@ using namespace Grid;
 double trunc(double d){ return (d>0) ? floor(d) : ceil(d) ; }
 float trunc(float d){ return (d>0) ? floor(d) : ceil(d) ; }
 
-VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
+VoxelGridCPU::VoxelGridCPU(int width, int height, int depth, float cellSize)
 	: Object(new Model(), new Material())
 {
 	m_width = width;
@@ -33,7 +33,7 @@ VoxelGrid::VoxelGrid(int width, int height, int depth, float cellSize)
 	setRenderMode(GL_LINES);
 }
 
-VoxelGrid::~VoxelGrid() {
+VoxelGridCPU::~VoxelGridCPU() {
 	for (unsigned int i = 0; i < m_voxelGrid.size(); i++)
 	{
 		for (unsigned j = 0; j < m_voxelGrid[i].size(); j++)
@@ -47,7 +47,7 @@ VoxelGrid::~VoxelGrid() {
 }
 
 AxisAlignedVoxelGrid::AxisAlignedVoxelGrid(float x, float y, float z,int width, int height, int depth, float cellSize)
-	: VoxelGrid(width,height,depth,cellSize)
+	: VoxelGridCPU(width,height,depth,cellSize)
 {
 	m_x = x;
 	m_y = y;
@@ -59,7 +59,7 @@ AxisAlignedVoxelGrid::~AxisAlignedVoxelGrid()
 
 }
 
-void VoxelGrid::setGridCell(int x, int y, int z, GridCell* gridCell)
+void VoxelGridCPU::setGridCell(int x, int y, int z, GridCell* gridCell)
 {
 	if ( checkCoordinates(x,y,z) )
 	{
@@ -67,41 +67,41 @@ void VoxelGrid::setGridCell(int x, int y, int z, GridCell* gridCell)
 	}
 }
 
-float VoxelGrid::getCellSize() const {
+float VoxelGridCPU::getCellSize() const {
 	return m_cellSize;
 }
 
-void VoxelGrid::setCellSize(float cellSize) {
+void VoxelGridCPU::setCellSize(float cellSize) {
 	m_cellSize = cellSize;
 }
 
-int VoxelGrid::getDepth() const {
+int VoxelGridCPU::getDepth() const {
 	return m_depth;
 }
 
-void VoxelGrid::setDepth(int depth) {
+void VoxelGridCPU::setDepth(int depth) {
 	m_depth = depth;
 }
 
-int VoxelGrid::getHeight() const {
+int VoxelGridCPU::getHeight() const {
 	return m_height;
 }
 
-void VoxelGrid::setHeight(int height) {
+void VoxelGridCPU::setHeight(int height) {
 	m_height = height;
 }
 
-int VoxelGrid::getWidth() const {
+int VoxelGridCPU::getWidth() const {
 	return m_width;
 }
 
-void VoxelGrid::setWidth(int width) {
+void VoxelGridCPU::setWidth(int width) {
 	m_width = width;
 }
 
 #include <Utility/DebugLog.h>
 
-GridCell* VoxelGrid::getGridCell(int x, int y, int z)
+GridCell* VoxelGridCPU::getGridCell(int x, int y, int z)
 {
 
 	if ( checkCoordinates(x,y,z) )
@@ -113,7 +113,7 @@ GridCell* VoxelGrid::getGridCell(int x, int y, int z)
 	}
 }
 
-bool VoxelGrid::checkCoordinates(int x, int y, int z)
+bool VoxelGridCPU::checkCoordinates(int x, int y, int z)
 {
 	return ( ( x > 0 && x < m_width ) && ( y > 0 && y < m_height ) && ( z > 0 && z < m_depth ) );
 }
@@ -146,7 +146,7 @@ void Grid::AxisAlignedVoxelGrid::setZ(float z) {
 GridCell* Grid::AxisAlignedVoxelGrid::getGridCell(const glm::vec3& position)
 {
 	glm::vec3 gridPos =( position - glm::vec3(m_x,m_y,m_z) ) / m_cellSize;
-	return VoxelGrid::getGridCell( (int) gridPos.x, (int) gridPos.y, (int) gridPos.z);
+	return VoxelGridCPU::getGridCell( (int) gridPos.x, (int) gridPos.y, (int) gridPos.z);
 }
 
 std::vector < std::pair < GridCell* , glm::vec3 > > Grid::AxisAlignedVoxelGrid::getGridCellsForTriangle(const std::vector < glm::vec3 >& trianglePositions)
@@ -196,7 +196,7 @@ std::vector < std::pair < GridCell* , glm::vec3 > > Grid::AxisAlignedVoxelGrid::
 				glm::vec3 currentSamplePoint = minCellCenter + glm::vec3(x * m_cellSize, y * m_cellSize, z * m_cellSize ) + 0.5f * m_cellSize;
 
 				// retrieve grid Cell to be tested against
-				GridCell* gridCellCandidate = VoxelGrid::getGridCell(indexMinX + x, indexMinY + y, indexMinZ + z );
+				GridCell* gridCellCandidate = VoxelGridCPU::getGridCell(indexMinX + x, indexMinY + y, indexMinZ + z );
 
 				if (gridCellCandidate != 0)
 				{
@@ -358,102 +358,93 @@ bool Grid::testIntersection(const glm::vec3& center, float cellSize,
 
 	// 1st : 3 tests - normals of AABB against minmal AABB of triangle
 
-	if ( min.x > halfExtent || max.x < - halfExtent )
+//	if ( min.x > halfExtent || max.x < - halfExtent )
+//	{
+//		return false;
+//	}
+//
+//	if ( min.y > halfExtent || max.y < - halfExtent )
+//	{
+//		return false;
+//	}
+//
+//	if ( min.z > halfExtent || max.z < - halfExtent )
+//	{
+//		return false;
+//	}
+//
+//	// if program reaches this point, all axis overlap
+//	// 2nd : 1 test - normal of Triangle
+//	bool overlapPlane = boxOverlapsPlane(n_t, halfExtent, v0);
+//	if (!overlapPlane)
+//	{
+//		return false;
+//	}
+
+	// 3rd : 9 tests - cross products of edges with world axis
+	glm::vec3 e0(1.0f, 0.0f, 0.0f);
+	glm::vec3 e1(0.0f, 1.0f, 0.0f);
+	glm::vec3 e2(0.0f, 0.0f, 1.0f);
+
+	bool overlaps = triangleOverlapsCross ( e0, f0, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
 	{
 		return false;
 	}
 
-	if ( min.y > halfExtent || max.y < - halfExtent )
+	overlaps = triangleOverlapsCross ( e0, f1, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
 	{
 		return false;
 	}
 
-	if ( min.z > halfExtent || max.z < - halfExtent )
+	overlaps = triangleOverlapsCross ( e0, f2, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
 	{
 		return false;
 	}
 
-	// if program reaches this point, all axis overlap
-	// 2nd : 1 test - normal of Triangle
-	bool overlapPlane = triangleOverlapsPlane(n_t, halfExtent, v0);
-	if (!overlapPlane)
+	overlaps = triangleOverlapsCross ( e1, f0, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
 	{
 		return false;
 	}
 
-//	// 3rd : 9 tests - cross products of edges
-//	glm::vec3 e0(1.0f, 0.0f, 0.0f);
-//	glm::vec3 e1(0.0f, 1.0f, 0.0f);
-//	glm::vec3 e2(0.0f, 0.0f, 1.0f);
-//
-//	glm::vec3 cross = glm::cross(e0, f0);
-//	bool overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e0, f1);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e0, f2);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e1, f0);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e1, f1);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e1, f2);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e2, f0);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e2, f1);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
-//
-//	cross = glm::cross(e2, f2);
-//	overlaps = triangleOverlapsCross ( cross, halfExtent, v0, v1, v2 );
-//	if ( !overlaps)
-//	{
-//		return false;
-//	}
+	overlaps = triangleOverlapsCross ( e1,f1, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
+	{
+		return false;
+	}
+
+	overlaps = triangleOverlapsCross ( e1, f2, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
+	{
+		return false;
+	}
+
+	overlaps = triangleOverlapsCross ( e2, f0, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
+	{
+		return false;
+	}
+
+	overlaps = triangleOverlapsCross ( e2, f1, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
+	{
+		return false;
+	}
+
+	overlaps = triangleOverlapsCross ( e2, f2, halfExtent, v0, v1, v2 );
+	if ( !overlaps)
+	{
+		return false;
+	}
 
 	// if program reaches this pont, all failed to find a separating axis
 	return true;
 }
 
-bool Grid::triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const glm::vec3& v0)
+bool Grid::boxOverlapsPlane( const glm::vec3& n_t, float halfExtent, const glm::vec3& v0)
 {
 	float d = glm::dot( n_t, v0 );
 	float negD = -d;
@@ -519,13 +510,31 @@ bool Grid::triangleOverlapsPlane( const glm::vec3& n_t, float halfExtent, const 
 	return false;
 }
 
-bool Grid::triangleOverlapsCross ( const glm::vec3& cross, float halfExtent, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2 )
-{
-	float neg_x,neg_y,neg_z;
 
-	( cross.x < 0.0f ) ? neg_x = -1.0f : neg_x = 1.0f;
-	( cross.y < 0.0f ) ? neg_y = -1.0f : neg_y = 1.0f;
-	( cross.z < 0.0f ) ? neg_z = -1.0f : neg_z = 1.0f;
+/**
+ *  test whether the box projected onto the cross product vector overlaps with the triangle
+ * @param axis  world axis
+ * @param edge	triangle edge
+ * @param halfExtent of box
+ * @param v0 vertex position of triangle
+ * @param v1 vertex position of triangle
+ * @param v2 vertex position of triangle
+ * @return
+ */
+bool Grid::triangleOverlapsCross ( const glm::vec3& axis, const glm::vec3& edge, float halfExtent, const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2 )
+{
+	glm::vec3 cross = glm::cross( axis , edge );
+
+	// cant test if cross product is zero vector...
+	if ( glm::length( cross ) == 0.0f )
+	{
+		// cant tell, so return true instead
+		return true;
+	}
+	else
+	{
+		cross = glm::normalize( cross );
+	}
 
 	float radius = halfExtent * glm::abs( cross.x ) + halfExtent * glm::abs( cross.y ) + halfExtent * glm::abs( cross.z );
 
@@ -536,5 +545,7 @@ bool Grid::triangleOverlapsCross ( const glm::vec3& cross, float halfExtent, con
 	float minTriangle = glm::min( dotV0, glm::min ( dotV1, dotV2) );
 	float maxTriangle = glm::max( dotV0, glm::max ( dotV1, dotV2) );
 
-	return ( minTriangle < radius && maxTriangle >= - radius);
+	return  ( !( minTriangle >= radius || maxTriangle <= - radius) );
+
+//	return ( minTriangle <= maxDotBox && maxTriangle >= minDotBox );
 }

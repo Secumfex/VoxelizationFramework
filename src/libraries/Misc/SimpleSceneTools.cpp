@@ -138,3 +138,63 @@ Turntable* SimpleScene::configureTurnTable(Node* node, Application* app, float s
 	app->getSceneManager().getActiveScene()->addUpdatable(turntable);
 	return turntable;
 }
+
+void SimpleScene::SceneGraphState::traverseAndAdd(Node* parent)
+{
+			std::vector<Node* > children = parent->getChildren();
+			for ( std::vector<Node* >::iterator it = children.begin(); it != children.end(); ++it)
+			{
+				m_modelMatrices[ (*it) ] = (*it)->getModelMatrix();
+				traverseAndAdd(*it);
+			}
+}
+
+void SimpleScene::SceneGraphState::traverseAndRestore(Node* parent)
+{
+			std::vector<Node* > children = parent->getChildren();
+
+			if ( children.size() != 0 )
+			{
+				DEBUGLOG->log("num children : ", children.size());
+			}
+
+			for ( std::vector<Node* >::iterator it = children.begin(); it != children.end(); ++it)
+			{
+				if ( m_modelMatrices.find( (*it) ) != m_modelMatrices.end())
+				{
+					(*it)->setModelMatrix( m_modelMatrices[ (*it) ] );
+				}
+				traverseAndRestore(*it);
+			}
+}
+
+SimpleScene::SceneGraphState::SceneGraphState(SceneGraph* sceneGraph)
+{
+			p_sceneGraph = sceneGraph;
+			Node* root = sceneGraph->getRootNode();
+			m_modelMatrices[root] = root->getModelMatrix();
+			traverseAndAdd(root);
+}
+
+void SimpleScene::SceneGraphState::restoreSceneGraph(SceneGraph* sceneGraph)
+{
+	DEBUGLOG->log("Restoring scene graph");
+	DEBUGLOG->indent();
+
+	Node* root = sceneGraph->getRootNode();
+	if ( m_modelMatrices.find( root ) != m_modelMatrices.end())
+	{
+		root->setModelMatrix( m_modelMatrices[ root ] );
+	}
+	traverseAndRestore(root);
+
+	DEBUGLOG->outdent();
+}
+
+void SimpleScene::SceneGraphState::call()
+{
+	if(p_sceneGraph)
+	{
+		restoreSceneGraph(p_sceneGraph);
+	}
+}

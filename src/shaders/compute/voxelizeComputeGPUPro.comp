@@ -1,0 +1,255 @@
+#version 430 core
+
+// struct type of values accessed through vertex buffer
+struct Vertex{
+	float x;
+	float y;
+	float z;
+};
+
+// specify local work group size 
+layout (local_size_x = 1024) in;
+
+// vertex buffer access
+layout( std430, binding = 0 ) buffer Vert { Vertex vertices[ ]; } ;
+
+// index buffer access
+layout( std430, binding = 1 ) buffer Ind { uint indices[ ]; };
+
+// voxel grid texture ( format MUST be signle channel unsigned integer to make atomic operations work )
+layout( r32ui, binding = 0 ) uniform uimage2D voxel_grid_texture;
+
+// bit mask
+layout( r32ui, binding = 1 ) uniform readonly uimage1D bitmaskTexture;
+
+// uniforms
+uniform mat4 uniformModel;
+
+uniform mat4 uniformVoxelizeView;
+uniform mat4 uniformVoxelizeProjection;
+uniform mat4 uniformWorldToVoxel;
+
+uniform int uniformNumVertices;
+uniform int uniformNumIndices;
+uniform int uniformNumFaces;
+
+uniform float uniformCellSize;
+
+// true if boundingbox defined bbox and bbox + (1,1,1) overlaps plane defined by support point and normal
+bool overlapsPlane( vec3 bbox, vec3 support, vec3 normal )
+{
+	// get diagonal corners of bbox with same direction as normal
+	vec3 c0 = vec3( 0.0, 0.0, 0.0 );
+	vec3 c1 = vec3( 0.0, 0.0, 0.0 );
+	
+	if ( normal.x > 0.0 )
+	{
+		c0.x = 1.0;
+	}
+	else
+	{
+		c1.x = 1.0;
+	}
+	
+	if ( normal.y > 0.0 )
+	{
+		c0.y = 1.0;
+	}
+	else
+	{
+		c1.y = 1.0;
+	}
+	
+	if ( normal.z > 0.0 )
+	{
+		c0.z = 1.0;
+	}
+	else
+	{
+		c1.z = 1.0;
+	}
+	
+	// different sides of plane
+	if ( dot( normal, bbox + c0 - support ) * dot( normal, bbox + c1 - support ) <= 0.0 )
+	{
+		return true;
+	}
+	// same sides of plane
+	else
+	{
+		return false;
+	}
+}
+
+// returns a value which allows one to determine whether a point is INSIDE or OUTSIDE of a edge
+float edgeFunction( vec2 normal_i, vec2 vertex_i, vec2 point )
+{
+	return dot( normal_i , point - vertex_i);
+}
+
+// returns the edge normal that points to the INSIDE of the triangle
+vec2 edgeNormal2D( v0, v1, float normalDir)
+{
+	// counter clock wise
+	if ( normalDir > 0)
+	{
+		// TODO
+	}
+	else
+	{
+		//clock wise
+		// TODO
+	}
+	
+}
+
+// returns true if point is INSIDE for ALL edge normals
+bool overlapsVoxel2D( vec2 voxel, vec2 v0, vec2 e01, vec2 v1, vec2 e12, vec2 v2, vec2 e20, float normalDir)
+{
+	vec3 normal = edgeNormal2D( v0, v1, normalDir );
+	// TODO test every edge functions agains some points
+	// return true if ALL edge functions return INSIDE
+	return false;
+}
+
+// test for 2D overlap
+bool overlapsVoxel( vec3 voxel, vec3 v0, vec3 e01, vec3 v1, vec3 e12, vec3 v2, vec3 e20, vec3 normal )
+{
+	// XY Plane Projection
+	if ( !overlapsVoxel2D( voxel.xy, v0.xy, e01.xy, v1.xy, e12.xy, v2.xy, e20.xy, normal.z ) )
+	{
+		return false;
+	}
+	if (!overlapsVoxel2D( voxel.yz, v0.yz, e01.yz, v1.yz, e12.yz, v2.yz, e20.yz, normal.x ) )
+	{
+		return false;
+	}
+	if ( !overlapsVoxel2D( voxel.xz, v0.xz, e01.xz, v1.xz, e12.xz, v2.xz, e20.xz, normal.y ) )
+	{
+		return false;
+	}
+	
+	// only possibility left
+	return true;
+}
+
+//float dot2D( vec2 v0, vec2 v1)
+//{
+//	return (v0.x * v1.x + v0.y * v1.y);
+//}
+
+void main()
+{
+	// determine which indices to read from
+	uint gid = gl_GlobalInvocationID.x;
+	
+	// read indices of face; gid : current face, * 3 : first index of face, + N : offset to first index
+	uint indexV0 = indices[ gid * 3 + 0 ];
+	uint indexV1 = indices[ gid * 3 + 1 ];
+	uint indexV2 = indices[ gid * 3 + 2 ];
+	
+	// read vertices of face
+	Vertex v0 = vertices[ indexV0 ];	
+	Vertex v1 = vertices[ indexV1 ];	
+	Vertex v2 = vertices[ indexV2 ];
+	
+	// compute grid position
+	vec3 posV0 = ( uniformWorldToVoxel * uniformModel * vec4 ( v0.x, v0.y, v0.z, 1.0 ) ).xyz;
+	vec3 posV1 = ( uniformWorldToVoxel * uniformModel * vec4 ( v1.x, v1.y, v1.z, 1.0 ) ).xyz;
+	vec3 posV2 = ( uniformWorldToVoxel * uniformModel * vec4 ( v2.x, v2.y, v2.z, 1.0 ) ).xyz;
+	
+	// compute edges of triangle
+	vec3 e01 = posV1 - posV0;
+	vec3 e12 = posV2 - posV1;
+	vec3 e20 = posV0 - posV2;
+	
+	// compute normal of triangle
+	vec3 normal = normalize ( cross ( e01,e12 ) );
+	
+	// compute bounding box 
+	vec3 bbMin = min( posV0, min ( posV1, posV2 ) );
+	vec3 bbMax = max( posV0, max ( posV1, posV2 ) );
+	
+	vec3 bbDiag = bbMax - bbMin;
+	
+	// lowest voxel index
+	float xMin = floor ( bbMin.x );
+	float yMin = floor ( bbMin.y );
+	float zMin = floor ( bbMin.z );
+	
+	// highest voxel index
+	float xMax = floor ( bbMax.x ) + 1.0;
+	float yMax = floor ( bbMax.y ) + 1.0;
+	float zMax = floor ( bbMax.z ) + 1.0;
+	
+	// TODO compute overlapped voxels from bbox
+	for ( float x = xMin; x <= xMax; x+= 1.0f )
+	{
+		for ( float y = yMin; y <= yMax; y+= 1.0f )
+		{
+			for ( float z = zMin; z < zMax; z+= 1.0f )
+			{
+				vec3 voxel = vec3( x, y, z );
+				
+				// test voxel defined by BBOX (x,y,z) / ( x+1, y+1, z+1 ) againts triangle plane
+				if ( !overlapsPlane( voxel, posV0, normal ) )
+				{
+					// skip since overlap is impossible
+					continue;
+				}
+				
+				// test triangle to bbox by projection in main axes
+				if ( !overlapsVoxel ( voxel, posV0, e01, posV1, e12, posV2, e20, normal ) )
+				{
+					// skip since overlap has been disproven
+					continue;
+				}			
+				
+				// default : fill voxel
+				// TODO fill voxel
+			}
+		}
+	}
+		
+		
+	// TODO perform overlap test for every voxel
+	
+	// TODO implement overlap tests
+	
+	// TODO OR byte value for every overlapping voxel
+	
+	
+//	// ignore this for a time
+//	vec4 posV0 = uniformVoxelizeProjection * uniformVoxelizeView * uniformModel * vec4 ( V0.x, V0.y, V0.z, 1.0 );
+//	vec4 posV1 = uniformVoxelizeProjection * uniformVoxelizeView * uniformModel * vec4 ( V1.x, V1.y, V1.z, 1.0 );
+//	vec4 posV2 = uniformVoxelizeProjection * uniformVoxelizeView * uniformModel * vec4 ( V2.x, V2.y, V2.z, 1.0 );	
+	
+//	// divide by homo coordinate
+//	posV0.xyz = posV0.xyz / posV0.w;
+//	posV1.xyz = posV1.xyz / posV1.w;
+//	posV2.xyz = posV2.xyz / posV2.w;
+
+//	// bring into [0,1] in every direction
+//	posV0.xyz = posV0.xyz * 0.5 + 0.5;
+//	posV1.xyz = posV1.xyz * 0.5 + 0.5;
+//	posV2.xyz = posV2.xyz * 0.5 + 0.5;
+
+	// compute BYTE-value from depth value of grid position
+	vec3 midPoint = (bbMin + ( bbDiag * 0.5 ) );
+	
+	int depth = int ( midPoint.z) ;
+	uvec4 bitMask = imageLoad( bitmaskTexture, depth );			
+	uint  byte = bitMask.r ;	
+		
+	// retrieve x / y coordinates
+	ivec2 gridSize = imageSize( voxel_grid_texture );
+	
+	// TODO write voxel position
+	int x = int( midPoint.x );
+	int y = int( midPoint.y );
+		
+	ivec2 writeTo  = ivec2( x, y );
+	
+	// OR with byte currently written in voxel grid texture
+	uint before = imageAtomicOr( voxel_grid_texture, writeTo , byte );
+}

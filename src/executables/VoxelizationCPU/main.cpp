@@ -17,69 +17,6 @@
 
 #include <Misc/SimpleSceneTools.h>
 
-class SceneGraphState : public Listener
-{
-protected:
-	SceneGraph* p_sceneGraph;
-	std::map<Node*, glm::mat4 > m_modelMatrices;	// maps a Node to a model matrix
-	void traverseAndAdd( Node* parent )
-	{
-		std::vector<Node* > children = parent->getChildren();
-		for ( std::vector<Node* >::iterator it = children.begin(); it != children.end(); ++it)
-		{
-			m_modelMatrices[ (*it) ] = (*it)->getModelMatrix();
-			traverseAndAdd(*it);
-		}
-	}
-	void traverseAndRestore( Node* parent)
-	{
-		std::vector<Node* > children = parent->getChildren();
-
-		if ( children.size() != 0 )
-		{
-			DEBUGLOG->log("num children : ", children.size());
-		}
-
-		for ( std::vector<Node* >::iterator it = children.begin(); it != children.end(); ++it)
-		{
-			if ( m_modelMatrices.find( (*it) ) != m_modelMatrices.end())
-			{
-				(*it)->setModelMatrix( m_modelMatrices[ (*it) ] );
-			}
-			traverseAndRestore(*it);
-		}
-	}
-public:
-	SceneGraphState( SceneGraph* sceneGraph)
-	{
-		p_sceneGraph = sceneGraph;
-		Node* root = sceneGraph->getRootNode();
-		m_modelMatrices[root] = root->getModelMatrix();
-		traverseAndAdd(root);
-	}
-	void restoreSceneGraph(SceneGraph* sceneGraph)
-	{
-		DEBUGLOG->log("Restoring scene graph");
-		DEBUGLOG->indent();
-
-		Node* root = sceneGraph->getRootNode();
-		if ( m_modelMatrices.find( root ) != m_modelMatrices.end())
-		{
-			root->setModelMatrix( m_modelMatrices[ root ] );
-		}
-		traverseAndRestore(root);
-
-		DEBUGLOG->outdent();
-	}
-	void call()
-	{
-		if(p_sceneGraph)
-		{
-			restoreSceneGraph(p_sceneGraph);
-		}
-	}
-};
-
 class GridRenderPass : public CameraRenderPass
 {
 protected:
@@ -235,7 +172,8 @@ public:
 			RenderableNode* filledCell = new RenderableNode( p_parentNode );
 
 			filledCell->scale( glm::vec3(p_axisAlignedVoxelGrid->getCellSize() ) );
-			filledCell->translate( p_axisAlignedVoxelGrid->getGridCellCenter( m_filledGridCells[i].second) );
+//			filledCell->translate( p_axisAlignedVoxelGrid->getGridCellCenter( m_filledGridCells[i].second) );
+			filledCell->translate(  m_filledGridCells[i].second );
 			filledCell->setObject( p_resourceManager->getCube( ) );
 
 			m_renderableNodes.push_back(filledCell);
@@ -336,7 +274,7 @@ class UniformVoxelGridApp : public Application
 
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode( sceneNode );
-				testRoomNode->scale( glm::vec3(0.6f, 0.6f, 0.6f) );
+				testRoomNode->scale( glm::vec3(0.56f, 0.56f, 0.56f) );
 				testRoomNode->setObject(testRoom[0]);
 
 				DEBUGLOG->log("Creating camera parent node");
@@ -533,7 +471,7 @@ class UniformVoxelGridApp : public Application
 			m_inputManager.attachListenerOnKeyPress( voxelizer, GLFW_KEY_V, GLFW_PRESS);
 
 			// restore on key press  : R
-			m_inputManager.attachListenerOnKeyPress( new SceneGraphState(scene->getSceneGraph()), GLFW_KEY_R, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ), GLFW_KEY_R, GLFW_PRESS);
 
 			DEBUGLOG->log("Configuring Turntable for scene node");
 			Turntable* turntable = SimpleScene::configureTurnTable(sceneNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT);

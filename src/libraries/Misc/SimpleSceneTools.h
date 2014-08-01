@@ -22,6 +22,27 @@ namespace SimpleScene
 	void configureSimpleCameraMovement(Camera* movableCam, Application* app, float speed = 2.0f);
 
 	Turntable* configureTurnTable( Node* node, Application* app, float sensitivity = 0.1f, int key = GLFW_MOUSE_BUTTON_LEFT);
+
+	// Save the current state of the scene graph and restore it when called
+	class SceneGraphState : public Listener
+	{
+	protected:
+		SceneGraph* p_sceneGraph;
+		std::map<Node*, glm::mat4 > m_modelMatrices;	// maps a Node to a model matrix
+
+		void traverseAndAdd( Node* parent );	// adds all child node model matrices
+		void traverseAndRestore( Node* parent); // restores all child node model matrices and removes
+	public:
+		SceneGraphState( SceneGraph* sceneGraph);	// save the provided scenegraph in its current state
+		void restoreSceneGraph(SceneGraph* sceneGraph); // restores the scenegraph
+
+		// restores the saved state upon call
+		void call();
+	};
+
+
+
+
 }
 
 #endif
