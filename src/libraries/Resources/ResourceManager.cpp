@@ -121,7 +121,7 @@ void ResourceManager::saveFacesList(Model* model, const aiMesh* mesh)
 
 		// read face vertices indices
 		std::vector< unsigned int > faceIndices;
-		for (int k = 0; k < currentFace.mNumIndices; k++)
+		for (unsigned int k = 0; k < currentFace.mNumIndices; k++)
 		{
 			faceIndices.push_back( currentFace.mIndices[k] );
 		}

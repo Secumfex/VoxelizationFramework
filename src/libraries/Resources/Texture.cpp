@@ -7,8 +7,10 @@ Texture::Texture(std::string path) {
 }
 
 Texture::Texture(GLuint textureHandle)
-: Texture( "" )
 {
+	Resource::setPath("");
+	m_texturehandle = 0;
+	m_activeUnit = -1;
 	m_texturehandle = textureHandle;
 }
 

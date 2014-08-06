@@ -35,7 +35,7 @@ public:
 	Texture* texture;
 
 	// provide some info and it will give you the suitable missing value
-	void setUniformCellSizeFromResolutionAndMapping(float width, float height, float resX, float resY, float resZ);
+	void setUniformCellSizeFromResolutionAndMapping(float width, float height, int resX, int resY, int resZ);
 
 	// void compute resolutions to map as specified
 	void setDimensionFromMapping( float cellSize, float resX, float resY, float resZ = 32);

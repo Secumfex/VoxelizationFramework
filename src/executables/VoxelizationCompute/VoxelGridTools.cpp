@@ -19,7 +19,7 @@ VoxelGridGPU::~VoxelGridGPU() {
 }
 
 void VoxelGridGPU::setUniformCellSizeFromResolutionAndMapping(float width,
-		float height, float resX, float resY, float resZ) {
+		float height, int resX, int resY, int resZ) {
 
 	if ( ( width / resX )  != ( height / resY) )
 	{

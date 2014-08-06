@@ -113,6 +113,7 @@ protected:
 	int m_local_group_size_x;
 	int m_local_group_size_y;
 	int m_local_group_size_z;
+	int m_local_group_size_total;
 public:
 
 	/** \brief constructor
@@ -143,6 +144,7 @@ public:
 	int getLocalGroupSizeX() const;
 	int getLocalGroupSizeY() const;
 	int getLocalGroupSizeZ() const;
+	int getLocalGroupSizeTotal() const;
 };
 
 #endif

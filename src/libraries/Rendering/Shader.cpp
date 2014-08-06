@@ -119,10 +119,12 @@ ComputeShader::ComputeShader(std::string computeShader) {
 	m_local_group_size_x = params[0];
 	m_local_group_size_y = params[1];
 	m_local_group_size_z = params[2];
+	m_local_group_size_total = m_local_group_size_x * m_local_group_size_y * m_local_group_size_z;
 
-	DEBUGLOG->log("ComputeShader local_group_size_x : ", m_local_group_size_x );
-	DEBUGLOG->log("ComputeShader local_group_size_y : ", m_local_group_size_y );
-	DEBUGLOG->log("ComputeShader local_group_size_z : ", m_local_group_size_z );
+	DEBUGLOG->log("ComputeShader local_group_size_x     : ", m_local_group_size_x );
+	DEBUGLOG->log("ComputeShader local_group_size_y     : ", m_local_group_size_y );
+	DEBUGLOG->log("ComputeShader local_group_size_z     : ", m_local_group_size_z );
+	DEBUGLOG->log("ComputeShader local_group_size_total : ", m_local_group_size_total );
 
 	requestUniformNames();
 }
@@ -136,6 +138,10 @@ int ComputeShader::getLocalGroupSizeX() const {
 
 int ComputeShader::getLocalGroupSizeY() const {
 	return m_local_group_size_y;
+}
+
+int ComputeShader::getLocalGroupSizeTotal() const {
+	return m_local_group_size_total;
 }
 
 int ComputeShader::getLocalGroupSizeZ() const {
