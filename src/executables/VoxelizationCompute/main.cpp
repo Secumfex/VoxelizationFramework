@@ -30,9 +30,11 @@ static bool voxelizeTexAtlasActive = false;
 static bool voxelizeActive = true;
 
 static int texAtlasResolution  = 512;
-static int voxelGridResolution = 64;
+static int voxelGridResolution = 32;
 
-static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
+static glm::vec3 lightPosition = glm::vec3(0.0f, 0.0f, 2.5f);
+static bool enableBackfaceCulling = true;
+static bool orthoCam = true;
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -65,6 +67,58 @@ public:
 		);
 	}
 };
+
+/**
+ * Renderpass that overlays the slice map ontop of fbo using gbuffer info
+ */
+class ProjectSliceMapRenderPass : public TriangleRenderPass
+{
+private:
+	VoxelGridGPU* p_voxelGrid;
+	Texture* p_bitMask;
+public:
+	ProjectSliceMapRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* triangle, Texture* baseTexture, VoxelGridGPU* voxelGrid, Texture* bitMask, Texture* positionMap, glm::mat4* viewMatrix)
+	: TriangleRenderPass(shader, fbo, triangle)
+	{
+		addUniformTexture(baseTexture, "uniformBaseTexture");
+		addUniformTexture(positionMap, "uniformPositionMap");
+
+		addUniform( new Uniform< glm::mat4 >("uniformProjectorView", &( voxelGrid->view ) ) );
+		addUniform( new Uniform< glm::mat4 >("uniformProjectorPerspective", &( voxelGrid->perspective ) ) );
+		addUniform( new Uniform< glm::mat4 >("uniformView", viewMatrix ) );
+
+//		addEnable(GL_BLEND);
+		p_voxelGrid = voxelGrid;
+		p_bitMask = bitMask;
+	}
+
+	virtual void uploadUniforms()
+	{
+		TriangleRenderPass::uploadUniforms();
+
+		// upload texture
+		glBindImageTexture(0,
+		p_voxelGrid->texture->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_ONLY,
+		GL_R32UI
+		);
+
+		// upload bitmask
+		glBindImageTexture(1,
+		p_bitMask->getTextureHandle(),
+		0,
+		GL_FALSE,
+		0,
+		GL_READ_ONLY,
+		GL_R32UI
+		);
+
+	}
+};
+
 
 /**
  * Clear voxel grid texture with 0
@@ -366,6 +420,41 @@ class ComputeShaderApp: public Application {
 private:
 	Node* m_cameraParentNode;
 	Node* m_objectsNode;
+
+	CameraRenderPass* createGBufferRenderPass( )
+	{
+		DEBUGLOG->indent();
+
+		// Render Scene into GBUFFER )
+		Shader* writeGbufferShader = new Shader(SHADERS_PATH "/gbuffer/gbuffer.vert", SHADERS_PATH "/gbuffer/gbuffer_backfaceCulling.frag");
+
+		GLenum internalFormat = FramebufferObject::static_internalFormat;
+		FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;
+
+		FramebufferObject* gbufferFramebufferObject = new FramebufferObject (512,512);
+		// 3 attachments : position, normals, color
+		gbufferFramebufferObject->addColorAttachments(3);
+
+		FramebufferObject::static_internalFormat = internalFormat;
+
+		CameraRenderPass* writeGbufferRenderPass = new CameraRenderPass(writeGbufferShader, gbufferFramebufferObject);
+		writeGbufferRenderPass->addEnable(GL_DEPTH_TEST);
+		writeGbufferRenderPass->setClearColor(0.0f,0.0f,0.0f,1.0f);
+		writeGbufferRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+		writeGbufferRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+
+		m_cameraParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
+		CameraNode* camera = new CameraNode( m_cameraParentNode );
+		writeGbufferRenderPass->setCamera( camera );
+
+		DEBUGLOG->log("Adding render pass to application");
+		m_renderManager.addRenderPass(writeGbufferRenderPass);
+
+		DEBUGLOG->outdent();
+
+		return writeGbufferRenderPass;
+	}
+
 	CameraRenderPass* createPhongRenderPass( )
 	{
 		DEBUGLOG->indent();
@@ -389,7 +478,7 @@ private:
 		phongPerspectiveRenderPass->setCamera(camera);
 		DEBUGLOG->outdent();
 
-		DEBUGLOG->log("Adding render passes to application");
+		DEBUGLOG->log("Adding render pass to application");
 		m_renderManager.addRenderPass(phongPerspectiveRenderPass);
 
 		return phongPerspectiveRenderPass;
@@ -440,7 +529,7 @@ public:
 			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
-//			renderables.push_back(testRoomNode);
+			renderables.push_back(testRoomNode);
 
 			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
 
@@ -474,33 +563,48 @@ public:
 
 		DEBUGLOG->log("Configuring Rendering");
 		DEBUGLOG->indent();
+			DEBUGLOG->log("Creating gbuffer renderpass");
+			CameraRenderPass* gbufferRenderPass = createGBufferRenderPass();
 
-			DEBUGLOG->log("Creating perspective phong renderpass");
-			CameraRenderPass* phongPerspectiveRenderPass = createPhongRenderPass( );
+			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &enableBackfaceCulling ) );
+			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &orthoCam ) );
+
+			Texture* gbufferPositionMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 ) );
+			Texture* gbufferNormalMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1 ) );
+			Texture* gbufferColorMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2 ) );
 
 			DEBUGLOG->log("Adding objects to perspective phong render pass");
 			for (unsigned int i = 0; i < renderables.size(); i++)
 			{
-				phongPerspectiveRenderPass->addRenderable( renderables[i] );
+				gbufferRenderPass->addRenderable( renderables[i] );
 			}
 
-			DEBUGLOG->log("Creating presentation render passes");
+			DEBUGLOG->log("Creating compositing render passes");
 			DEBUGLOG->indent();
-				DEBUGLOG->log("Creating texture presentation shader");
-					Shader* showTexture = new Shader(SHADERS_PATH "/screenspace/screenFill.vert" ,SHADERS_PATH "/screenspace/simpleTexture.frag");
+
+				DEBUGLOG->log("Creating gbuffer compositing shader");
+					Shader* gbufferCompositingShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/screenspace/gbuffer_compositing_phong.frag");
+
+				DEBUGLOG->log("Creating framebuffer for compositing render pass");
+					FramebufferObject* compositingFramebuffer = new FramebufferObject(512,512);
+					compositingFramebuffer->addColorAttachments(1);
+					Texture* compositingOutput = new Texture( compositingFramebuffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
 
 				DEBUGLOG->indent();
-					DEBUGLOG->log("Creating phong presentation render pass");
-					TriangleRenderPass* showRenderPassPerspective = new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
-					showRenderPassPerspective->setViewport(0,0,512,512);
-					showRenderPassPerspective->addClearBit(GL_COLOR_BUFFER_BIT);
-					showRenderPassPerspective->addClearBit(GL_DEPTH_BUFFER_BIT);
+					DEBUGLOG->log("Creating compositing render pass");
+					TriangleRenderPass* gbufferCompositing = new TriangleRenderPass(gbufferCompositingShader, compositingFramebuffer, m_resourceManager.getScreenFillingTriangle());
+					gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
+					gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
 
-					Texture* phongPerspectiveRenderPassOutput = new Texture( phongPerspectiveRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
-					showRenderPassPerspective->addUniformTexture( phongPerspectiveRenderPassOutput, "uniformTexture" );
+					gbufferCompositing->addUniformTexture( gbufferPositionMap, "uniformPositionMap" );
+					gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
+					gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
 
-					DEBUGLOG->log("Adding phong framebuffer presentation render pass now");
-					m_renderManager.addRenderPass(showRenderPassPerspective);
+					gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &lightPosition  ) );
+					gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    gbufferRenderPass->getCamera()->getViewMatrixPointer() ) );
+
+					DEBUGLOG->log("Adding compositing render pass now");
+					m_renderManager.addRenderPass(gbufferCompositing);
 				DEBUGLOG->outdent();
 
 			DEBUGLOG->outdent();
@@ -578,7 +682,7 @@ public:
 				FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;// change this first
 
 				// create renderpass that generates a textureAtlas for models
-				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, texAtlasResolution, texAtlasResolution, phongPerspectiveRenderPass->getCamera() );
+				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, texAtlasResolution, texAtlasResolution, gbufferRenderPass->getCamera() );
 
 				FramebufferObject::static_internalFormat = internalFormat;	// restore default
 			DEBUGLOG->outdent();
@@ -752,16 +856,28 @@ public:
 		DEBUGLOG->indent();
 
 			// Align Camera with voxelization view
-			phongPerspectiveRenderPass->getCamera()->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 10.0f) );
-			phongPerspectiveRenderPass->getCamera()->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
+			gbufferRenderPass->getCamera()->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 10.0f) );
+			gbufferRenderPass->getCamera()->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
 
-			Shader* 			showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
-			TriangleRenderPass* showSliceMap = new OverlayR32UITextureRenderPass(
+//			Shader* 			showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
+//			TriangleRenderPass* showSliceMap = new OverlayR32UITextureRenderPass(
+//					showSliceMapShader,
+//					0,
+//					m_resourceManager.getScreenFillingTriangle(),
+//					compositingOutput,
+//					voxelGridTexture );
+
+			Shader* showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
+			TriangleRenderPass* showSliceMap = new ProjectSliceMapRenderPass(
 					showSliceMapShader,
 					0,
 					m_resourceManager.getScreenFillingTriangle(),
-					phongPerspectiveRenderPassOutput,
-					voxelGridTexture );
+					compositingOutput,
+					voxelGrid,
+					SliceMap::get32BitUintMask(),
+					gbufferPositionMap,
+					gbufferRenderPass->getCamera()->getViewMatrixPointer()
+					);
 
 			m_renderManager.addRenderPass( showSliceMap );
 
@@ -819,11 +935,11 @@ public:
 //			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
 //			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_M, GLFW_PRESS);
 
-			DEBUGLOG->log("Configuring camera movement           : MOUSE - RIGHT");
-			Camera* movableCam = phongPerspectiveRenderPass->getCamera();
+			DEBUGLOG->log("turn camera                           : MOUSE - RIGHT");
+			Camera* movableCam = gbufferRenderPass->getCamera();
 			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
 
-			DEBUGLOG->log("Configuring Turntable for objects     : MOUSE - LEFT");
+			DEBUGLOG->log("turn objects                          : MOUSE - LEFT");
 			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f );
 			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT);
 

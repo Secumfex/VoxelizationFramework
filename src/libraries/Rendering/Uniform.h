@@ -28,6 +28,11 @@ public:
 		m_name = name;
 	}
 
+	Uniform(const char* name, T* valuePtr) {
+		p_value = valuePtr;
+		m_name = std::string( name );
+	}
+
 	virtual ~Uniform() {
 	}
 

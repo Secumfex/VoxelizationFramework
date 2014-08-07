@@ -28,8 +28,8 @@ void VoxelGridGPU::setUniformCellSizeFromResolutionAndMapping(float width,
 	}
 
 	this->width = width;
-	this->resX = resX;
 	this->height = height;
+	this->resX = resX;
 	this->resY = resY;
 	this->resZ = resZ;
 
@@ -98,9 +98,9 @@ void VoxelGridGPU::setView( glm::mat4 view ) {
 }
 
 void VoxelGridGPU::printInfo() {
-	DEBUGLOG->log("resX     : ", width);
-	DEBUGLOG->log("resY     : ", height);
-	DEBUGLOG->log("resZ     : ", depth);
+	DEBUGLOG->log("resX     : ", resX);
+	DEBUGLOG->log("resY     : ", resY);
+	DEBUGLOG->log("resZ     : ", resZ);
 	DEBUGLOG->log("width    : ", width);
 	DEBUGLOG->log("height   : ", height);
 	DEBUGLOG->log("depth    : ", depth);

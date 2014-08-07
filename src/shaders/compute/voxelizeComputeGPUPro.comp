@@ -240,8 +240,6 @@ void main()
 	vec3 bbMin = min( posV0, min ( posV1, posV2 ) );
 	vec3 bbMax = max( posV0, max ( posV1, posV2 ) );
 	
-	vec3 bbDiag = bbMax - bbMin;
-	
 	// lowest voxel index
 	float xMin = floor ( bbMin.x );
 	float yMin = floor ( bbMin.y );
