@@ -30,6 +30,16 @@ public:
 	void call();
 };
 
+class DebugPrintListener : public Listener
+{
+private:
+	std::string m_message;
+public:
+	DebugPrintListener( std::string message);
+	virtual ~DebugPrintListener();
+	void call();
+};
+
 class DebugPrintDoubleListener : public Listener
 {
 private:

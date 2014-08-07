@@ -34,7 +34,7 @@ public:
 	static int  static_fpsRefreshFrames;
 
 	Application();
-	~Application();
+	virtual ~Application();
 
 	/*Public Methods*/
 	void configure();

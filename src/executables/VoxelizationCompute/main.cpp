@@ -26,7 +26,6 @@
 static bool rotatingBunny = false;
 
 static bool voxelizeRegularActive = true;
-static bool voxelizeTexAtlasActive = false;
 static bool voxelizeActive = true;
 
 static int texAtlasResolution  = 512;
@@ -138,7 +137,7 @@ public:
 		p_computeShader->useProgram();
 
 		// unbind output texture
-		p_voxelGridTexture->unbindFromActiveUnit();
+//		p_voxelGridTexture->unbindFromActiveUnit();
 
 		// upload clear texture index binding
 		glBindImageTexture(0,
@@ -150,16 +149,30 @@ public:
 		GL_R32UI);							// 1 channel 32 bit unsigned int
 
 		// set suitable amount of work groups
-		m_num_groups_x = voxelGridResolution / 32 + 1;
-		m_num_groups_y = voxelGridResolution / 32 + 1;
+		m_num_groups_x = voxelGridResolution / p_computeShader->getLocalGroupSizeX() + 1;
+		m_num_groups_y = voxelGridResolution / p_computeShader->getLocalGroupSizeY() + 1;
 		m_num_groups_z = 1;
+
+//		int totalNumGroups = m_num_groups_x * m_num_groups_y * m_num_groups_z;
+//		if ( totalNumGroups > ShaderInfo::MAX_COMPUTE_WORK_GROUP_INVOCATIONS )
+//		{
+//			DEBUGLOG->log("ERROR : clear grid : max compute work group invocations exceeded!");
+//			DEBUGLOG->log("totalNumGroups: ", totalNumGroups );
+//			DEBUGLOG->log("m_numgroups_x : ", m_num_groups_x);
+//			DEBUGLOG->log("m_numgroups_x : ", m_num_groups_y);
+//			DEBUGLOG->log("m_numgroups_x : ", m_num_groups_z);
+//			m_num_groups_x = 1;
+//			m_num_groups_y = 1;
+//			m_num_groups_z = 1;
+//		}
 
 		// dispatch as usual
 		DispatchComputeShaderListener::call();
 
 		// put memory barriers for future shader program
-		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-		glMemoryBarrier( GL_TEXTURE_FETCH_BARRIER_BIT );
+//		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+//		glMemoryBarrier( GL_TEXTURE_FETCH_BARRIER_BIT );
+		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 	}
 };
 
@@ -258,9 +271,23 @@ public:
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
 
 			// set local group amount suitable for object size:
-			m_num_groups_x = numVertices / 1024 + 1;
+			m_num_groups_x = numVertices / p_computeShader->getLocalGroupSizeX() + 1;
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
+
+//			int totalNumGroups = m_num_groups_x * m_num_groups_y * m_num_groups_z;
+//
+//			if ( totalNumGroups > ShaderInfo::MAX_COMPUTE_WORK_GROUP_INVOCATIONS )
+//			{
+//				DEBUGLOG->log("ERROR : voxelize texatlas : max compute work group invocations exceeded!");
+//				DEBUGLOG->log("totalNumGroups: ", totalNumGroups );
+//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_x);
+//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_y);
+//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_z);
+//				m_num_groups_x = 1;
+//				m_num_groups_y = 1;
+//				m_num_groups_z = 1;
+//			}
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -277,8 +304,9 @@ public:
 		}
 
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
-		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+//		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+//		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 	}
 };
 
@@ -392,9 +420,22 @@ public:
 			p_computeShader->uploadUniform( numFaces, "uniformNumFaces");
 
 			// set local group amount suitable for object size:
-			m_num_groups_x =  numFaces / 1024 + 1;
-			m_num_groups_y = 1;
+			m_num_groups_x = numFaces / p_computeShader->getLocalGroupSizeTotal() + 1;
+			m_num_groups_y = numFaces / p_computeShader->getLocalGroupSizeTotal() + 1;
 			m_num_groups_z = 1;
+
+//			int totalNumGroups = m_num_groups_x * m_num_groups_y * m_num_groups_z;
+//			if ( totalNumGroups  > ShaderInfo::MAX_COMPUTE_WORK_GROUP_COUNT[0] )
+//			{
+//				DEBUGLOG->log("ERROR : regular voxelize : max compute work group invocations exceeded!");
+//				DEBUGLOG->log("totalNumGroups: ", totalNumGroups );
+//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_x);
+//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_y);
+//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_z);
+//				m_num_groups_x = 1;
+//				m_num_groups_y = 1;
+//				m_num_groups_z = 1;
+//			}
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -411,8 +452,9 @@ public:
 		}
 
 		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
-		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+//		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+//		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 	}
 };
 
@@ -825,11 +867,12 @@ public:
 
 			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
 			// voxelize in every frame
-			attach(new ConditionalProxyListener(
-					dispatchClearVoxelGridComputeShader,
-					&voxelizeActive,
-					false),
-				"CLEAR");
+//			attach(new ConditionalProxyListener(
+//					dispatchClearVoxelGridComputeShader,
+//					&voxelizeActive,
+//					false),
+//				"CLEAR");
+
 			attach(new ConditionalProxyListener(
 					new ConditionalProxyListener(
 						dispatchVoxelizeComputeShader,
@@ -838,11 +881,12 @@ public:
 					&voxelizeActive,
 					false),
 				"VOXELIZE");
+
 			attach(new ConditionalProxyListener(
 					new ConditionalProxyListener(
 							dispatchVoxelizeWithTexAtlasComputeShader,
-							&voxelizeTexAtlasActive,
-							false ),
+							&voxelizeRegularActive,
+							true),
 					&voxelizeActive,
 					false),
 				"VOXELIZE");
@@ -897,29 +941,19 @@ public:
 
 			DEBUGLOG->log("Switch active Voxelization Method     : X");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeRegularActive ), GLFW_KEY_X, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeRegularActive, "Voxelize regular  mode     : "), GLFW_KEY_X, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeTexAtlasActive ), GLFW_KEY_X, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeTexAtlasActive,  "Voxelize texatlas mode     : "), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : regular"), &voxelizeRegularActive), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : texAtlas"), &voxelizeRegularActive, true), GLFW_KEY_X, GLFW_PRESS);
 
 			DEBUGLOG->log("Disable/Enable real-time voxelization : Y");
-			// first switch active / inactive
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeActive ), GLFW_KEY_Y, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeActive,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
 
-			// then set enabled or disabled
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new SetValueListener<bool>( &voxelizeRegularActive, false  ), &voxelizeActive, true), GLFW_KEY_Y, GLFW_PRESS ) ;
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new SetValueListener<bool>( &voxelizeTexAtlasActive, false ), &voxelizeActive, true  ), GLFW_KEY_Y, GLFW_PRESS ) ;
-
-			// only enable one of both
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new SetValueListener<bool>( &voxelizeRegularActive, true ), &voxelizeActive, false), GLFW_KEY_Y, GLFW_PRESS ) ;
-
-
 			DEBUGLOG->log("Clear voxel grid on key press         : C");
-			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
-			DEBUGLOG->log("Voxelize scene with model voxelizer   : V");
-			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader, GLFW_KEY_V, GLFW_PRESS);
-			DEBUGLOG->log("Voxelize scene with texatlas voxelizer: B");
-			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader, GLFW_KEY_B, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress(  dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
+
+			DEBUGLOG->log("Voxelize scene with active voxelizer  : V");
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &voxelizeRegularActive ), GLFW_KEY_V, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &voxelizeRegularActive, true ), GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Print compute shader execution times  : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
@@ -949,7 +983,11 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 		DEBUGLOG->outdent();
+
+		DEBUGLOG->log("---------------------------------------------------------");
 	}
+
+
 
 	void programCycle()
 	{

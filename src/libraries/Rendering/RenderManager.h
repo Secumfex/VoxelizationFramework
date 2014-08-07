@@ -15,9 +15,12 @@ public:
 	~RenderManager();
 	void render();
 
-	void addRenderPass(RenderPass* renderPass);
+	int addRenderPass(RenderPass* renderPass);
 
 	std::vector<RenderPass* > getRenderPasses();
+	std::vector<RenderPass* >* getRenderPassesPtr();
+
+	int getRenderPassIndex( RenderPass* renderPass );
 
 	void setActiveWindow(GLFWwindow* window);
 };

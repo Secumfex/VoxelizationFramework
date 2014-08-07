@@ -68,3 +68,14 @@ void ConditionalProxyListener::call() {
 		p_listener->call();
 	}
 }
+
+DebugPrintListener::DebugPrintListener(std::string message) {
+	m_message = message;
+}
+
+DebugPrintListener::~DebugPrintListener() {
+}
+
+void DebugPrintListener::call() {
+	DEBUGLOG->log(m_message);
+}
