@@ -20,6 +20,8 @@
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
 
+#include <Input/InputField.h>
+
 #include "VoxelGridTools.h"
 #include "VoxelizerTools.h"
 
@@ -950,15 +952,18 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
+			DEBUGLOG->log("Hoverable Element                     : upper left corner");
+			InputField* inputField = new InputField(0,0,100,50,&m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
+
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("---------------------------------------------------------");
 
-		std::string* p1 = new std::string( "string c 1" );
-		std::string* p2 = new std::string( "string c 2");
-		std::string* p3 = new std::string( "string c 3");
-		std::string* p4 = new std::string( "string c 4");
-
+//		std::string* p1 = new std::string( "string c 1" );
+//		std::string* p2 = new std::string( "string c 2");
+//		std::string* p3 = new std::string( "string c 3");
+//		std::string* p4 = new std::string( "string c 4");
+//
 //		std::vector < std::string* > candidates;
 //		candidates.push_back(p1);
 //		candidates.push_back(p2);

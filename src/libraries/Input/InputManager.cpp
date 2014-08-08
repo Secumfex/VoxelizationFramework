@@ -90,6 +90,8 @@ void InputManager::cursorPos(GLFWwindow* window, double x, double y)
 
 	m_cursorX = x;
 	m_cursorY = y;
+
+	call("CURSORPOS");
 }
 
 void InputManager::cursorPosCallback(GLFWwindow* window, double x, double y)
@@ -105,6 +107,11 @@ void InputManager::attachListenerOnKeyPress(Listener* listener, int key, int act
 	std::stringstream ss;
 	ss << key << "_KEY_" << action;
 	attach(listener, ss.str() );
+}
+
+void InputManager::attachListenerOnCursorPos(Listener* listener)
+{
+	attach(listener, "CURSORPOS");
 }
 
 void InputManager::attachListenerOnMouseButtonPress(Listener* listener, int button, int action)
