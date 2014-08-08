@@ -137,7 +137,7 @@ public:
 		p_computeShader->useProgram();
 
 		// unbind output texture
-//		p_voxelGridTexture->unbindFromActiveUnit();
+		p_voxelGridTexture->unbindFromActiveUnit();
 
 		// upload clear texture index binding
 		glBindImageTexture(0,
@@ -152,19 +152,6 @@ public:
 		m_num_groups_x = voxelGridResolution / p_computeShader->getLocalGroupSizeX() + 1;
 		m_num_groups_y = voxelGridResolution / p_computeShader->getLocalGroupSizeY() + 1;
 		m_num_groups_z = 1;
-
-//		int totalNumGroups = m_num_groups_x * m_num_groups_y * m_num_groups_z;
-//		if ( totalNumGroups > ShaderInfo::MAX_COMPUTE_WORK_GROUP_INVOCATIONS )
-//		{
-//			DEBUGLOG->log("ERROR : clear grid : max compute work group invocations exceeded!");
-//			DEBUGLOG->log("totalNumGroups: ", totalNumGroups );
-//			DEBUGLOG->log("m_numgroups_x : ", m_num_groups_x);
-//			DEBUGLOG->log("m_numgroups_x : ", m_num_groups_y);
-//			DEBUGLOG->log("m_numgroups_x : ", m_num_groups_z);
-//			m_num_groups_x = 1;
-//			m_num_groups_y = 1;
-//			m_num_groups_z = 1;
-//		}
 
 		// dispatch as usual
 		DispatchComputeShaderListener::call();
@@ -274,20 +261,6 @@ public:
 			m_num_groups_x = numVertices / p_computeShader->getLocalGroupSizeX() + 1;
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
-
-//			int totalNumGroups = m_num_groups_x * m_num_groups_y * m_num_groups_z;
-//
-//			if ( totalNumGroups > ShaderInfo::MAX_COMPUTE_WORK_GROUP_INVOCATIONS )
-//			{
-//				DEBUGLOG->log("ERROR : voxelize texatlas : max compute work group invocations exceeded!");
-//				DEBUGLOG->log("totalNumGroups: ", totalNumGroups );
-//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_x);
-//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_y);
-//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_z);
-//				m_num_groups_x = 1;
-//				m_num_groups_y = 1;
-//				m_num_groups_z = 1;
-//			}
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -421,21 +394,8 @@ public:
 
 			// set local group amount suitable for object size:
 			m_num_groups_x = numFaces / p_computeShader->getLocalGroupSizeTotal() + 1;
-			m_num_groups_y = numFaces / p_computeShader->getLocalGroupSizeTotal() + 1;
+			m_num_groups_y = 1;
 			m_num_groups_z = 1;
-
-//			int totalNumGroups = m_num_groups_x * m_num_groups_y * m_num_groups_z;
-//			if ( totalNumGroups  > ShaderInfo::MAX_COMPUTE_WORK_GROUP_COUNT[0] )
-//			{
-//				DEBUGLOG->log("ERROR : regular voxelize : max compute work group invocations exceeded!");
-//				DEBUGLOG->log("totalNumGroups: ", totalNumGroups );
-//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_x);
-//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_y);
-//				DEBUGLOG->log("m_numgroups_x : ", m_num_groups_z);
-//				m_num_groups_x = 1;
-//				m_num_groups_y = 1;
-//				m_num_groups_z = 1;
-//			}
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -858,6 +818,8 @@ public:
 			dispatchVoxelizeWithTexAtlasComputeShader->setQueryTime(true);
 
 		DEBUGLOG->outdent();
+
+
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
@@ -867,11 +829,11 @@ public:
 
 			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
 			// voxelize in every frame
-//			attach(new ConditionalProxyListener(
-//					dispatchClearVoxelGridComputeShader,
-//					&voxelizeActive,
-//					false),
-//				"CLEAR");
+			attach(new ConditionalProxyListener(
+					dispatchClearVoxelGridComputeShader,
+					&voxelizeActive,
+					false),
+				"CLEAR");
 
 			attach(new ConditionalProxyListener(
 					new ConditionalProxyListener(
@@ -900,20 +862,20 @@ public:
 		DEBUGLOG->indent();
 
 			// Align Camera with voxelization view
-			gbufferRenderPass->getCamera()->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 10.0f) );
+			gbufferRenderPass->getCamera()->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 15.0f) );
 			gbufferRenderPass->getCamera()->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
 
-//			Shader* 			showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
-//			TriangleRenderPass* showSliceMap = new OverlayR32UITextureRenderPass(
-//					showSliceMapShader,
-//					0,
-//					m_resourceManager.getScreenFillingTriangle(),
-//					compositingOutput,
-//					voxelGridTexture );
+			Shader* 			overlaySliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
+			TriangleRenderPass* overlaySliceMap = new OverlayR32UITextureRenderPass(
+					overlaySliceMapShader,
+					0,
+					m_resourceManager.getScreenFillingTriangle(),
+					compositingOutput,
+					voxelGridTexture );
 
-			Shader* showSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
-			TriangleRenderPass* showSliceMap = new ProjectSliceMapRenderPass(
-					showSliceMapShader,
+			Shader* projectSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
+			TriangleRenderPass* projectSliceMap = new ProjectSliceMapRenderPass(
+					projectSliceMapShader,
 					0,
 					m_resourceManager.getScreenFillingTriangle(),
 					compositingOutput,
@@ -923,7 +885,19 @@ public:
 					gbufferRenderPass->getCamera()->getViewMatrixPointer()
 					);
 
-			m_renderManager.addRenderPass( showSliceMap );
+			RenderPass* showSliceMap = projectSliceMap;
+
+			// create listener to switch through display methods
+			int showSliceMapIndex = m_renderManager.addRenderPass( showSliceMap );
+
+			std::vector <RenderPass* > showSliceMapCandidates;
+			showSliceMapCandidates.push_back( overlaySliceMap );
+			showSliceMapCandidates.push_back( projectSliceMap );
+
+			SwitchThroughValuesListener< RenderPass* >* switchShowSliceMaps = new SwitchThroughValuesListener<RenderPass*>(
+							&( *m_renderManager.getRenderPassesPtr())[showSliceMapIndex],
+							showSliceMapCandidates
+							);
 
 		DEBUGLOG->outdent();
 		/**************************************************************************************
@@ -933,20 +907,16 @@ public:
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->log("---------------------------------------------------------");
 		DEBUGLOG->indent();
+			DEBUGLOG->log("Disable/Enable real-time voxelization : Y");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeActive ), GLFW_KEY_Y, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeActive,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
 
-//			DEBUGLOG->log("Clear and voxelize scene on key press : V");
-//			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader, GLFW_KEY_V, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &voxelizeRegularActive, false), GLFW_KEY_V, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &voxelizeTexAtlasActive, false), GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Switch active Voxelization Method     : X");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeRegularActive ), GLFW_KEY_X, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : regular"), &voxelizeRegularActive), GLFW_KEY_X, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : texAtlas"), &voxelizeRegularActive, true), GLFW_KEY_X, GLFW_PRESS);
 
-			DEBUGLOG->log("Disable/Enable real-time voxelization : Y");
-			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeActive ), GLFW_KEY_Y, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeActive,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
 
 			DEBUGLOG->log("Clear voxel grid on key press         : C");
 			m_inputManager.attachListenerOnKeyPress(  dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
@@ -955,25 +925,22 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &voxelizeRegularActive ), GLFW_KEY_V, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &voxelizeRegularActive, true ), GLFW_KEY_V, GLFW_PRESS);
 
+			DEBUGLOG->log("Switch voxel grid display             : B");
+			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
+
+			DEBUGLOG->log("Reset scenegraph                      : R");
+			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState(scene->getSceneGraph()),GLFW_KEY_R, GLFW_PRESS);
+
 			DEBUGLOG->log("Print compute shader execution times  : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader->getPrintExecutionTimeListener(				"Voxelize Models       "), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader->getPrintExecutionTimeListener(	"Voxelize Texture Atlas"), GLFW_KEY_T, GLFW_PRESS);
 
-//			DEBUGLOG->log("Increase / decrease clear color       : N / M  ");
-//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_N, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_N, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_N, GLFW_PRESS);
-//
-//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "Before: "), GLFW_KEY_M, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec4> ( &voxelGridClearColor, glm::vec4(-10.0f, 0.0f, 0.0f, 0.0f) ), GLFW_KEY_M, GLFW_PRESS);
-//			m_inputManager.attachListenerOnKeyPress( new DebugPrintVec4Listener (&voxelGridClearColor, "After : "), GLFW_KEY_M, GLFW_PRESS);
-
-			DEBUGLOG->log("turn camera                           : MOUSE - RIGHT");
+			DEBUGLOG->log("Turn camera                           : MOUSE - RIGHT");
 			Camera* movableCam = gbufferRenderPass->getCamera();
 			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
 
-			DEBUGLOG->log("turn objects                          : MOUSE - LEFT");
+			DEBUGLOG->log("Turn objects                          : MOUSE - LEFT");
 			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f );
 			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT);
 
@@ -982,9 +949,60 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
+
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("---------------------------------------------------------");
+
+		std::string* p1 = new std::string( "string c 1" );
+		std::string* p2 = new std::string( "string c 2");
+		std::string* p3 = new std::string( "string c 3");
+		std::string* p4 = new std::string( "string c 4");
+
+//		std::vector < std::string* > candidates;
+//		candidates.push_back(p1);
+//		candidates.push_back(p2);
+//		candidates.push_back(p3);
+//		candidates.push_back(p4);
+//
+//		std::vector < std::string* > realList;
+//		realList.push_back( new string( "string 0") );
+//		realList.push_back( new string( "string 1") );
+//		realList.push_back( new string( "string 2") );
+//
+//		SwitchThroughValuesListener< std::string* > switcher( &realList[1], candidates );
+//
+//		for ( unsigned int i = 0; i < realList.size(); i++)
+//		{
+//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
+//		}
+//
+//		switcher.call();
+//
+//		for ( unsigned int i = 0; i < realList.size(); i++)
+//		{
+//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
+//		}
+//
+//		switcher.call();
+//
+//		for ( unsigned int i = 0; i < realList.size(); i++)
+//		{
+//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
+//		}
+//		switcher.call();
+//
+//		for ( unsigned int i = 0; i < realList.size(); i++)
+//		{
+//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
+//		}
+//		switcher.call();
+//
+//		for ( unsigned int i = 0; i < realList.size(); i++)
+//		{
+//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
+//		}
+
 	}
 
 

@@ -145,12 +145,12 @@ template < class T >
 class SwitchThroughValuesListener : public Listener
 {
 private:
-	T** p_value;
-	std::vector < T* > m_candidates;
+	T* p_value;
+	std::vector < T > m_candidates;
 	unsigned int m_activeCandidate;
 public:
-	SwitchThroughValuesListener(T** valuePtr,
-			std::vector< T* > candidates) {
+	SwitchThroughValuesListener(T* valuePtr,
+			std::vector< T > candidates) {
 		m_candidates = candidates;
 		m_activeCandidate = 0;
 		p_value = valuePtr;
@@ -163,16 +163,14 @@ public:
 			return;
 		}
 
-		if ( m_activeCandidate < m_candidates.size() -1 )
-		{
-			m_activeCandidate++;
-		}
-		else
+		m_activeCandidate++;
+
+		if ( m_activeCandidate > m_candidates.size() -1 )
 		{
 			m_activeCandidate = 0;
 		}
 
-		**p_value = *m_candidates[ m_activeCandidate ];
+		*p_value = m_candidates[ m_activeCandidate ];
 	}
 };
 
