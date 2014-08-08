@@ -127,9 +127,9 @@ void SimpleScene::configureSimpleCameraMovement(Camera* movableCam,
 	}
 }
 
-Turntable* SimpleScene::configureTurnTable(Node* node, Application* app, float sensitivity, int key)
+Turntable* SimpleScene::configureTurnTable(Node* node, Application* app, float sensitivity, int key, Camera* cam)
 {
-	Turntable* turntable = new Turntable( node, &(app->getInputManager() ));
+	Turntable* turntable = new Turntable( node, &(app->getInputManager() ), cam);
 	turntable->setSensitivity(sensitivity);
 
 	app->getInputManager().attachListenerOnMouseButtonPress(new Turntable::ToggleTurntableDragListener(turntable), key, GLFW_PRESS);

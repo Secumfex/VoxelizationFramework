@@ -31,7 +31,7 @@ static bool voxelizeActive = true;
 static int texAtlasResolution  = 512;
 static int voxelGridResolution = 32;
 
-static glm::vec3 lightPosition = glm::vec3(0.0f, 0.0f, 2.5f);
+static glm::vec3 lightPosition = glm::vec3(3.0f, 3.0f, 3.0f);
 static bool enableBackfaceCulling = true;
 static bool orthoCam = true;
 
@@ -941,8 +941,8 @@ public:
 			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
 
 			DEBUGLOG->log("Turn objects                          : MOUSE - LEFT");
-			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f );
-			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT);
+			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT, gbufferRenderPass->getCamera() );
+			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT, gbufferRenderPass->getCamera());
 
 			DEBUGLOG->log("Configuring light movement            : Arrow keys");
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );

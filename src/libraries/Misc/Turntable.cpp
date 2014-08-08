@@ -1,8 +1,9 @@
 #include "Turntable.h"
 
-Turntable::Turntable(Node* node, InputManager* inputManager)
+Turntable::Turntable(Node* node, InputManager* inputManager, Camera* camera)
 {
 	p_node = node;
+	p_cam = camera;
 	p_inputManager = inputManager;
 	m_dragActive = false;
 	m_sensitivity = 0.01f;
@@ -48,8 +49,19 @@ void Turntable::setInputManager(InputManager* inputManager)
 
 void Turntable::dragBy(float phi, float theta)
 {
-	p_node->rotate( phi   * m_sensitivity ,glm::vec3(0.0f,1.0f,0.0f) );
-	p_node->rotate( theta * m_sensitivity ,glm::vec3(1.0f,0.0f,0.0f) );
+	// first: rotate "turn vector" as proposed by view matrix
+	glm::mat4 transformMatrix = glm::mat4(1.0f);
+	if ( p_cam )
+	{
+			 transformMatrix = glm::inverse( p_cam->getViewMatrix() );
+			 transformMatrix = glm::inverse( p_cam->getViewMatrix() );
+	}
+
+	glm::vec3 yRotation = glm::vec3 ( transformMatrix * glm::vec4 ( 0.0, 1.0, 0.0, 0.0) );
+	glm::vec3 xRotation = glm::vec3 ( transformMatrix * glm::vec4 ( 1.0, 0.0, 0.0, 0.0) );
+
+	p_node->rotate( phi   * m_sensitivity , yRotation );
+	p_node->rotate( theta * m_sensitivity , xRotation );
 }
 
 Turntable::ToggleTurntableDragListener::ToggleTurntableDragListener(Turntable* turntable)
