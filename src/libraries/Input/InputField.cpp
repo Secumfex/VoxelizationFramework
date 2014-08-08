@@ -84,11 +84,12 @@ void InputFieldHoveredListener::call() {
 			p_inputField->setHovered(true);
 			p_inputField->hover();
 		}
+		else
+		{
+			p_inputField->setHovered(false);
+		}
 	}
-	else
-	{
-		p_inputField->setHovered(false);
-	}
+
 }
 
 InputFieldPressedListener::InputFieldPressedListener(InputField* inputField,
@@ -98,14 +99,17 @@ InputFieldPressedListener::InputFieldPressedListener(InputField* inputField,
 }
 
 void InputFieldPressedListener::call() {
-	if ( p_inputField->isHovered() )
+	if ( p_inputField )
 	{
-		p_inputField->setPressed(true);
-		p_inputField->press();
-	}
-	else
-	{
-		p_inputField->setPressed(false);
+		if ( p_inputField->isHovered() )
+		{
+			p_inputField->setPressed( true );
+			p_inputField->press();
+		}
+		else
+		{
+			p_inputField->setPressed( false );
+		}
 	}
 }
 
@@ -116,10 +120,13 @@ InputFieldReleasedListener::InputFieldReleasedListener(InputField* inputField,
 }
 
 void InputFieldReleasedListener::call() {
-	if ( p_inputField->isPressed()() )
+	if ( p_inputField )
 	{
-		p_inputField->release();
-		p_inputField->setPressed(false);
+		if ( p_inputField->isPressed() )
+		{
+			p_inputField->release();
+			p_inputField->setPressed(false);
+		}
 	}
 }
 
@@ -129,6 +136,18 @@ bool InputField::isHovered() const {
 
 bool InputField::isPressed() const {
 	return m_pressed;
+}
+
+void InputField::attachListenerOnHover(Listener* listener) {
+	attach(listener, "HOVER");
+}
+
+void InputField::attachListenerOnPress(Listener* listener) {
+	attach(listener, "PRESS");
+}
+
+void InputField::attachListenerOnRelease(Listener* listener) {
+	attach(listener, "RELEASE");
 }
 
 void InputField::setPressed(bool pressed) {

@@ -5,6 +5,8 @@ in vec2 passUV;
 uniform sampler2D uniformBaseTexture;
 uniform uint uniformMaxUINT;
 
+uniform float uniformBackgroundTransparency;
+
 layout( r32ui, binding = 1 ) uniform uimage2D uniformSliceMapTexture;
 
 out vec4 fragmentColor;
@@ -26,7 +28,7 @@ void main() {
 	float a = float ( ( byte & 0x000000FF ) >> 0u  ) / 255.0;
 	
 	// base color
-	vec4 baseTex = texture(uniformBaseTexture, passUV);
+	vec4 baseTex = texture(uniformBaseTexture, passUV) * ( 1.0 - min( 1.0, max( 0.0, uniformBackgroundTransparency ) ) );
 	
 	// alpha is distributed among r,g,b channels --> white
 	vec4 sliceAdd = vec4( r + a , g + a, b + a, 1.0);

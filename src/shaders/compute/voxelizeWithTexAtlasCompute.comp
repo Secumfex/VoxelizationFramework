@@ -22,8 +22,8 @@ layout( r32ui, binding = 2 ) uniform readonly uimage1D bitmaskTexture;
 // texture atlas containing world positions
 uniform sampler2D uniformTextureAtlas;
 
-uniform mat4 uniformVoxelizeView;
-uniform mat4 uniformVoxelizeProjection;
+// matrix from world position to voxel grid coordinates
+uniform mat4 uniformWorldToVoxel;
 
 uniform int uniformNumVertices;
 
@@ -43,17 +43,17 @@ void main()
 	// retrieve world position from texture atlas
 	vec4 pos = texture( uniformTextureAtlas, vec2( vertex.x, vertex.y ) );
 	
-	// compute grid position
-	vec4 perspGridPos = uniformVoxelizeProjection * uniformVoxelizeView * pos;
-	
-	// divide by homo coordinate
-	vec3 gridPos = perspGridPos.xyz / perspGridPos.w;
-	
-	// bring into [0,1] in every direction
-	gridPos.xyz = gridPos.xyz * 0.5 + 0.5;
+	// position in grid coordinates
+	vec3 gridPos = ( uniformWorldToVoxel * pos ).xyz;
 	
 	// retrieve depth component
-	int depth = int( gridPos.z * 31.0 );
+	int depth = int( gridPos.z );
+	
+	// abort if too far away
+	if ( depth >= 32 || depth < 0 )
+	{
+		return;
+	}
 	
 	// compute BYTE-value from depth value of grid position
 	uvec4 bitMask = imageLoad( bitmaskTexture, depth );			
@@ -61,8 +61,8 @@ void main()
 		
 	// retrieve x / y coordinates
 	ivec2 gridSize = imageSize( voxel_grid_texture );
-	int x = int( float( gridSize.x ) * gridPos.x );
-	int y = int( float( gridSize.y ) * gridPos.y );
+	int x = int( gridPos.x );
+	int y = int( gridPos.y );
 	ivec2 writeTo  = ivec2( x, y );
 	
 	// OR with byte currently written in voxel grid texture

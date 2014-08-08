@@ -2,6 +2,7 @@
 #define UTILITYLISTENERS_H
 
 #include <string>
+#include <sstream>
 #include <vector>
 #include "SubjectListenerPattern.h"
 
@@ -72,6 +73,26 @@ public:
 	DebugPrintVec4Listener( glm::vec4* vectorPtr, std::string message);
 	virtual ~DebugPrintVec4Listener();
 	void call();
+};
+
+template < class T >
+class DebugPrintValueListener : public Listener
+{
+private:
+	T* p_value;
+	std::string m_message;
+public:
+	DebugPrintValueListener( T* valuePtr, std::string message)
+	{
+		p_value = valuePtr;
+		m_message = message;
+	}
+	virtual ~DebugPrintValueListener(){};
+	void call(){
+		std::stringstream ss;
+		ss<< *p_value;
+		DEBUGLOG->log(m_message + ss.str() );
+	}
 };
 
 template < class T >

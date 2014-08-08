@@ -31,11 +31,14 @@ static bool voxelizeRegularActive = true;
 static bool voxelizeActive = true;
 
 static int texAtlasResolution  = 512;
-static int voxelGridResolution = 32;
+static int voxelGridResolution = 64;
+static float voxelGridWidth = 7.5;
+static float voxelGridHeight = 7.5;
 
 static glm::vec3 lightPosition = glm::vec3(3.0f, 3.0f, 3.0f);
 static bool enableBackfaceCulling = true;
 static bool orthoCam = true;
+static float backgroundTransparency = 0.25;
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -84,8 +87,9 @@ public:
 		addUniformTexture(baseTexture, "uniformBaseTexture");
 		addUniformTexture(positionMap, "uniformPositionMap");
 
-		addUniform( new Uniform< glm::mat4 >("uniformProjectorView", &( voxelGrid->view ) ) );
-		addUniform( new Uniform< glm::mat4 >("uniformProjectorPerspective", &( voxelGrid->perspective ) ) );
+//		addUniform( new Uniform< glm::mat4 >("uniformProjectorView", &( voxelGrid->view ) ) );
+//		addUniform( new Uniform< glm::mat4 >("uniformProjectorPerspective", &( voxelGrid->perspective ) ) );
+		addUniform( new Uniform< glm::mat4 >("uniformWorldToVoxel", &( voxelGrid->worldToVoxel ) ) );
 		addUniform( new Uniform< glm::mat4 >("uniformView", viewMatrix ) );
 
 //		addEnable(GL_BLEND);
@@ -155,12 +159,14 @@ public:
 		m_num_groups_y = voxelGridResolution / p_computeShader->getLocalGroupSizeY() + 1;
 		m_num_groups_z = 1;
 
+		// put memory barriers for this shader program
+		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+		glMemoryBarrier( GL_TEXTURE_FETCH_BARRIER_BIT );
+
 		// dispatch as usual
 		DispatchComputeShaderListener::call();
 
-		// put memory barriers for future shader program
-//		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-//		glMemoryBarrier( GL_TEXTURE_FETCH_BARRIER_BIT );
+		// put barrier
 		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 	}
 };
@@ -174,18 +180,14 @@ protected:
 
 	std::vector<std::pair<Object*, TexAtlas::TextureAtlas* > > m_objects;
 
-	glm::mat4 m_voxelizeView;
-	glm::mat4 m_voxelizeProjection;
-	Texture* p_voxelGridTexture;
+	VoxelGridGPU* p_voxelGrid;
 	Texture* p_bitMask;
 public:
-	DispatchVoxelizeWithTexAtlasComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, TexAtlas::TextureAtlas*> > objects, glm::mat4 voxelizeView, glm::mat4 voxelizeProjection, Texture* voxelGridTexture, Texture* bitMask, int x= 0, int y= 0, int z = 0 )
+	DispatchVoxelizeWithTexAtlasComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, TexAtlas::TextureAtlas*> > objects, VoxelGridGPU* voxelGrid, Texture* bitMask, int x= 0, int y= 0, int z = 0 )
 	: DispatchComputeShaderListener(computeShader, x,y,z)
 	{
 		m_objects = objects;
-		m_voxelizeView = voxelizeView;
-		m_voxelizeProjection = voxelizeProjection;
-		p_voxelGridTexture = voxelGridTexture;
+		p_voxelGrid = voxelGrid;
 		p_bitMask = bitMask;
 	}
 
@@ -195,11 +197,11 @@ public:
 		p_computeShader->useProgram();
 
 		// unbind output texture
-		p_voxelGridTexture->unbindFromActiveUnit();
+		p_voxelGrid->texture->unbindFromActiveUnit();
 
 		// upload output texture
 		glBindImageTexture(1,
-		p_voxelGridTexture->getTextureHandle(),
+		p_voxelGrid->texture->getTextureHandle(),
 		0,
 		GL_FALSE,
 		0,
@@ -252,9 +254,8 @@ public:
 				}
 			}
 
-			// upload uniform voxel grid matrices
-			p_computeShader->uploadUniform( m_voxelizeView, "uniformVoxelizeView");
-			p_computeShader->uploadUniform( m_voxelizeProjection, "uniformVoxelizeProjection");
+			// upload uniform voxel grid matrix
+			p_computeShader->uploadUniform( p_voxelGrid->worldToVoxel, "uniformWorldToVoxel" );
 
 			// upload uniform vertices amount
 			p_computeShader->uploadUniform( numVertices, "uniformNumVertices");
@@ -263,6 +264,10 @@ public:
 			m_num_groups_x = numVertices / p_computeShader->getLocalGroupSizeX() + 1;
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
+
+			// put barriers
+			glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+			glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -278,9 +283,7 @@ public:
 			m_executionTime = totalExecutionTime;
 		}
 
-		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
-//		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-//		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+		// put barrier
 		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 	}
 };
@@ -384,9 +387,6 @@ public:
 			p_computeShader->uploadUniform( modelMatrix, "uniformModel");
 
 			// upload voxel grid info
-			p_computeShader->uploadUniform( m_voxelizeView, "uniformVoxelizeView");
-			p_computeShader->uploadUniform( m_voxelizeProjection, "uniformVoxelizeProjection");
-			p_computeShader->uploadUniform( p_voxelGrid->cellSize, "uniformCellSize");
 			p_computeShader->uploadUniform( p_voxelGrid->worldToVoxel, "uniformWorldToVoxel");
 
 			// upload geometric info
@@ -395,9 +395,13 @@ public:
 			p_computeShader->uploadUniform( numFaces, "uniformNumFaces");
 
 			// set local group amount suitable for object size:
-			m_num_groups_x = numFaces / p_computeShader->getLocalGroupSizeTotal() + 1;
+			m_num_groups_x = numFaces / p_computeShader->getLocalGroupSizeX() + 1;
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
+
+			// put barriers for this dispatch
+			glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );  // to make sure grid is ready
+			glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );		// shader storage should be ready
 
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
@@ -413,9 +417,7 @@ public:
 			m_executionTime = totalExecutionTime;
 		}
 
-		// since models can be voxelized concurrently, put memory barrier after voxelization of all objects instead of inbetween
-//		glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
-//		glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT );
+		// put barrier
 		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 	}
 };
@@ -623,7 +625,7 @@ public:
 		DEBUGLOG->indent();
 			VoxelGridGPU* voxelGrid = new VoxelGridGPU();
 
-			voxelGrid->setUniformCellSizeFromResolutionAndMapping(10.0f,10.0f,voxelGridResolution, voxelGridResolution, 32);
+			voxelGrid->setUniformCellSizeFromResolutionAndMapping(voxelGridWidth,voxelGridHeight, voxelGridResolution, voxelGridResolution, 32);
 
 			DEBUGLOG->log("Creating voxel grid texture");
 			// generate Texture
@@ -806,9 +808,10 @@ public:
 			DispatchVoxelizeWithTexAtlasComputeShader* dispatchVoxelizeWithTexAtlasComputeShader = new DispatchVoxelizeWithTexAtlasComputeShader(
 					voxelizeWithTexAtlasComputeShader,
 					texAtlasObjects,
-					voxelGrid->view,
-					voxelGrid->perspective,
-					voxelGridTexture,
+//					voxelGrid->view,
+//					voxelGrid->perspective,
+//					voxelGridTexture,
+					voxelGrid,
 					SliceMap::get32BitUintMask()
 					);
 
@@ -874,6 +877,7 @@ public:
 					m_resourceManager.getScreenFillingTriangle(),
 					compositingOutput,
 					voxelGridTexture );
+			overlaySliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &backgroundTransparency) );
 
 			Shader* projectSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
 			TriangleRenderPass* projectSliceMap = new ProjectSliceMapRenderPass(
@@ -886,6 +890,9 @@ public:
 					gbufferPositionMap,
 					gbufferRenderPass->getCamera()->getViewMatrixPointer()
 					);
+			projectSliceMap->addClearBit( GL_COLOR_BUFFER_BIT );
+			projectSliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &backgroundTransparency) );
+
 
 			RenderPass* showSliceMap = projectSliceMap;
 
@@ -893,8 +900,8 @@ public:
 			int showSliceMapIndex = m_renderManager.addRenderPass( showSliceMap );
 
 			std::vector <RenderPass* > showSliceMapCandidates;
-			showSliceMapCandidates.push_back( overlaySliceMap );
 			showSliceMapCandidates.push_back( projectSliceMap );
+			showSliceMapCandidates.push_back( overlaySliceMap );
 
 			SwitchThroughValuesListener< RenderPass* >* switchShowSliceMaps = new SwitchThroughValuesListener<RenderPass*>(
 							&( *m_renderManager.getRenderPassesPtr())[showSliceMapIndex],
@@ -952,8 +959,13 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
-			DEBUGLOG->log("Hoverable Element                     : upper left corner");
-			InputField* inputField = new InputField(0,0,100,50,&m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
+			DEBUGLOG->log("In- /Decrease background transparency : upper / lower left corner");
+			InputField* inputFieldIncTransparency = new InputField(0,  0, 100, 256, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
+			InputField* inputFieldDecTransparency = new InputField(0,256, 100, 256, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
+			inputFieldIncTransparency->attachListenerOnPress( new IncrementValueListener<float>( &backgroundTransparency, 0.1f ) );
+			inputFieldIncTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &backgroundTransparency, "background transparency : "));
+			inputFieldDecTransparency->attachListenerOnPress( new DecrementValueListener<float>( &backgroundTransparency, 0.1f ) );
+			inputFieldDecTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &backgroundTransparency, "background transparency : "));
 
 		DEBUGLOG->outdent();
 

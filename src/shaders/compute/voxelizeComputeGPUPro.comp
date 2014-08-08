@@ -23,17 +23,11 @@ layout( r32ui, binding = 0 ) uniform uimage2D voxel_grid_texture;
 layout( r32ui, binding = 1 ) uniform readonly uimage1D bitmaskTexture;
 
 // uniforms
+// model 
 uniform mat4 uniformModel;
 
-uniform mat4 uniformVoxelizeView;
-uniform mat4 uniformVoxelizeProjection;
+// voxel grid space
 uniform mat4 uniformWorldToVoxel;
-
-uniform int uniformNumVertices;
-uniform int uniformNumIndices;
-uniform int uniformNumFaces;
-
-uniform float uniformCellSize;
 
 // true if boundingbox defined bbox and bbox + (1,1,1) overlaps plane defined by support point and normal
 bool overlapsPlane( vec3 bbox, vec3 support, vec3 normal )

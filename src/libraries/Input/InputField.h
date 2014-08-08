@@ -26,6 +26,10 @@ public:
 
 	void createMouseListeners( InputManager* inputManager, int button );
 
+	void attachListenerOnHover( Listener* listener);
+	void attachListenerOnPress( Listener* listener);
+	void attachListenerOnRelease( Listener* listener);
+
 	int getHeight() const;
 	void setHeight(int height);
 	int getWidth() const;

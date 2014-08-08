@@ -160,6 +160,9 @@ namespace AssimpTools
 			DEBUGLOG->log("Buffered indices        : " , indices.size());
 			DEBUGLOG->log("Bytes per entry (uint)  : " ,  sizeof( GLuint ) );
 
+			DEBUGLOG->log("Buffered faces          : " , mesh->mNumFaces);
+			DEBUGLOG->log("Bytes per entry (    )  : " ,  sizeof(aiFace) );
+
 			model->setIndexBufferHandle( buffer );
 
 			// generate vertex position buffer
