@@ -1,6 +1,8 @@
 #include "Rendering/Shader.h"
 
+#include "Rendering/RenderState.h"
 #include "Utility/DebugLog.h"
+
 Shader::Shader()
 {
 	m_programHandle = 0;
@@ -57,7 +59,11 @@ void Shader::setProgramHandle(GLuint handle)
 
 void Shader::useProgram()
 {
-	glUseProgram(m_programHandle);
+	if ( RenderState::getInstance()->activeStateDiffers(GL_CURRENT_PROGRAM, m_programHandle) )
+	{
+		glUseProgram(m_programHandle);
+		RenderState::getInstance()->m_boundVariables[GL_CURRENT_PROGRAM] = m_programHandle;
+	}
 }
 
 bool Shader :: hasUniform(std::string uniformName){

@@ -32,6 +32,10 @@ Application::Application()
 	if(!window){
 		DEBUGLOG->log ("ERROR : GLFW Window failed to initialize");
 	}
+
+	DEBUGLOG->log("Enabling Vertical Sync");
+	glfwSwapInterval(1);
+
 	DEBUGLOG->log("Initializing GLEW libraries");
 
 	glewInit();

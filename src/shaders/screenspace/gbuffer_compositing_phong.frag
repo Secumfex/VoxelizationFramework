@@ -38,4 +38,5 @@ void main(){
 			( diffuseStrength  * attenuationStrength ) * gbufferColor 
 			+ ambientStrength  * gbufferColor
 			+ specularStrength * vec4( 1.0, 1.0, 1.0, 1.0 );
+	fragment_color.a = 1.0;
 }
