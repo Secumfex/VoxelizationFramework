@@ -22,6 +22,7 @@ protected:
 
 	Renderable* m_screenFillingTriangle;
 	Object* m_cube;
+	Object* m_quad;
 public:
 	ResourceManager();
 	~ResourceManager();
@@ -41,6 +42,7 @@ public:
 	const std::vector<std::vector <unsigned int> >& getAssimpMeshFacesForModel(Model* model);
 
 	Renderable* getScreenFillingTriangle();
+	Object* getQuad();
 	Object* getCube();
 
 	void deleteAll();

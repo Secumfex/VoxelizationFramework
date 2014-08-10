@@ -300,6 +300,77 @@ Renderable* ResourceManager::getScreenFillingTriangle(){
 }
 
 /**
+ * get a quad with side length = 1.0
+ */
+Object* ResourceManager::getQuad() {
+	if ( m_quad == 0)
+	{
+		Model *quad = new Model();
+		Material *mat = new Material();
+
+		GLuint quadVertexArrayHandle;
+
+		glGenVertexArrays( 1, &quadVertexArrayHandle );
+		glBindVertexArray( quadVertexArrayHandle );
+
+		GLuint indexBufferHandle;
+		glGenBuffers(1, &indexBufferHandle);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferHandle);
+
+		GLint indices[] = { 0, 1, 2, 2, 3, 0 };
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof( indices ) , indices,
+				GL_STATIC_DRAW);
+
+		GLuint vertexBufferHandle;
+		glGenBuffers(1, &vertexBufferHandle);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferHandle);
+
+		GLfloat vertices[] = {
+				-0.5f, -0.5f, 0.0f,	    //0
+				-0.5f, 0.5f, 0.0f,		//1
+				0.5f, 0.5f, 0.0f,		//2
+				0.5f, -0.5f, 0.0f,		//3
+				};
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof( vertices ), vertices,
+				GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray( 0 );
+		glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, 0 );
+
+		GLuint uvBufferHandle;
+		glGenBuffers(1, &uvBufferHandle);
+		glBindBuffer(GL_ARRAY_BUFFER, uvBufferHandle);
+
+		GLfloat uvCoords[] = {
+				0.0f, 0.0f,	      //0
+				0.0f, 1.0f,	      //1
+				1.0f, 1.0f,	      //2
+				1.0f, 0.0f,       //3
+				};
+
+		glBufferData(GL_ARRAY_BUFFER, sizeof( uvCoords ), uvCoords,
+				GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray( 1 );
+		glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, 0, 0 );
+
+		quad->setVertexBufferHandle(vertexBufferHandle);
+		quad->setIndexBufferHandle(indexBufferHandle);
+		quad->setVAOHandle(quadVertexArrayHandle);
+		quad->setNumIndices(sizeof( indices ) / sizeof( GLint ));
+		quad->setNumVertices(sizeof( vertices )/ sizeof( GLfloat ));
+		quad->setNumFaces(2);
+
+		Object* quadObject = new Object(quad, mat);
+		quadObject->setRenderMode( GL_TRIANGLES );
+		m_quad = quadObject;
+
+	}
+	return m_quad;
+}
+
+/**
  *	get a cube with side length = 1.0
  */
 Object* ResourceManager::getCube(){
@@ -356,8 +427,8 @@ Object* ResourceManager::getCube(){
 		cube->setVertexBufferHandle( vertexBufferHandle );
 		cube->setIndexBufferHandle( indexBufferHandle );
 		cube->setVAOHandle(cubeVertexArrayHandle);
-		cube->setNumIndices(sizeof(indices));
-		cube->setNumVertices(sizeof(vertices));
+		cube->setNumIndices(sizeof(indices) / sizeof( GLint ) );
+		cube->setNumVertices(sizeof(vertices ) / sizeof( GLfloat ) );
 		cube->setNumFaces(6);
 
 		Object* cubeObject  = new Object(cube,mat);

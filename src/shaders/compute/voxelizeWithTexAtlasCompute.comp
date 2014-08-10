@@ -13,11 +13,11 @@ layout (local_size_x = 1024) in;
 // vertex buffer access
 layout( std140, binding = 0 ) buffer destBuffer { Vert v[ ]; } vertices;
 
-// voxel grid texture ( format MUST be signle channel unsigned integer to make atomic operations work )
-layout( r32ui, binding = 1 ) uniform uimage2D voxel_grid_texture;
+// voxel grid texture ( format MUST be single channel unsigned integer to make atomic operations work )
+layout( r32ui, binding = 0 ) uniform uimage2D voxel_grid_texture;
 
 // bit mask
-layout( r32ui, binding = 2 ) uniform readonly uimage1D bitmaskTexture;
+layout( r32ui, binding = 1 ) uniform readonly uimage1D bitmaskTexture;
 
 // texture atlas containing world positions
 uniform sampler2D uniformTextureAtlas;
