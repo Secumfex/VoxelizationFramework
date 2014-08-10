@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <windows.h>
+
 #include <Rendering/Shader.h>
 #include <Rendering/ShaderInfo.h>
 #include <Rendering/FramebufferObject.h>
@@ -61,7 +63,7 @@ public:
 		TriangleRenderPass::uploadUniforms();
 
 		// upload texture
-		glBindImageTexture(1,
+		glBindImageTexture(0,
 		p_texture->getTextureHandle(),
 		0,
 		GL_FALSE,
@@ -69,6 +71,16 @@ public:
 		GL_READ_ONLY,
 		GL_R32UI
 		);
+	}
+
+	virtual void postRender()
+	{
+		TriangleRenderPass::postRender();
+		//unbind texture
+		glBindImageTexture(0, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_ONLY,
+		GL_R32UI);
 	}
 };
 
@@ -87,12 +99,9 @@ public:
 		addUniformTexture(baseTexture, "uniformBaseTexture");
 		addUniformTexture(positionMap, "uniformPositionMap");
 
-//		addUniform( new Uniform< glm::mat4 >("uniformProjectorView", &( voxelGrid->view ) ) );
-//		addUniform( new Uniform< glm::mat4 >("uniformProjectorPerspective", &( voxelGrid->perspective ) ) );
 		addUniform( new Uniform< glm::mat4 >("uniformWorldToVoxel", &( voxelGrid->worldToVoxel ) ) );
 		addUniform( new Uniform< glm::mat4 >("uniformView", viewMatrix ) );
 
-//		addEnable(GL_BLEND);
 		p_voxelGrid = voxelGrid;
 		p_bitMask = bitMask;
 	}
@@ -103,7 +112,7 @@ public:
 
 		// upload texture
 		glBindImageTexture(0,
-		p_voxelGrid->texture->getTextureHandle(),
+		p_voxelGrid->handle,
 		0,
 		GL_FALSE,
 		0,
@@ -122,6 +131,22 @@ public:
 		);
 
 	}
+
+	virtual void postRender()
+	{
+		TriangleRenderPass::postRender();
+
+		// unbind textures
+		glBindImageTexture(0, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_ONLY,
+		GL_R32UI);
+
+		glBindImageTexture(1, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_ONLY,
+		GL_R32UI);
+	}
 };
 
 
@@ -131,28 +156,41 @@ public:
 class DispatchClearVoxelGridComputeShader : public DispatchComputeShaderListener
 {
 protected:
-	Texture* p_voxelGridTexture;
+	VoxelGridGPU* p_voxelGrid;
 public:
-	DispatchClearVoxelGridComputeShader(ComputeShader* computeShader, Texture* voxelGridTexture, int x = 0, int y = 0, int z = 0 )
+	DispatchClearVoxelGridComputeShader(ComputeShader* computeShader, VoxelGridGPU* voxelGrid, int x = 0, int y = 0, int z = 0 )
 	: DispatchComputeShaderListener(computeShader, x, y, z)
 {
-		p_voxelGridTexture = voxelGridTexture;
+		p_voxelGrid = voxelGrid;
 }
 	void call()
 	{
-		p_computeShader->useProgram();
+		// only thing that works
+//		glBindTexture(GL_TEXTURE_2D, p_voxelGrid->handle);
+//
+//		std::vector < GLuint > emptyData( voxelGridResolution * voxelGridResolution , 0);
+//		glTexSubImage2D(
+//				GL_TEXTURE_2D,	// target
+//				0,				// level
+//				0,				// xOffset
+//				0,				// yOffset
+//				voxelGridResolution, // width
+//				voxelGridResolution, // height
+//				GL_RED,			// format
+//				GL_UNSIGNED_INT,// type
+//				&emptyData[0] );// data
+//
+//		glBindTexture(GL_TEXTURE_2D, 0);
 
-		// unbind output texture
-		p_voxelGridTexture->unbindFromActiveUnit();
+		p_computeShader->useProgram();
 
 		// upload clear texture index binding
 		glBindImageTexture(0,
-		p_voxelGridTexture->getTextureHandle(),
+		p_voxelGrid->handle,
 		0,
 		GL_FALSE,
 		0,
-//		GL_WRITE_ONLY,						// only write
-		GL_READ_WRITE,
+		GL_WRITE_ONLY,						// only write
 		GL_R32UI);							// 1 channel 32 bit unsigned int
 
 		// set suitable amount of work groups
@@ -160,14 +198,14 @@ public:
 		m_num_groups_y = voxelGridResolution / p_computeShader->getLocalGroupSizeY() + ( ( voxelGridResolution % p_computeShader->getLocalGroupSizeY() == 0 ) ? 0 : 1 );
 		m_num_groups_z = 1;
 
-		// put memory barriers for this shader program
-		glMemoryBarrier( GL_ALL_BARRIER_BITS );
-
 		// dispatch as usual
 		DispatchComputeShaderListener::call();
 
-		// put barrier
+		// barrier bla whatever
 		glMemoryBarrier( GL_ALL_BARRIER_BITS );
+
+		// unbind clear texture
+		glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI );
 	}
 };
 
@@ -196,12 +234,9 @@ public:
 		// use compute program
 		p_computeShader->useProgram();
 
-		// unbind output texture
-		p_voxelGrid->texture->unbindFromActiveUnit();
-
 		// upload output texture
-		glBindImageTexture(1,
-		p_voxelGrid->texture->getTextureHandle(),
+		glBindImageTexture(0,
+		p_voxelGrid->handle,
 		0,
 		GL_FALSE,
 		0,
@@ -209,7 +244,7 @@ public:
 		GL_R32UI);							// 1 channel 32 bit unsigned int to make sure OR-ing works
 
 		// upload bit mask
-		glBindImageTexture(2,
+		glBindImageTexture(1,
 		p_bitMask->getTextureHandle(),
 		0,
 		GL_FALSE,
@@ -265,11 +300,10 @@ public:
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
 
-			// put barriers
-			glMemoryBarrier( GL_ALL_BARRIER_BITS );
-
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
+
+			glMemoryBarrier( GL_ALL_BARRIER_BITS );
 
 			if ( m_queryTime )
 			{
@@ -282,8 +316,16 @@ public:
 			m_executionTime = totalExecutionTime;
 		}
 
-		// put barrier
-		glMemoryBarrier( GL_ALL_BARRIER_BITS );
+		// unbind image textures
+		glBindImageTexture(0, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_WRITE,
+		GL_R32UI);
+
+		glBindImageTexture(1, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_ONLY,
+		GL_R32UI);
 	}
 };
 
@@ -296,20 +338,15 @@ protected:
 
 	std::vector<std::pair<Object*, RenderableNode* > > m_objects;
 
-	glm::mat4 m_voxelizeView;
-	glm::mat4 m_voxelizeProjection;
 	VoxelGridGPU* p_voxelGrid;
 	Texture* p_bitMask;
 public:
 	DispatchVoxelizeComputeShader(ComputeShader* computeShader, std::vector< std::pair<Object*, RenderableNode*> > objects,
-			glm::mat4 voxelizeView, glm::mat4 voxelizeProjection,
 			VoxelGridGPU* voxelGrid, Texture* bitMask,
 			int x= 0, int y= 0, int z = 0 )
 	: DispatchComputeShaderListener(computeShader, x,y,z)
 {
 		m_objects = objects;
-		m_voxelizeView = voxelizeView;
-		m_voxelizeProjection = voxelizeProjection;
 		p_voxelGrid = voxelGrid;
 		p_bitMask = bitMask;
 }
@@ -398,11 +435,10 @@ public:
 			m_num_groups_y = 1;
 			m_num_groups_z = 1;
 
-			// put barriers for this dispatch
-			glMemoryBarrier( GL_ALL_BARRIER_BITS );
-
 			// dispatch as usual
 			DispatchComputeShaderListener::call();
+
+			glMemoryBarrier( GL_ALL_BARRIER_BITS );
 
 			if ( m_queryTime )
 			{
@@ -415,8 +451,15 @@ public:
 			m_executionTime = totalExecutionTime;
 		}
 
-		// put barrier
-		glMemoryBarrier( GL_ALL_BARRIER_BITS );
+		// unbind image textures
+		glBindImageTexture(0, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_WRITE,
+		GL_R32UI);
+		glBindImageTexture(1, 0, 0,
+		GL_FALSE, 0,
+		GL_READ_ONLY,
+		GL_R32UI);
 	}
 };
 
@@ -443,7 +486,7 @@ private:
 
 		CameraRenderPass* writeGbufferRenderPass = new CameraRenderPass(writeGbufferShader, gbufferFramebufferObject);
 		writeGbufferRenderPass->addEnable(GL_DEPTH_TEST);
-		writeGbufferRenderPass->setClearColor(0.0f,0.0f,0.0f,1.0f);
+		writeGbufferRenderPass->setClearColor(0.0f,0.0f,0.0f,0.0f);
 		writeGbufferRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
 		writeGbufferRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 
@@ -597,6 +640,7 @@ public:
 				DEBUGLOG->indent();
 					DEBUGLOG->log("Creating compositing render pass");
 					TriangleRenderPass* gbufferCompositing = new TriangleRenderPass(gbufferCompositingShader, compositingFramebuffer, m_resourceManager.getScreenFillingTriangle());
+					gbufferCompositing->setClearColor( 0.1f ,0.1f, 0.1f, 1.0 );
 					gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
 					gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
 
@@ -642,8 +686,8 @@ public:
 			// buffer empty data, i.e. clear memory
 			glBufferData( GL_TEXTURE_2D, // target
 					voxelGridResolution * voxelGridResolution, // amount
-					NULL,				// data = 0
-					GL_STATIC_DRAW );	// usage of buffer
+					NULL,				// no initial data
+					GL_DYNAMIC_COPY );	// usage of buffer
 
 			// clear texture
 			std::vector < GLuint > emptyData( voxelGridResolution * voxelGridResolution , 0);
@@ -665,11 +709,12 @@ public:
 			// save handle
 			voxelGrid->handle = voxelGridHandle;
 			voxelGrid->texture = new Texture(voxelGridHandle);
+
 			// unbind
 			glBindTexture(GL_TEXTURE_2D, 0);
 
 			// for other use (i.e. tex atlas)
-			Texture* voxelGridTexture = voxelGrid->texture;
+//			Texture* voxelGridTexture = voxelGrid->texture;
 		DEBUGLOG->outdent();
 
 
@@ -768,12 +813,18 @@ public:
 		DEBUGLOG->indent();
 
 			DEBUGLOG->log("Configuring list of objects to voxelize");
+
+			// objects and their corresponding scene graph node
 			std::vector<std::pair < Object*, RenderableNode*> > objects;
 			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
 //			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
 
+			// texture atlas pixel objects and their corresponding texture atlas
 			std::vector<std::pair < Object*, TexAtlas::TextureAtlas* > > texAtlasObjects;
-			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >( textureAtlasVertexGenerator->getPixelsObject(), textureAtlasVertexGenerator->getTextureAtlas()) );
+			texAtlasObjects.push_back( std::pair< Object*, TexAtlas::TextureAtlas* >(
+					textureAtlasVertexGenerator->getPixelsObject(),
+					textureAtlasVertexGenerator->getTextureAtlas())
+					);
 
 
 			DEBUGLOG->log("Creating voxel grid clearing compute shader dispatcher");
@@ -781,7 +832,7 @@ public:
 
 			DispatchClearVoxelGridComputeShader* dispatchClearVoxelGridComputeShader = new DispatchClearVoxelGridComputeShader(
 					clearVoxelGridComputeShader,
-					voxelGridTexture
+					voxelGrid
 			);
 
 			DEBUGLOG->outdent();
@@ -792,8 +843,6 @@ public:
 			DispatchVoxelizeComputeShader* dispatchVoxelizeComputeShader = new DispatchVoxelizeComputeShader(
 					voxelizeComputeShader,
 					objects,
-					voxelGrid->view,
-					voxelGrid->perspective,
 					voxelGrid,
 					SliceMap::get32BitUintMask()
 					);
@@ -806,9 +855,6 @@ public:
 			DispatchVoxelizeWithTexAtlasComputeShader* dispatchVoxelizeWithTexAtlasComputeShader = new DispatchVoxelizeWithTexAtlasComputeShader(
 					voxelizeWithTexAtlasComputeShader,
 					texAtlasObjects,
-//					voxelGrid->view,
-//					voxelGrid->perspective,
-//					voxelGridTexture,
 					voxelGrid,
 					SliceMap::get32BitUintMask()
 					);
@@ -816,9 +862,9 @@ public:
 			DEBUGLOG->outdent();
 
 			DEBUGLOG->log("Enabling execution time queries");
-			dispatchClearVoxelGridComputeShader->setQueryTime(true);
-			dispatchVoxelizeComputeShader->setQueryTime(true);
-			dispatchVoxelizeWithTexAtlasComputeShader->setQueryTime(true);
+			dispatchClearVoxelGridComputeShader->setQueryTime( true );
+			dispatchVoxelizeComputeShader->setQueryTime( true );
+			dispatchVoxelizeWithTexAtlasComputeShader->setQueryTime( true );
 
 		DEBUGLOG->outdent();
 
@@ -830,26 +876,28 @@ public:
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
 
-			glMemoryBarrier( GL_ALL_BARRIER_BITS );
-
 			DEBUGLOG->log( "Attaching voxelize dispatchers to program cycle via VOXELIZE interface");
-			// voxelize in every frame
-			attach(new ConditionalProxyListener(
+
+			attach(
+					new ConditionalProxyListener(
 					dispatchClearVoxelGridComputeShader,
 					&voxelizeActive,
 					false),
 				"CLEAR");
 
-			attach(new ConditionalProxyListener(
+			attach(
+					new ConditionalProxyListener(
 					new ConditionalProxyListener(
 						dispatchVoxelizeComputeShader,
 						&voxelizeRegularActive,
 						false ),
 					&voxelizeActive,
 					false),
-				"VOXELIZE");
+				"VOXELIZE"
+			);
 
-			attach(new ConditionalProxyListener(
+			attach(
+					new ConditionalProxyListener(
 					new ConditionalProxyListener(
 							dispatchVoxelizeWithTexAtlasComputeShader,
 							&voxelizeRegularActive,
@@ -857,8 +905,6 @@ public:
 					&voxelizeActive,
 					false),
 				"VOXELIZE");
-
-		glMemoryBarrier( GL_ALL_BARRIER_BITS );
 
 		DEBUGLOG->outdent();
 
@@ -878,7 +924,7 @@ public:
 					0,
 					m_resourceManager.getScreenFillingTriangle(),
 					compositingOutput,
-					voxelGridTexture );
+					voxelGrid->texture );
 			overlaySliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &backgroundTransparency) );
 
 			Shader* projectSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
@@ -893,8 +939,7 @@ public:
 					gbufferRenderPass->getCamera()->getViewMatrixPointer()
 					);
 			projectSliceMap->addClearBit( GL_COLOR_BUFFER_BIT );
-			projectSliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &backgroundTransparency) );
-
+			projectSliceMap->addUniform( new Uniform<float>( "uniformBackgroundTransparency", &backgroundTransparency ) );
 
 			RenderPass* showSliceMap = projectSliceMap;
 
@@ -970,63 +1015,15 @@ public:
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("---------------------------------------------------------");
-
-//		std::string* p1 = new std::string( "string c 1" );
-//		std::string* p2 = new std::string( "string c 2");
-//		std::string* p3 = new std::string( "string c 3");
-//		std::string* p4 = new std::string( "string c 4");
-//
-//		std::vector < std::string* > candidates;
-//		candidates.push_back(p1);
-//		candidates.push_back(p2);
-//		candidates.push_back(p3);
-//		candidates.push_back(p4);
-//
-//		std::vector < std::string* > realList;
-//		realList.push_back( new string( "string 0") );
-//		realList.push_back( new string( "string 1") );
-//		realList.push_back( new string( "string 2") );
-//
-//		SwitchThroughValuesListener< std::string* > switcher( &realList[1], candidates );
-//
-//		for ( unsigned int i = 0; i < realList.size(); i++)
-//		{
-//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
-//		}
-//
-//		switcher.call();
-//
-//		for ( unsigned int i = 0; i < realList.size(); i++)
-//		{
-//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
-//		}
-//
-//		switcher.call();
-//
-//		for ( unsigned int i = 0; i < realList.size(); i++)
-//		{
-//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
-//		}
-//		switcher.call();
-//
-//		for ( unsigned int i = 0; i < realList.size(); i++)
-//		{
-//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
-//		}
-//		switcher.call();
-//
-//		for ( unsigned int i = 0; i < realList.size(); i++)
-//		{
-//			std::cout << "pos" << i << " : " << *realList[i] << std::endl;
-//		}
-
 	}
 
 
 
 	void programCycle()
+
 	{
 		call("CLEAR");					// call listeners attached to clear interface
+
 		call("VOXELIZE");				// call listeners attached to voxelize interface
 
 		Application::programCycle(); 	// regular rendering and image presentation

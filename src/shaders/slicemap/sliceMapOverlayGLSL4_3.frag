@@ -7,7 +7,7 @@ uniform uint uniformMaxUINT;
 
 uniform float uniformBackgroundTransparency;
 
-layout( r32ui, binding = 1 ) uniform uimage2D uniformSliceMapTexture;
+layout( r32ui, binding = 0 ) uniform readonly uimage2D uniformSliceMapTexture;
 
 out vec4 fragmentColor;
 

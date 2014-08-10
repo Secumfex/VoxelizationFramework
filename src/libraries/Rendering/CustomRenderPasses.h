@@ -38,6 +38,7 @@ public:
 	void removeUniformTexture(Texture* texture);	// remove uniform that uploads this texture if existent
 	void removeUniformTexture(std::string uniformTarget); // remove uniform that uploads to this target if existent
 	virtual void uploadUniforms();
+//	virtual void postRender();
 };
 
 #endif

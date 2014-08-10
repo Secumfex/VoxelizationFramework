@@ -3,7 +3,7 @@
 in vec2 passUV;
 
 // slice map
-layout( r32ui, binding = 0 ) uniform uimage2D uniformSliceMapTexture;
+layout( r32ui, binding = 0 ) uniform readonly uimage2D uniformSliceMapTexture;
 
 // bit mask
 layout( r32ui, binding = 1 ) uniform readonly uimage1D bitmaskTexture;
@@ -22,6 +22,12 @@ out vec4 fragmentColor;
 void main() {
 	// gbuffer values
 	vec4 gbufferPosition = texture(uniformPositionMap, passUV);
+	
+	// discard if background pixel
+	if ( gbufferPosition.a == 0.0 )
+	{
+		discard;
+	}
 	
 	// compute world positon
 	vec4 worldPos = inverse( uniformView ) * ( gbufferPosition );
