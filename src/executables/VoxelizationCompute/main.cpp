@@ -32,10 +32,10 @@ static bool rotatingBunny = false;
 static bool voxelizeRegularActive = true;
 static bool voxelizeActive = true;
 
-static int texAtlasResolution  = 256;
-static int voxelGridResolution = 32;
-static float voxelGridWidth = 7.5;
-static float voxelGridHeight = 7.5;
+static int texAtlasResolution  = 512;
+static int voxelGridResolution = 64;
+static float voxelGridWidth = 8.0f;
+static float voxelGridHeight = 8.0f;
 
 static glm::vec3 lightPosition = glm::vec3(3.0f, 3.0f, 3.0f);
 static bool enableBackfaceCulling = true;
@@ -791,7 +791,7 @@ public:
 			DEBUGLOG->indent();
 
 			// shader that voxelizes an object
-			ComputeShader* voxelizeComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeComputeGPUPro.comp");
+			ComputeShader* voxelizeComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeComputeGPUPro_simplifications.comp");
 			
 			DEBUGLOG->outdent();
 
@@ -1020,7 +1020,6 @@ public:
 
 
 	void programCycle()
-
 	{
 		call("CLEAR");					// call listeners attached to clear interface
 

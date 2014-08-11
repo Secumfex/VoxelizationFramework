@@ -186,6 +186,7 @@ bool overlapsVoxel( vec3 voxel, vec3 v0, vec3 v1, vec3 v2, vec3 normal )
 //	return (v0.x * v1.x + v0.y * v1.y);
 //}
 
+// fill a single voxel
 void fillVoxel( vec3 voxel )
 {
 	// retrieve BYTE value from bitmask
@@ -200,6 +201,21 @@ void fillVoxel( vec3 voxel )
 	
 	// OR with byte currently written in voxel grid texture
 	uint before = imageAtomicOr( voxel_grid_texture, writeTo , byte );
+}
+
+// fills all voxels in the BBOX of vmin to vmax
+void fillVoxels( vec3 vMin, vec3 vMax )
+{
+	for ( float x = vMin.x ; x <= vMax.x ; x += 1.0)
+	{
+		for ( float y = vMin.y ; y <= vMax.y ; y += 1.0)
+		{
+			for ( float z = vMin.z; z <= vMax.z; z += 1.0)
+			{
+				fillVoxel ( vec3( x, y, z ) );
+			}
+		}
+	}
 }
 
 void main()
@@ -253,14 +269,91 @@ void main()
 	{
 		fillVoxel ( vMin );
 		return;
+	}		
+	
+	// test which dimensions are set
+	int dimensions = 0;
+	bool dimX = false;
+	bool dimY = false;
+	bool dimZ = false;
+	
+	if ( ( vMax.x - vMin.x ) > 0.0 )
+	{
+		dimX = true;
+		dimensions ++;
+	}
+	if ( ( vMax.y - vMin.y ) > 0.0 )
+	{
+		dimY = true;
+		dimensions ++;
+	}
+	if ( ( vMax.z - vMin.z ) > 0.0 )
+	{
+		dimZ = true;
+		dimensions++;
 	}
 	
-	// compute overlapped voxels from bbox
-	for ( float x = vMin.x; x <= vMax.x; x+= 1.0f )
+	// only one line of voxels is overlapped
+	if ( dimensions == 1 ) 
 	{
-		for ( float y = vMin.y; y <= vMax.y; y+= 1.0f )
+		// fill all voxels from min to max
+		fillVoxels( vMin, vMax);
+		return;
+	}
+	
+	// only one Slice is overlapped
+	if ( dimensions == 2 ) 
+	{	
+		for ( float x = vMin.x; x <= vMax.x; x += 1.0f )
 		{
-			for ( float z = vMin.z; z <= vMax.z; z+= 1.0f )
+			for ( float y = vMin.y; y <= vMax.y; y += 1.0f )
+			{
+				for ( float z = vMin.z; z <= vMax.z; z += 1.0f )
+				{
+					// current voxel
+					vec3 voxel = vec3( x, y, z );
+					
+					// perform only corresponding 2D Projection test
+					if ( dimX && dimY )
+					{
+						// XY plane projection
+						if ( overlapsVoxel2D( voxel.xy, posV0.xy, posV1.xy, posV2.xy, normal.z ) )
+						{
+							fillVoxel( voxel );
+						}
+						continue;
+					}
+					
+					if ( dimX && dimZ )
+					{
+						// XZ plane projection
+						if ( overlapsVoxel2D( voxel.xz, posV0.xz, posV1.xz, posV2.xz, normal.y ) )
+						{
+							fillVoxel( voxel );							
+						}
+						continue;
+					}
+					
+					if( dimY && dimZ )
+					{
+						// YZ plane projection
+						if (overlapsVoxel2D( voxel.yz, posV0.yz, posV1.yz, posV2.yz, normal.x ) )
+						{
+							fillVoxel( voxel );							
+						}	
+					}
+				}
+			}
+		}
+	}
+	
+	// all three dimensions are set
+	// compute overlapped voxels from bbox
+	for ( float x = vMin.x; x <= vMax.x; x += 1.0f )
+	{
+		for ( float y = vMin.y; y <= vMax.y; y += 1.0f )
+		{
+			for ( float z = vMin.z; z <= vMax.z; z += 1.0f )
 			{
 				vec3 voxel = vec3( x, y, z );
 				
