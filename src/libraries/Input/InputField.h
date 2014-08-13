@@ -52,6 +52,7 @@ private:
 	InputManager* p_inputManager;
 public:
 	InputFieldHoveredListener(InputField* inputField, InputManager* inputManager);
+	virtual bool testHovered();
 	virtual void call();
 };
 

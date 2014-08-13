@@ -73,13 +73,17 @@ InputFieldHoveredListener::InputFieldHoveredListener(InputField* inputField,
 	p_inputManager = inputManager;
 }
 
+bool InputFieldHoveredListener::testHovered() {
+return (   p_inputManager->getCursorX() >= p_inputField->getXPos()
+		&& p_inputManager->getCursorX() <= p_inputField->getXPos() + p_inputField->getWidth()
+		&& p_inputManager->getCursorY() >= p_inputField->getYPos()
+		&& p_inputManager->getCursorY() <= p_inputField->getYPos() + p_inputField->getHeight() );
+}
+
 void InputFieldHoveredListener::call() {
 	if ( p_inputField && p_inputManager )
 	{
-		if ( p_inputManager->getCursorX() >= p_inputField->getXPos()
-				&& p_inputManager->getCursorX() <= p_inputField->getXPos() + p_inputField->getWidth()
-				&& p_inputManager->getCursorY() >= p_inputField->getYPos()
-				&& p_inputManager->getCursorY() <= p_inputField->getYPos() + p_inputField->getHeight())
+		if ( testHovered() )
 		{
 			p_inputField->setHovered(true);
 			p_inputField->hover();

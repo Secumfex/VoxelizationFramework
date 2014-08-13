@@ -27,20 +27,25 @@
 #include "VoxelGridTools.h"
 #include "VoxelizerTools.h"
 
-static bool rotatingBunny = false;
+static bool USE_ROTATING_BUNNY = false;
 
-static bool voxelizeRegularActive = true;
-static bool voxelizeActive = true;
+static bool VOXELIZE_REGULAR_ACTIVE = true;
+static bool VOXELIZE_ACTIVE = true;
 
-static int texAtlasResolution  = 512;
-static int voxelGridResolution = 64;
-static float voxelGridWidth = 8.0f;
-static float voxelGridHeight = 8.0f;
+static int TEXATLAS_RESOLUTION  = 512;
+static int VOXELGRID_RESOLUTION = 64;
+static float VOXELGRID_WIDTH = 8.0f;
+static float VOXELGRID_HEIGHT = 8.0f;
 
-static glm::vec3 lightPosition = glm::vec3(3.0f, 3.0f, 3.0f);
-static bool enableBackfaceCulling = true;
-static bool orthoCam = true;
-static float backgroundTransparency = 0.25;
+static glm::vec3 LIGHT_POSITION = glm::vec3(3.0f, 3.0f, 3.0f);
+static bool ENABLE_BACKFACE_CULLING = true;
+static bool USE_ORTHOCAM = true;
+static float BACKGROUND_TRANSPARENCY = 0.25;
+
+static int RENDER_FRAME_WIDTH = 512;
+static int RENDER_FRAME_HEIGHT = 512;
+static int GUI_FRAME_WIDTH = 256;
+static int GUI_FRAME_HEIGHT = 512;
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -194,8 +199,8 @@ public:
 		GL_R32UI);							// 1 channel 32 bit unsigned int
 
 		// set suitable amount of work groups
-		m_num_groups_x = voxelGridResolution / p_computeShader->getLocalGroupSizeX() + ( ( voxelGridResolution % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
-		m_num_groups_y = voxelGridResolution / p_computeShader->getLocalGroupSizeY() + ( ( voxelGridResolution % p_computeShader->getLocalGroupSizeY() == 0 ) ? 0 : 1 );
+		m_num_groups_x = VOXELGRID_RESOLUTION / p_computeShader->getLocalGroupSizeX() + ( ( VOXELGRID_RESOLUTION % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
+		m_num_groups_y = VOXELGRID_RESOLUTION / p_computeShader->getLocalGroupSizeY() + ( ( VOXELGRID_RESOLUTION % p_computeShader->getLocalGroupSizeY() == 0 ) ? 0 : 1 );
 		m_num_groups_z = 1;
 
 		// dispatch as usual
@@ -478,7 +483,7 @@ private:
 		GLenum internalFormat = FramebufferObject::static_internalFormat;
 		FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;
 
-		FramebufferObject* gbufferFramebufferObject = new FramebufferObject (512,512);
+		FramebufferObject* gbufferFramebufferObject = new FramebufferObject ( RENDER_FRAME_WIDTH, RENDER_FRAME_HEIGHT );
 		// 3 attachments : position, normals, color
 		gbufferFramebufferObject->addColorAttachments(3);
 
@@ -515,7 +520,7 @@ private:
 		phongPerspectiveRenderPass->addEnable(GL_DEPTH_TEST);
 		phongPerspectiveRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 		phongPerspectiveRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
-		phongPerspectiveRenderPass->addUniform( new Uniform<glm::vec3>("uniformLightPos", &lightPosition));
+		phongPerspectiveRenderPass->addUniform( new Uniform<glm::vec3>("uniformLightPos", &LIGHT_POSITION));
 
 		m_cameraParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
 		CameraNode* camera = new CameraNode( m_cameraParentNode );
@@ -587,7 +592,7 @@ public:
 
 			DEBUGLOG->log("Attaching objects to scene graph");
 			DEBUGLOG->indent();
-					if ( rotatingBunny )
+					if ( USE_ROTATING_BUNNY )
 					{
 						std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this, 0.1f, 0.1f);
 						rotatingNodes.first->setParent( m_objectsNode );
@@ -613,8 +618,8 @@ public:
 			DEBUGLOG->log("Creating gbuffer renderpass");
 			CameraRenderPass* gbufferRenderPass = createGBufferRenderPass();
 
-			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &enableBackfaceCulling ) );
-			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &orthoCam ) );
+			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &ENABLE_BACKFACE_CULLING ) );
+			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &USE_ORTHOCAM ) );
 
 			Texture* gbufferPositionMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 ) );
 			Texture* gbufferNormalMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1 ) );
@@ -648,7 +653,7 @@ public:
 					gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
 					gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
 
-					gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &lightPosition  ) );
+					gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &LIGHT_POSITION  ) );
 					gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    gbufferRenderPass->getCamera()->getViewMatrixPointer() ) );
 
 					DEBUGLOG->log("Adding compositing render pass now");
@@ -667,7 +672,7 @@ public:
 		DEBUGLOG->indent();
 			VoxelGridGPU* voxelGrid = new VoxelGridGPU();
 
-			voxelGrid->setUniformCellSizeFromResolutionAndMapping(voxelGridWidth,voxelGridHeight, voxelGridResolution, voxelGridResolution, 32);
+			voxelGrid->setUniformCellSizeFromResolutionAndMapping(VOXELGRID_WIDTH,VOXELGRID_HEIGHT, VOXELGRID_RESOLUTION, VOXELGRID_RESOLUTION, 32);
 
 			DEBUGLOG->log("Creating voxel grid texture");
 			// generate Texture
@@ -680,24 +685,24 @@ public:
 					GL_TEXTURE_2D,			// 2D Texture
 					1,						// 1 level
 					GL_R32UI,				// 1 channel 32 bit unsigned int
-					voxelGridResolution,	// res X
-					voxelGridResolution);	// rex Y
+					VOXELGRID_RESOLUTION,	// res X
+					VOXELGRID_RESOLUTION);	// rex Y
 			
 			// buffer empty data, i.e. clear memory
 			glBufferData( GL_TEXTURE_2D, // target
-					voxelGridResolution * voxelGridResolution, // amount
+					VOXELGRID_RESOLUTION * VOXELGRID_RESOLUTION, // amount
 					NULL,				// no initial data
 					GL_DYNAMIC_COPY );	// usage of buffer
 
 			// clear texture
-			std::vector < GLuint > emptyData( voxelGridResolution * voxelGridResolution , 0);
+			std::vector < GLuint > emptyData( VOXELGRID_RESOLUTION * VOXELGRID_RESOLUTION , 0);
 			glTexSubImage2D(
 					GL_TEXTURE_2D,	// target
 					0,				// level
 					0,				// xOffset
 					0,				// yOffset
-					voxelGridResolution, // width
-					voxelGridResolution, // height
+					VOXELGRID_RESOLUTION, // width
+					VOXELGRID_RESOLUTION, // height
 					GL_RED,			// format
 					GL_UNSIGNED_INT,// type
 					&emptyData[0] );// data
@@ -731,7 +736,7 @@ public:
 				FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;// change this first
 
 				// create renderpass that generates a textureAtlas for models
-				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, texAtlasResolution, texAtlasResolution, gbufferRenderPass->getCamera() );
+				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, TEXATLAS_RESOLUTION, TEXATLAS_RESOLUTION, gbufferRenderPass->getCamera() );
 
 				FramebufferObject::static_internalFormat = internalFormat;	// restore default
 			DEBUGLOG->outdent();
@@ -881,7 +886,7 @@ public:
 			attach(
 					new ConditionalProxyListener(
 					dispatchClearVoxelGridComputeShader,
-					&voxelizeActive,
+					&VOXELIZE_ACTIVE,
 					false),
 				"CLEAR");
 
@@ -889,9 +894,9 @@ public:
 					new ConditionalProxyListener(
 					new ConditionalProxyListener(
 						dispatchVoxelizeComputeShader,
-						&voxelizeRegularActive,
+						&VOXELIZE_REGULAR_ACTIVE,
 						false ),
-					&voxelizeActive,
+					&VOXELIZE_ACTIVE,
 					false),
 				"VOXELIZE"
 			);
@@ -900,9 +905,9 @@ public:
 					new ConditionalProxyListener(
 					new ConditionalProxyListener(
 							dispatchVoxelizeWithTexAtlasComputeShader,
-							&voxelizeRegularActive,
+							&VOXELIZE_REGULAR_ACTIVE,
 							true),
-					&voxelizeActive,
+					&VOXELIZE_ACTIVE,
 					false),
 				"VOXELIZE");
 
@@ -925,7 +930,8 @@ public:
 					m_resourceManager.getScreenFillingTriangle(),
 					compositingOutput,
 					voxelGrid->texture );
-			overlaySliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &backgroundTransparency) );
+			overlaySliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &BACKGROUND_TRANSPARENCY) );
+			overlaySliceMap->setViewport(0,0,RENDER_FRAME_WIDTH,RENDER_FRAME_HEIGHT);
 
 			Shader* projectSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
 			TriangleRenderPass* projectSliceMap = new ProjectSliceMapRenderPass(
@@ -939,7 +945,8 @@ public:
 					gbufferRenderPass->getCamera()->getViewMatrixPointer()
 					);
 			projectSliceMap->addClearBit( GL_COLOR_BUFFER_BIT );
-			projectSliceMap->addUniform( new Uniform<float>( "uniformBackgroundTransparency", &backgroundTransparency ) );
+			projectSliceMap->addUniform( new Uniform<float>( "uniformBackgroundTransparency", &BACKGROUND_TRANSPARENCY ) );
+			projectSliceMap->setViewport(0,0,RENDER_FRAME_WIDTH,RENDER_FRAME_HEIGHT);
 
 			RenderPass* showSliceMap = projectSliceMap;
 
@@ -955,6 +962,15 @@ public:
 							showSliceMapCandidates
 							);
 
+			/**************************************************************************************
+			* 								GUI DISPLAY CONFIGURATION
+			**************************************************************************************/
+			Shader* simpleTex = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
+			RenderPass* guiRenderPass = new RenderPass( simpleTex, 0);
+			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
+//			guiRenderPass->addUniform()
+
+
 		DEBUGLOG->outdent();
 		/**************************************************************************************
 		* 								INPUT CONFIGURATION
@@ -964,20 +980,20 @@ public:
 		DEBUGLOG->log("---------------------------------------------------------");
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Disable/Enable real-time voxelization : Y");
-			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeActive ), GLFW_KEY_Y, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&voxelizeActive,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &VOXELIZE_ACTIVE ), GLFW_KEY_Y, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&VOXELIZE_ACTIVE,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
 
 			DEBUGLOG->log("Switch active Voxelization Method     : X");
-			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &voxelizeRegularActive ), GLFW_KEY_X, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : regular"), &voxelizeRegularActive), GLFW_KEY_X, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : texAtlas"), &voxelizeRegularActive, true), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &VOXELIZE_REGULAR_ACTIVE ), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : regular"), &VOXELIZE_REGULAR_ACTIVE), GLFW_KEY_X, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : texAtlas"), &VOXELIZE_REGULAR_ACTIVE, true), GLFW_KEY_X, GLFW_PRESS);
 
 			DEBUGLOG->log("Clear voxel grid on key press         : C");
 			m_inputManager.attachListenerOnKeyPress(  dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
 
 			DEBUGLOG->log("Voxelize scene with active voxelizer  : V");
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &voxelizeRegularActive ), GLFW_KEY_V, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &voxelizeRegularActive, true ), GLFW_KEY_V, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &VOXELIZE_REGULAR_ACTIVE ), GLFW_KEY_V, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &VOXELIZE_REGULAR_ACTIVE, true ), GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Switch voxel grid display             : B");
 			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
@@ -999,18 +1015,18 @@ public:
 			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT, gbufferRenderPass->getCamera());
 
 			DEBUGLOG->log("Configuring light movement            : Arrow keys");
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &lightPosition, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
 			DEBUGLOG->log("In- /Decrease background transparency : upper / lower left corner");
 			InputField* inputFieldIncTransparency = new InputField(0,  0, 100, 256, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
 			InputField* inputFieldDecTransparency = new InputField(0,256, 100, 256, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
-			inputFieldIncTransparency->attachListenerOnPress( new IncrementValueListener<float>( &backgroundTransparency, 0.1f ) );
-			inputFieldIncTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &backgroundTransparency, "background transparency : "));
-			inputFieldDecTransparency->attachListenerOnPress( new DecrementValueListener<float>( &backgroundTransparency, 0.1f ) );
-			inputFieldDecTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &backgroundTransparency, "background transparency : "));
+			inputFieldIncTransparency->attachListenerOnPress( new IncrementValueListener<float>( &BACKGROUND_TRANSPARENCY, 0.1f ) );
+			inputFieldIncTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &BACKGROUND_TRANSPARENCY, "background transparency : "));
+			inputFieldDecTransparency->attachListenerOnPress( new DecrementValueListener<float>( &BACKGROUND_TRANSPARENCY, 0.1f ) );
+			inputFieldDecTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &BACKGROUND_TRANSPARENCY, "background transparency : "));
 
 		DEBUGLOG->outdent();
 
@@ -1033,8 +1049,8 @@ public:
 
 int main() {
 	// configure a little bit
-	Application::static_newWindowHeight = 512;
-	Application::static_newWindowWidth = 512;
+	Application::static_newWindowHeight = RENDER_FRAME_HEIGHT;
+	Application::static_newWindowWidth = RENDER_FRAME_WIDTH + GUI_FRAME_WIDTH;
 
 	// formats to be used whenever a framebuffer object is instantiated
 	FramebufferObject::static_internalFormat = GL_RGBA32F;
