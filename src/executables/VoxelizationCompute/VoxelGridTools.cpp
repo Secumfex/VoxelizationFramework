@@ -9,6 +9,7 @@ VoxelGridGPU::VoxelGridGPU() {
 	height = 0;
 	depth = 0;
 	cellSize = 0;
+	numMipmaps = 0;
 	perspective = glm::mat4(1.0f);
 	view = glm::lookAt( glm::vec3(0,0,0), glm::vec3(0,0,-1), glm::vec3(0,1,0) );
 	texture = 0;

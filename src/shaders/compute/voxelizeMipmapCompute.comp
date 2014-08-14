@@ -1,0 +1,29 @@
+#version 430 core
+
+// specify local work group size
+layout (local_size_x = 32, local_size_y = 32) in;
+
+// specify image to mipmap
+layout(binding = 0, r32ui) readonly uniform uimage2D mipmap_base;
+
+// specify image to write to
+layout(binding = 1, r32ui) writeonly uniform uimage2D mipmap_target;
+
+void main()
+{
+	// read x & y index of global invocation as index to write to and read from
+	ivec2 index = ivec2( gl_GlobalInvocationID.xy );
+	
+	// load values
+	uvec4 valL  = imageLoad( mipmap_base, index * 2 );					
+	uvec4 valR  = imageLoad( mipmap_base, index * 2 + ivec2( 1, 0 ) );
+	uvec4 valTL = imageLoad( mipmap_base, index * 2 + ivec2( 0, 1 ) );
+	uvec4 valTR = imageLoad( mipmap_base, index * 2 + ivec2( 1, 1 ) );
+				
+	// OR values
+	uvec4 value = uvec4(0);
+	value.r = valL.r | valR.r | valTL.r | valTR.r; 
+		
+	// write value
+	imageStore( mipmap_target, ivec2( index ), value );
+}

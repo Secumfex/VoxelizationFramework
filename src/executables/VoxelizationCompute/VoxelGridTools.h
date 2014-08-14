@@ -26,6 +26,8 @@ public:
 	int resY;
 	int resZ;
 
+	int numMipmaps;
+
 	glm::mat4 perspective;
 	glm::mat4 view;
 	glm::mat4 worldToVoxel;

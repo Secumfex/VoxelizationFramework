@@ -27,6 +27,8 @@
 #include "VoxelGridTools.h"
 #include "VoxelizerTools.h"
 
+static int VISIBLE_TEXTURE_LEVEL = 0;
+
 static bool USE_ROTATING_BUNNY = false;
 
 static bool VOXELIZE_REGULAR_ACTIVE = true;
@@ -68,13 +70,13 @@ public:
 		TriangleRenderPass::uploadUniforms();
 
 		// upload texture
-		glBindImageTexture(0,
-		p_texture->getTextureHandle(),
-		0,
-		GL_FALSE,
-		0,
-		GL_READ_ONLY,
-		GL_R32UI
+		glBindImageTexture(0,           // image unit binding
+		p_texture->getTextureHandle(),  // texture
+		VISIBLE_TEXTURE_LEVEL,			// texture level
+		GL_FALSE,                       // layered
+		0,                              // layer
+		GL_READ_ONLY,                   // access
+		GL_R32UI                        // format
 		);
 	}
 
@@ -199,8 +201,8 @@ public:
 		GL_R32UI);							// 1 channel 32 bit unsigned int
 
 		// set suitable amount of work groups
-		m_num_groups_x = VOXELGRID_RESOLUTION / p_computeShader->getLocalGroupSizeX() + ( ( VOXELGRID_RESOLUTION % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
-		m_num_groups_y = VOXELGRID_RESOLUTION / p_computeShader->getLocalGroupSizeY() + ( ( VOXELGRID_RESOLUTION % p_computeShader->getLocalGroupSizeY() == 0 ) ? 0 : 1 );
+		m_num_groups_x = p_voxelGrid->resX / p_computeShader->getLocalGroupSizeX() + ( ( p_voxelGrid->resX % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
+		m_num_groups_y = p_voxelGrid->resY / p_computeShader->getLocalGroupSizeY() + ( ( p_voxelGrid->resY % p_computeShader->getLocalGroupSizeY() == 0 ) ? 0 : 1 );
 		m_num_groups_z = 1;
 
 		// dispatch as usual
@@ -211,6 +213,85 @@ public:
 
 		// unbind clear texture
 		glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI );
+	}
+};
+
+class DispatchMipmapVoxelGridComputeShader : public DispatchComputeShaderListener
+{
+protected:
+	VoxelGridGPU* p_voxelGrid;
+public:
+	DispatchMipmapVoxelGridComputeShader(ComputeShader* computeShader, VoxelGridGPU* voxelGrid, int x = 0, int y = 0, int z = 0 )
+	: DispatchComputeShaderListener( computeShader, x, y, z )
+	{
+		p_voxelGrid = voxelGrid;
+	}
+	void call()
+	{
+		p_computeShader->useProgram();
+
+		// bind to access image size
+		glBindTexture( GL_TEXTURE_2D, p_voxelGrid->handle );
+
+		int current_mipmap_res;
+
+		double totalExecutionTime = 0.0;
+
+		for ( int i = 1; i <= p_voxelGrid->numMipmaps; i++ )
+		{
+
+			// bind voxel grid mipmap base level
+			glBindImageTexture(
+			0,									// texture image unit
+			p_voxelGrid->handle,				// texture name
+			i-1,                                // mipmap level
+			GL_FALSE,							// layered
+			0,									// layer
+			GL_READ_ONLY,						// only read access
+			GL_R32UI);							// 1 channel 32 bit unsigned int
+
+			// bind voxel grid mipmap target level
+			glBindImageTexture(
+			1,									// texture image unit
+			p_voxelGrid->handle,				// texture name
+			i,                                  // mipmap level
+			GL_FALSE,                           // layered
+			0,                                  // layer
+			GL_WRITE_ONLY,						// only write access
+			GL_R32UI);							// 1 channel 32 bit unsigned int
+
+			glGetTexLevelParameteriv( GL_TEXTURE_2D, i, GL_TEXTURE_WIDTH, &current_mipmap_res );
+//			DEBUGLOG->log( "current mipmap target level size : ", current_mipmap_res );
+
+			// make sure mipmap is written before proceeding
+			glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT );
+
+			// set suitable amount of work groups
+			m_num_groups_x = current_mipmap_res / p_computeShader->getLocalGroupSizeX() + ( ( current_mipmap_res % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
+			m_num_groups_y = current_mipmap_res / p_computeShader->getLocalGroupSizeY() + ( ( current_mipmap_res % p_computeShader->getLocalGroupSizeY() == 0 ) ? 0 : 1 );
+			m_num_groups_z = 1;
+
+			// dispatch compute shader
+			DispatchComputeShaderListener::call();
+
+			// add this execution time to the total execution time
+			if ( m_queryTime ) {
+				totalExecutionTime += m_executionTime;
+			}
+		}
+
+		if ( m_queryTime )
+		{
+					m_executionTime = totalExecutionTime;
+		}
+
+		// arbitrary barrier
+		glMemoryBarrier( GL_ALL_BARRIER_BITS );
+
+		// unbind textures
+		glBindTexture( GL_TEXTURE_2D, 0);
+		glBindImageTexture(0, 0, 0, GL_FALSE, 0, GL_READ_ONLY,  GL_R32UI );
+		glBindImageTexture(1, 0, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_R32UI );
 	}
 };
 
@@ -675,24 +756,35 @@ public:
 			voxelGrid->setUniformCellSizeFromResolutionAndMapping(VOXELGRID_WIDTH,VOXELGRID_HEIGHT, VOXELGRID_RESOLUTION, VOXELGRID_RESOLUTION, 32);
 
 			DEBUGLOG->log("Creating voxel grid texture");
+			DEBUGLOG->indent();
+
 			// generate Texture
 			GLuint voxelGridHandle;
 			glGenTextures(1, &voxelGridHandle);
 			glBindTexture(GL_TEXTURE_2D, voxelGridHandle);
 
+			// compute number of mipmaps
+			double integralPart;
+			double fractionalPart = modf( log2( max( VOXELGRID_RESOLUTION, VOXELGRID_RESOLUTION ) ), &integralPart );
+			voxelGrid->numMipmaps = (int) integralPart;
+			if ( fractionalPart != 0.0 )
+			{
+				DEBUGLOG->log("WARNING : texture requires a irregular number of mipMaps: ");
+				DEBUGLOG->indent();
+					DEBUGLOG->log("Integral part   : ", integralPart);
+					DEBUGLOG->log("Fractional part : ", fractionalPart);
+				DEBUGLOG->outdent();
+				voxelGrid->numMipmaps += 1;
+			}
+			DEBUGLOG->log("Number of mipmap levels : ", voxelGrid->numMipmaps );
+
 			// allocate memory
 			glTexStorage2D(
 					GL_TEXTURE_2D,			// 2D Texture
-					1,						// 1 level
+					voxelGrid->numMipmaps+1,// levels : Base level + mipMaplevels
 					GL_R32UI,				// 1 channel 32 bit unsigned int
 					VOXELGRID_RESOLUTION,	// res X
 					VOXELGRID_RESOLUTION);	// rex Y
-			
-			// buffer empty data, i.e. clear memory
-			glBufferData( GL_TEXTURE_2D, // target
-					VOXELGRID_RESOLUTION * VOXELGRID_RESOLUTION, // amount
-					NULL,				// no initial data
-					GL_DYNAMIC_COPY );	// usage of buffer
 
 			// clear texture
 			std::vector < GLuint > emptyData( VOXELGRID_RESOLUTION * VOXELGRID_RESOLUTION , 0);
@@ -717,6 +809,8 @@ public:
 
 			// unbind
 			glBindTexture(GL_TEXTURE_2D, 0);
+
+			DEBUGLOG->outdent();
 
 			// for other use (i.e. tex atlas)
 //			Texture* voxelGridTexture = voxelGrid->texture;
@@ -808,6 +902,15 @@ public:
 
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Loading and compiling voxel grid mipmapping compute shader program");
+			DEBUGLOG->indent();
+
+			// shader that voxelizes an object by its texture atlas
+			ComputeShader* voxelizeMipmapComputeShader = new ComputeShader(SHADERS_PATH "/compute/voxelizeMipmapCompute.comp");
+
+			DEBUGLOG->outdent();
+
+
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
@@ -866,10 +969,21 @@ public:
 
 			DEBUGLOG->outdent();
 
+			DEBUGLOG->log("Creating voxel grid mipmapping compute shader dispatcher");
+			DEBUGLOG->indent();
+
+			DispatchMipmapVoxelGridComputeShader* dispatchMipmapVoxelGridComputeShader = new DispatchMipmapVoxelGridComputeShader(
+					voxelizeMipmapComputeShader,
+					voxelGrid
+					);
+
+			DEBUGLOG->outdent();
+
 			DEBUGLOG->log("Enabling execution time queries");
 			dispatchClearVoxelGridComputeShader->setQueryTime( true );
 			dispatchVoxelizeComputeShader->setQueryTime( true );
 			dispatchVoxelizeWithTexAtlasComputeShader->setQueryTime( true );
+			dispatchMipmapVoxelGridComputeShader->setQueryTime(true);
 
 		DEBUGLOG->outdent();
 
@@ -910,6 +1024,13 @@ public:
 					&VOXELIZE_ACTIVE,
 					false),
 				"VOXELIZE");
+
+			attach(
+					new ConditionalProxyListener(
+							dispatchMipmapVoxelGridComputeShader,
+					&VOXELIZE_ACTIVE,
+					false),
+				"MIPMAP");
 
 		DEBUGLOG->outdent();
 
@@ -979,54 +1100,63 @@ public:
 		DEBUGLOG->log("Configuring Input");
 		DEBUGLOG->log("---------------------------------------------------------");
 		DEBUGLOG->indent();
-			DEBUGLOG->log("Disable/Enable real-time voxelization : Y");
+			DEBUGLOG->log("Disable/Enable real-time voxelization  : Y");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &VOXELIZE_ACTIVE ), GLFW_KEY_Y, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&VOXELIZE_ACTIVE,          "Voxelize real-time enabled : "), GLFW_KEY_Y, GLFW_PRESS);
 
-			DEBUGLOG->log("Switch active Voxelization Method     : X");
+			DEBUGLOG->log("Switch active Voxelization Method      : X");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &VOXELIZE_REGULAR_ACTIVE ), GLFW_KEY_X, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : regular"), &VOXELIZE_REGULAR_ACTIVE), GLFW_KEY_X, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active voxelize mode     : texAtlas"), &VOXELIZE_REGULAR_ACTIVE, true), GLFW_KEY_X, GLFW_PRESS);
 
-			DEBUGLOG->log("Clear voxel grid on key press         : C");
+			DEBUGLOG->log("Clear voxel grid on key press          : C");
 			m_inputManager.attachListenerOnKeyPress(  dispatchClearVoxelGridComputeShader, GLFW_KEY_C, GLFW_PRESS);
 
-			DEBUGLOG->log("Voxelize scene with active voxelizer  : V");
+			DEBUGLOG->log("Voxelize scene with active voxelizer   : V");
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeComputeShader, &VOXELIZE_REGULAR_ACTIVE ), GLFW_KEY_V, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &VOXELIZE_REGULAR_ACTIVE, true ), GLFW_KEY_V, GLFW_PRESS);
 
-			DEBUGLOG->log("Switch voxel grid display             : B");
+			DEBUGLOG->log("Switch voxel grid display              : B");
 			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
 
-			DEBUGLOG->log("Reset scenegraph                      : R");
+			DEBUGLOG->log("Reset scenegraph                       : R");
 			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState(scene->getSceneGraph()),GLFW_KEY_R, GLFW_PRESS);
 
-			DEBUGLOG->log("Print compute shader execution times  : T");
+			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeComputeShader->getPrintExecutionTimeListener(				"Voxelize Models       "), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader->getPrintExecutionTimeListener(	"Voxelize Texture Atlas"), GLFW_KEY_T, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( dispatchMipmapVoxelGridComputeShader->getPrintExecutionTimeListener(       "Mipmap Voxel Grid     "), GLFW_KEY_T, GLFW_PRESS);
 
-			DEBUGLOG->log("Turn camera                           : MOUSE - RIGHT");
+			DEBUGLOG->log("Turn camera                            : MOUSE - RIGHT");
 			Camera* movableCam = gbufferRenderPass->getCamera();
 			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
 
-			DEBUGLOG->log("Turn objects                          : MOUSE - LEFT");
+			DEBUGLOG->log("Turn objects                           : MOUSE - LEFT");
 			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT, gbufferRenderPass->getCamera() );
 			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT, gbufferRenderPass->getCamera());
 
-			DEBUGLOG->log("Configuring light movement            : Arrow keys");
+			DEBUGLOG->log("Configuring light movement             : Arrow keys");
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
-			DEBUGLOG->log("In- /Decrease background transparency : upper / lower left corner");
+			DEBUGLOG->log("De-/Increase background transparency   : lower / upper left corner");
+			// TODO create some actual GUI elements for these
 			InputField* inputFieldIncTransparency = new InputField(0,  0, 100, 256, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
 			InputField* inputFieldDecTransparency = new InputField(0,256, 100, 256, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
 			inputFieldIncTransparency->attachListenerOnPress( new IncrementValueListener<float>( &BACKGROUND_TRANSPARENCY, 0.1f ) );
 			inputFieldIncTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &BACKGROUND_TRANSPARENCY, "background transparency : "));
 			inputFieldDecTransparency->attachListenerOnPress( new DecrementValueListener<float>( &BACKGROUND_TRANSPARENCY, 0.1f ) );
 			inputFieldDecTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &BACKGROUND_TRANSPARENCY, "background transparency : "));
+
+			DEBUGLOG->log("De-/Increase visible voxel grid level  : K / L    ( overlay view only )");
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_L);
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_K);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_L);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_K);
+
 
 		DEBUGLOG->outdent();
 
@@ -1040,6 +1170,8 @@ public:
 		call("CLEAR");					// call listeners attached to clear interface
 
 		call("VOXELIZE");				// call listeners attached to voxelize interface
+
+		call ("MIPMAP");				// call listeners attached to mipmap interface
 
 		Application::programCycle(); 	// regular rendering and image presentation
 	}
