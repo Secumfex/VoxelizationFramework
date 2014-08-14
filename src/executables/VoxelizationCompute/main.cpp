@@ -56,14 +56,26 @@ class OverlayR32UITextureRenderPass : public TriangleRenderPass
 {
 private:
 	Texture* p_texture;
+	int* p_level;
+
 public:
-	OverlayR32UITextureRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* triangle, Texture* baseTexture, Texture* texture)
+	OverlayR32UITextureRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* triangle, Texture* baseTexture, Texture* texture, int* level = 0)
 	: TriangleRenderPass(shader, fbo, triangle)
 	{
 		addUniformTexture(baseTexture, "uniformBaseTexture");
 		addEnable(GL_BLEND);
 		p_texture = texture;
+
+		if ( level == 0 )
+		{
+			p_level = new int( 0 );
+		}
+		else
+		{
+			p_level = level;
+		}
 	}
+
 
 	virtual void uploadUniforms()
 	{
@@ -1050,7 +1062,8 @@ public:
 					0,
 					m_resourceManager.getScreenFillingTriangle(),
 					compositingOutput,
-					voxelGrid->texture );
+					voxelGrid->texture,
+					&VISIBLE_TEXTURE_LEVEL );
 			overlaySliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &BACKGROUND_TRANSPARENCY) );
 			overlaySliceMap->setViewport(0,0,RENDER_FRAME_WIDTH,RENDER_FRAME_HEIGHT);
 
