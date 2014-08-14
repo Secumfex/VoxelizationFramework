@@ -24,7 +24,7 @@ static int voxelGridResolution = 256;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
 
-class TransluscentShadowMappingApp: public Application {
+class TransmittanceShadowMappingApp: public Application {
 private:
 
 	TexAtlas::TextureAtlasRenderPass* m_textureAtlasRenderer;
@@ -159,14 +159,14 @@ private:
 	}
 
 public:
-	TransluscentShadowMappingApp()
+	TransmittanceShadowMappingApp()
 	{
 		m_textureAtlasRenderer = 0;
 		m_textureAtlasVertexGenerator = 0;
 
-		m_name = "Transluscent Shadow Mapping App";
+		m_name = "Transmittance Shadow Mapping App";
 	}
-	virtual ~TransluscentShadowMappingApp()
+	virtual ~TransmittanceShadowMappingApp()
 	{
 
 	}
@@ -483,7 +483,7 @@ int main() {
 	// configure a little bit
 	Application::static_newWindowHeight = 700;
 
-	TransluscentShadowMappingApp myApp;
+	TransmittanceShadowMappingApp myApp;
 
 	myApp.configure();
 
