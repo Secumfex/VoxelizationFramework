@@ -113,6 +113,23 @@ public:
 };
 
 template < class T >
+class MultiplyValueListener : public Listener
+{
+private:
+	T* p_value;
+	T m_multiplicant;
+public:
+	MultiplyValueListener(T* valuePtr, T multiplicant) {
+		m_multiplicant = multiplicant;
+		p_value = valuePtr;
+	}
+	virtual ~MultiplyValueListener() {};
+	void call() {
+		*p_value = m_multiplicant * (*p_value);
+	}
+};
+
+template < class T >
 class IncrementValueListener : public Listener
 {
 private:

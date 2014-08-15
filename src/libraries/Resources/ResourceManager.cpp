@@ -376,7 +376,7 @@ Object* ResourceManager::getQuad() {
 Object* ResourceManager::getCube(){
 	if(m_cube == 0){
 
-		Model *cube = new Model;
+		Model *cube = new Model();
 		Material *mat = new Material();
 
 		GLuint cubeVertexArrayHandle;

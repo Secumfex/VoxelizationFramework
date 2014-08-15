@@ -42,8 +42,11 @@ void main() {
 	// declare RGB value to be added
 	vec4 sliceAdd = vec4(0.0);
 	
+	// retrieve actual texture size
+	ivec2 sliceMapSize = imageSize( uniformSliceMapTexture );
+	
 	// ignore if not in actual voxel grid
-	if ( projDepth < 32 && projDepth >= 0 )
+	if ( ( projDepth < 32 && projDepth >= 0 ) && (projXY.x < sliceMapSize.x && projXY.x >= 0 ) && ( projXY.y < sliceMapSize.y && projXY.y >= 0) )
 	{
 	
 		// retrieve byte corresponding to projected depth

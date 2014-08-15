@@ -1,7 +1,5 @@
 #version 330
 
-in vec2 passUV;
-
 uniform bool uniformHasTexture;
 uniform sampler2D uniformTexture;
 uniform float uniformTextureTransparency;
@@ -11,6 +9,8 @@ uniform float uniformRed;
 uniform float uniformGreen;
 uniform float uniformBlue;
 uniform float uniformAlpha;
+
+in vec2 passUV;
 
 out vec4 fragmentColor;
 
@@ -29,5 +29,5 @@ void main() {
 	
     fragmentColor = vec4 ( 
     		max ( 0.0, min( 1.0 ,         ( texColor.a - uniformTextureTransparency ) ) )   * texColor.rgb 
-    	  + max ( 0.0, min( 1.0 , ( 1.0 - ( texColor.a - uniformTextureTransparency ) ) ) ) * color.rgb   , 1.0 );
+    	  + max ( 0.0, min( 1.0 , ( 1.0 - ( texColor.a - uniformTextureTransparency ) ) ) ) * color.rgb   , uniformAlpha + texColor.a );
 }

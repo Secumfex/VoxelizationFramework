@@ -26,6 +26,7 @@ public:
 
 	std::vector< Node* > getChildren();
 	glm::mat4 getModelMatrix();
+	glm::mat4* getModelMatrixPtr();
 	glm::mat4 getAccumulatedModelMatrix();
 	virtual void setModelMatrix(glm::mat4 modelMatrix);
 

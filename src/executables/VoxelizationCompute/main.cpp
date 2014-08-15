@@ -287,6 +287,7 @@ public:
 		DEBUGLOG->indent();
 			DEBUGLOG->log("Creating gbuffer renderpass");
 			CameraRenderPass* gbufferRenderPass = createGBufferRenderPass();
+			Camera* mainCamera = gbufferRenderPass->getCamera();
 
 			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &ENABLE_BACKFACE_CULLING ) );
 			gbufferRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &USE_ORTHOCAM ) );
@@ -324,7 +325,7 @@ public:
 					gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
 
 					gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &LIGHT_POSITION  ) );
-					gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    gbufferRenderPass->getCamera()->getViewMatrixPointer() ) );
+					gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    mainCamera->getViewMatrixPointer() ) );
 
 					DEBUGLOG->log("Adding compositing render pass now");
 					m_renderManager.addRenderPass(gbufferCompositing);
@@ -419,7 +420,7 @@ public:
 				FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;// change this first
 
 				// create renderpass that generates a textureAtlas for models
-				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, TEXATLAS_RESOLUTION, TEXATLAS_RESOLUTION, gbufferRenderPass->getCamera() );
+				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, TEXATLAS_RESOLUTION, TEXATLAS_RESOLUTION, mainCamera );
 
 				FramebufferObject::static_internalFormat = internalFormat;	// restore default
 			DEBUGLOG->outdent();
@@ -630,8 +631,8 @@ public:
 		DEBUGLOG->indent();
 
 			// Align Camera with voxelization view
-			gbufferRenderPass->getCamera()->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 15.0f) );
-			gbufferRenderPass->getCamera()->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
+			mainCamera->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 15.0f) );
+			mainCamera->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
 
 			Shader* 			overlaySliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
 			TriangleRenderPass* overlaySliceMap = new OverlayR32UITextureRenderPass(
@@ -653,7 +654,7 @@ public:
 					voxelGrid,
 					SliceMap::get32BitUintMask(),
 					gbufferPositionMap,
-					gbufferRenderPass->getCamera()->getViewMatrixPointer()
+					mainCamera->getViewMatrixPointer()
 					);
 			projectSliceMap->addClearBit( GL_COLOR_BUFFER_BIT );
 			projectSliceMap->addUniform( new Uniform<float>( "uniformBackgroundTransparency", &BACKGROUND_TRANSPARENCY ) );
@@ -661,26 +662,76 @@ public:
 
 			RenderPass* showSliceMap = projectSliceMap;
 
-			// create listener to switch through display methods
-			int showSliceMapIndex = m_renderManager.addRenderPass( showSliceMap );
+			m_renderManager.addRenderPass( showSliceMap );
 
+			// for later use in switch through values listener
 			std::vector <RenderPass* > showSliceMapCandidates;
 			showSliceMapCandidates.push_back( projectSliceMap );
 			showSliceMapCandidates.push_back( overlaySliceMap );
 
-			SwitchThroughValuesListener< RenderPass* >* switchShowSliceMaps = new SwitchThroughValuesListener<RenderPass*>(
-							&( *m_renderManager.getRenderPassesPtr())[showSliceMapIndex],
-							showSliceMapCandidates
-							);
+		DEBUGLOG->outdent();
 
-			/**************************************************************************************
-			* 								GUI DISPLAY CONFIGURATION
-			**************************************************************************************/
-			Shader* simpleTex = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
-			RenderPass* guiRenderPass = new RenderPass( simpleTex, 0);
-			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
-//			guiRenderPass->addUniform()
+		/**************************************************************************************
+		* 						DEBUG GEOMETRY DISPLAY CONFIGURATION
+		**************************************************************************************/
 
+		DEBUGLOG->log("Configuring debug geometry display");
+		DEBUGLOG->indent();
+
+			DEBUGLOG->log("Configuring debug geometry renderpass");
+			// create simple render pass / shader for arbitrary geometry
+			Shader* debugShader = new Shader(SHADERS_PATH "/myShader/simpleVertex.vert" , SHADERS_PATH "/myShader/simpleColoring.frag");
+			CameraRenderPass* debugGeometry = new CameraRenderPass( debugShader, 0 );
+			debugGeometry->setCamera( mainCamera );
+			debugGeometry->setViewport( 0, 0, RENDER_FRAME_WIDTH, RENDER_FRAME_HEIGHT);
+			debugGeometry->addEnable( GL_BLEND );
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			DEBUGLOG->log("Configuring debug geometry : voxel grid");
+			// debug geometry for voxel grid
+			RenderableNode* voxelGridDebugGeometry = new RenderableNode( scene->getSceneGraph()->getRootNode() );
+			Object* boundingBox = new Object ( *m_resourceManager.getCube() );
+			Material* vMaterial = new Material( *boundingBox->getMaterial() );
+			vMaterial->setAttribute( "uniformHasColor", 1.0f );
+			vMaterial->setAttribute( "uniformRed", 0.2f );
+			vMaterial->setAttribute( "uniformGreen", 1.0f );
+			vMaterial->setAttribute( "uniformBlue", 1.0f );
+			vMaterial->setAttribute( "uniformAlpha", 0.5f );
+			boundingBox->setMaterial( vMaterial );
+			voxelGridDebugGeometry->scale( glm::vec3 ( voxelGrid->width, voxelGrid->height, voxelGrid->depth ) );
+			voxelGridDebugGeometry->setObject( boundingBox );
+			debugGeometry->addRenderable( voxelGridDebugGeometry );
+
+			DEBUGLOG->log("Configuring debug geometry : light source");
+			// debug geometry for light Source
+			Node* lightPositionNode  = new Node( scene->getSceneGraph()->getRootNode() );
+			RenderableNode* lightDebugGeometry = new RenderableNode( lightPositionNode );
+			Object* lightBox = new Object ( *m_resourceManager.getCube() );
+			Material* lMaterial = new Material( *lightBox->getMaterial() );
+			lMaterial->setAttribute( "uniformHasColor", 1.0f );
+			lMaterial->setAttribute( "uniformRed", 1.0f );
+			lMaterial->setAttribute( "uniformGreen", 1.0f );
+			lMaterial->setAttribute( "uniformBlue", 0.8f );
+			lMaterial->setAttribute( "uniformAlpha", 1.0f );
+			lightBox->setMaterial( lMaterial );
+			lightDebugGeometry->scale( glm::vec3 ( 0.1, 0.1, 0.1 ) );
+			lightDebugGeometry->setObject( lightBox );
+			lightDebugGeometry->translate( LIGHT_POSITION );
+			debugGeometry->addRenderable( lightDebugGeometry );
+
+			m_renderManager.addRenderPass( debugGeometry );
+
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		* 								GUI DISPLAY CONFIGURATION
+		**************************************************************************************/
+		DEBUGLOG->indent();
+
+		Shader* simpleTex = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
+		RenderPass* guiRenderPass = new RenderPass( simpleTex, 0);
+		guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
+//		guiRenderPass->addUniform()
 
 		DEBUGLOG->outdent();
 		/**************************************************************************************
@@ -707,6 +758,12 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( dispatchVoxelizeWithTexAtlasComputeShader, &VOXELIZE_REGULAR_ACTIVE, true ), GLFW_KEY_V, GLFW_PRESS);
 
 			DEBUGLOG->log("Switch voxel grid display              : B");
+			// create listener to switch through display methods
+			int showSliceMapIndex = m_renderManager.getRenderPassIndex( showSliceMap );
+			SwitchThroughValuesListener< RenderPass* >* switchShowSliceMaps = new SwitchThroughValuesListener<RenderPass*>(
+					&( *m_renderManager.getRenderPassesPtr() )[showSliceMapIndex],
+					showSliceMapCandidates
+			);
 			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
 
 			DEBUGLOG->log("Reset scenegraph                       : R");
@@ -718,19 +775,22 @@ public:
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader->getPrintExecutionTimeListener(	"Voxelize Texture Atlas"), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchMipmapVoxelGridComputeShader->getPrintExecutionTimeListener(       "Mipmap Voxel Grid     "), GLFW_KEY_T, GLFW_PRESS);
 
-			DEBUGLOG->log("Turn camera                            : MOUSE - RIGHT");
-			Camera* movableCam = gbufferRenderPass->getCamera();
-			SimpleScene::configureSimpleCameraMovement(movableCam, this, 2.5f);
-
 			DEBUGLOG->log("Turn objects                           : MOUSE - LEFT");
-			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT, gbufferRenderPass->getCamera() );
-			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT, gbufferRenderPass->getCamera());
+			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT, mainCamera );
+			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT, mainCamera );
 
-			DEBUGLOG->log("Configuring light movement             : Arrow keys");
+			DEBUGLOG->log("Turn camera                            : MOUSE - RIGHT");
+			SimpleScene::configureSimpleCameraMovement(mainCamera, this, 2.5f);
+
+			DEBUGLOG->log("Move light source                      : Arrow keys");
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, 1.0f) ), GLFW_KEY_DOWN, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(1.0f,0.0f, 1.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(1.0f,0.0f, 0.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(0.0f,0.0f, 1.0f ) ) ), GLFW_KEY_DOWN, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(0.0f,0.0f, -1.0f) ) ), GLFW_KEY_UP, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(-1.0f,0.0f, 0.0f) ) ), GLFW_KEY_LEFT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(1.0f,0.0f, 0.0f ) ) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
 			DEBUGLOG->log("De-/Increase background transparency   : lower / upper left corner");
 			// TODO create some actual GUI elements for these

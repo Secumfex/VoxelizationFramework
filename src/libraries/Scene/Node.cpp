@@ -93,6 +93,10 @@ Object* Node::getObject() {
 	return m_object;
 }
 
+glm::mat4* Node::getModelMatrixPtr() {
+	return &m_modelMatrix;
+}
+
 Node* Node::findObjectNode(Object* object)
 {
 	if (m_object == object)	// this is the Node
