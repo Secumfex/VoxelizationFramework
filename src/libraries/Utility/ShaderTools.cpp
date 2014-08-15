@@ -30,6 +30,10 @@ namespace ShaderTools {
     }
 
     void loadShaderSource(GLuint shaderHandle, const char* fileName) {
+
+    	std::string fileString = std::string( fileName );
+    	fileString = fileString.substr( fileString.find_last_of("/") );
+
         std::string fileContent;
         std::string line;
 
@@ -42,11 +46,11 @@ namespace ShaderTools {
             }
             file.close();
 //            std::cout << "SUCCESS: Opened file " << fileName << std::endl;
-            DEBUGLOG->log("SUCCESS: Opened file " + std::string( fileName ) );
+            DEBUGLOG->log("SUCCESS: Opened file " + fileString );
         }
         else
 //            std::cout << "ERROR: Unable to open file " << fileName << std::endl;
-        	DEBUGLOG->log("ERROR: Unable to open file " + std::string(  fileName ) );
+        	DEBUGLOG->log("ERROR: Unable to open file " + fileString );
 
         const char* source = fileContent.c_str();
         const GLint source_size = strlen(source);
