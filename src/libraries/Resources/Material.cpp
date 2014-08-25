@@ -53,3 +53,7 @@ std::map <std::string, float> Material::getAttributes()
 {
 	return m_attributes;
 }
+
+std::map<std::string, Texture*>* Material::getTexturesPtr() {
+	return &m_textures;
+}

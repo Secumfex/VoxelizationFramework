@@ -23,6 +23,7 @@ public:
 	float getAttribute(std::string name);
 
 	std::map <std::string, Texture* > getTextures();
+	std::map <std::string, Texture* >* getTexturesPtr();
 	std::map <std::string, float > getAttributes();
 };
 

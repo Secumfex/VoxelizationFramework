@@ -6,12 +6,20 @@
 
 namespace TextureTools {
     GLuint loadTexture(std::string fileName){
-        int width, height, bytesPerPixel;
+
+    	std::string fileString = std::string(fileName);
+    	fileString = fileString.substr(fileString.find_last_of("/"));
+
+    	std::string fileContent;
+    	std::string line;
+
+    	int width, height, bytesPerPixel;
         unsigned char *data = stbi_load(fileName.c_str(), &width, &height, &bytesPerPixel, 0);
 
         if(data == NULL){
 //        	std::cout << "ERROR: Unable to open image "  << fileName << std::endl;
-        	DEBUGLOG->log("ERROR : Unable to open image " + fileName);
+//        	DEBUGLOG->log("ERROR : Unable to open image " + fileName);
+        	DEBUGLOG->log("ERROR : Unable to open image " + fileString);
         	  return -1;}
 
         //create new texture
@@ -23,7 +31,8 @@ namespace TextureTools {
      
         //send image data to the new texture
         if (bytesPerPixel < 3) {
-        	DEBUGLOG->log("ERROR : Unable to open image " + fileName);
+        	DEBUGLOG->log("ERROR : Unable to open image " + fileString);
+//        	DEBUGLOG->log("ERROR : Unable to open image " + fileName);
 //            std::cout << "ERROR: Unable to open image"  << fileName << std::endl;
             return -1;
         } else if (bytesPerPixel == 3){
@@ -45,7 +54,8 @@ namespace TextureTools {
         glBindTexture(GL_TEXTURE_2D, 0);
 
         stbi_image_free(data);
-        DEBUGLOG->log("SUCCESS: image loaded from " + fileName );
+//        DEBUGLOG->log("SUCCESS: image loaded from " + fileName );
+        DEBUGLOG->log( "SUCCESS: image loaded from " + fileString );
 //        std::cout << "SUCCESS: image loaded from " << fileName << std::endl;
         return textureHandle;
     }

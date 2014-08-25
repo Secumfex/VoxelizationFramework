@@ -33,7 +33,8 @@ namespace AssimpTools
 		
 		// load the desired file
 		directory = getDirectoryPath(path);
-
+		std::string fileString = std::string(path);
+		fileString = fileString.substr(fileString.find_last_of("/"));
 
 		std::ifstream fin(path.c_str());
 		if(!fin.fail()) {
@@ -42,8 +43,9 @@ namespace AssimpTools
 
 		else{
 
-			DEBUGLOG->log(std::string ("ERROR : Couldn't open file: ") + path.c_str() );
-			cout<<Importer.GetErrorString()<<endl;
+//			DEBUGLOG->log(std::string ("ERROR : Couldn't open file: ") + path.c_str() );
+			DEBUGLOG->log(std::string ("ERROR : Couldn't open file: ") + fileString.c_str() );
+					cout<<Importer.GetErrorString()<<endl;
 			return 0;
 		}
 
@@ -66,7 +68,9 @@ namespace AssimpTools
 		}
 
 		else{
-			DEBUGLOG->log( std::string( "import of scene " ) + path.c_str() + std::string( " succeeded." ) );
+//			DEBUGLOG->log( std::string( "import of scene " ) + path.c_str() + std::string( " succeeded." ) );
+			DEBUGLOG->log( std::string( "import of scene " ) + fileString.c_str() + std::string( " succeeded." ) );
+
 			// DEBUGLOG->indent();
 			// {
 			// 	DEBUGLOG->log("Scene HasMeshes: ", pScene->HasMeshes());

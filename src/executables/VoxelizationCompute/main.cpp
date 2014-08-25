@@ -38,7 +38,13 @@ static int VOXELGRID_RESOLUTION = 64;
 static float VOXELGRID_WIDTH = 8.0f;
 static float VOXELGRID_HEIGHT = 8.0f;
 
-static glm::vec3 LIGHT_POSITION = glm::vec3(3.0f, 3.0f, 3.0f);
+static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 3.0f);
+static float LIGHT_FLUX = 1.0f;
+static bool USE_ORTHOLIGHTSOURCE = true;
+
+static int SHADOWMAP_WIDTH = 256;
+static int SHADOWMAP_HEIGHT = 256;
+
 static bool ENABLE_BACKFACE_CULLING = true;
 static bool USE_ORTHOCAM = true;
 static float BACKGROUND_TRANSPARENCY = 0.25;
@@ -169,8 +175,52 @@ public:
 
 class ComputeShaderApp: public Application {
 private:
+	Node* m_lightParentNode;
+	CameraNode* m_lightSourceNode;
 	Node* m_cameraParentNode;
 	Node* m_objectsNode;
+
+
+	CameraRenderPass* createReflectiveShadowMapRenderPass( )
+	{
+		// render scene information into framebuffer attachments
+		Shader* writeRSMShader = new Shader( SHADERS_PATH "/rsm/rsm.vert", SHADERS_PATH "/rsm/rsm_backfaceCulling.frag" );
+
+		// allow values > 1.0 and < 0.0
+		GLenum internalFormat = FramebufferObject::static_internalFormat;
+		FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;
+
+		FramebufferObject* rsmFramebufferObject = new FramebufferObject ( SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT );
+		// 3 attachments : world position, normals, flux
+		rsmFramebufferObject->addColorAttachments(3);
+
+		FramebufferObject::static_format = internalFormat;
+
+		CameraRenderPass* writeRSMRenderPass = new CameraRenderPass( writeRSMShader, rsmFramebufferObject );
+		writeRSMRenderPass->addEnable(GL_DEPTH_TEST);	// write depth map
+		writeRSMRenderPass->setClearColor(0.0f,0.0f,0.0f,0.0f);
+		writeRSMRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
+		writeRSMRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+
+		// create light source node
+		m_lightParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
+		m_lightSourceNode = new CameraNode( m_lightParentNode );
+		m_lightSourceNode->translate( LIGHT_POSITION );
+		m_lightSourceNode->setProjectionMatrix( glm::ortho( -5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f) );
+
+		// TODO implement setCenter for CameraNode
+//		m_lightSourceNode->setCenter( glm::vec3(0.0f, 0.0f, 0.0f) );
+
+		// look at center
+//		m_lightSourceNode->setDirection( glm::normalize( -1.0f * LIGHT_POSITION ) );
+
+		writeRSMRenderPass->setCamera( m_lightSourceNode );
+
+		DEBUGLOG->log("Adding render pass to application");
+		m_renderManager.addRenderPass(writeRSMRenderPass);
+
+		return writeRSMRenderPass;
+	}
 
 	CameraRenderPass* createGBufferRenderPass( )
 	{
@@ -220,6 +270,8 @@ public:
 		m_name = "Compute Voxelization";
 		m_objectsNode = 0;
 		m_cameraParentNode = 0;
+		m_lightParentNode = 0;
+		m_lightSourceNode = 0;
 	}
 
 	virtual ~ComputeShaderApp()
@@ -296,7 +348,7 @@ public:
 			Texture* gbufferNormalMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1 ) );
 			Texture* gbufferColorMap = new Texture( gbufferRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2 ) );
 
-			DEBUGLOG->log("Adding objects to perspective phong render pass");
+			DEBUGLOG->log("Adding objects to gbuffer render pass");
 			for (unsigned int i = 0; i < renderables.size(); i++)
 			{
 				gbufferRenderPass->addRenderable( renderables[i] );
@@ -332,6 +384,31 @@ public:
 				DEBUGLOG->outdent();
 
 			DEBUGLOG->outdent();
+
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		* 						REFLECTIVE SHADOW MAP CONFIGURATION
+		**************************************************************************************/
+		DEBUGLOG->log("Configuring reflective shadow map rendering");
+		DEBUGLOG->indent();
+			CameraRenderPass* rsmRenderPass = createReflectiveShadowMapRenderPass();
+
+			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &ENABLE_BACKFACE_CULLING ) );
+			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &USE_ORTHOLIGHTSOURCE ) );
+			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformFlux" ) , &LIGHT_FLUX ) );
+
+			// for future use
+			Texture* rsmPositionMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 ) );
+			Texture* rsmNormalMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1 ) );
+			Texture* rsmFluxMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2 ) );
+			Texture* rsmDepthMap = new Texture ( rsmRenderPass->getFramebufferObject()->getDepthTextureHandle() );
+
+			DEBUGLOG->log("Adding objects to reflective shadow map render pass");
+			for (unsigned int i = 0; i < renderables.size(); i++)
+			{
+				rsmRenderPass->addRenderable( renderables[i] );
+			}
 
 		DEBUGLOG->outdent();
 
@@ -704,8 +781,11 @@ public:
 
 			DEBUGLOG->log("Configuring debug geometry : light source");
 			// debug geometry for light Source
-			Node* lightPositionNode  = new Node( scene->getSceneGraph()->getRootNode() );
-			RenderableNode* lightDebugGeometry = new RenderableNode( lightPositionNode );
+
+//			Node* lightPositionNode  = new Node( scene->getSceneGraph()->getRootNode() );
+//			Node* lightPositionNode = m_lightParentNode;
+
+			RenderableNode* lightDebugGeometry = new RenderableNode( m_lightSourceNode );
 			Object* lightBox = new Object ( *m_resourceManager.getCube() );
 			Material* lMaterial = new Material( *lightBox->getMaterial() );
 			lMaterial->setAttribute( "uniformHasColor", 1.0f );
@@ -716,7 +796,6 @@ public:
 			lightBox->setMaterial( lMaterial );
 			lightDebugGeometry->scale( glm::vec3 ( 0.1, 0.1, 0.1 ) );
 			lightDebugGeometry->setObject( lightBox );
-			lightDebugGeometry->translate( LIGHT_POSITION );
 			debugGeometry->addRenderable( lightDebugGeometry );
 
 			m_renderManager.addRenderPass( debugGeometry );
@@ -726,12 +805,35 @@ public:
 		/**************************************************************************************
 		* 								GUI DISPLAY CONFIGURATION
 		**************************************************************************************/
+		DEBUGLOG->log("Configuring GUI");
 		DEBUGLOG->indent();
 
-		Shader* simpleTex = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
-		RenderPass* guiRenderPass = new RenderPass( simpleTex, 0);
-		guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
-//		guiRenderPass->addUniform()
+			Shader* guiShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
+			RenderPass* guiRenderPass = new RenderPass( guiShader, 0);
+			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
+
+			// debug view
+			RenderableNode* dNode = new RenderableNode();
+			Object* dObject = new Object( *m_resourceManager.getQuad() );
+			Material* dMaterial = new Material( *dObject->getMaterial() );
+			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
+			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
+			dMaterial->setTexture( "uniformTexture", rsmDepthMap );
+			dObject->setMaterial( dMaterial );
+			dNode->setObject( dObject );
+
+			// create input field
+			InputField* debugFrameInputField = new InputField(RENDER_FRAME_WIDTH, 0, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
+			debugFrameInputField->attachListenerOnPress( new DebugPrintListener(" OH BOY OH BOY" ) );
+
+			// place Node center and scale according to input field
+			// TODO
+
+			guiRenderPass->addRenderable( dNode );
+
+			// TODO add some other buttons
+
+			m_renderManager.addRenderPass( guiRenderPass );
 
 		DEBUGLOG->outdent();
 		/**************************************************************************************
@@ -767,7 +869,7 @@ public:
 			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
 
 			DEBUGLOG->log("Reset scenegraph                       : R");
-			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState(scene->getSceneGraph()),GLFW_KEY_R, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ),GLFW_KEY_R, GLFW_PRESS);
 
 			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
@@ -787,10 +889,10 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(0.0f,0.0f, -1.0f) ), GLFW_KEY_UP, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(-1.0f,0.0f, 0.0f) ), GLFW_KEY_LEFT, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener<glm::vec3>( &LIGHT_POSITION, glm::vec3(1.0f,0.0f, 0.0f) ), GLFW_KEY_RIGHT, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(0.0f,0.0f, 1.0f ) ) ), GLFW_KEY_DOWN, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(0.0f,0.0f, -1.0f) ) ), GLFW_KEY_UP, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(-1.0f,0.0f, 0.0f) ) ), GLFW_KEY_LEFT, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( lightPositionNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(1.0f,0.0f, 0.0f ) ) ), GLFW_KEY_RIGHT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( m_lightSourceNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(0.0f,0.0f, 1.0f ) ) ), GLFW_KEY_DOWN, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( m_lightSourceNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(0.0f,0.0f, -1.0f) ) ), GLFW_KEY_UP, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( m_lightSourceNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(-1.0f,0.0f, 0.0f) ) ), GLFW_KEY_LEFT, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new MultiplyValueListener<glm::mat4>( m_lightSourceNode->getModelMatrixPtr(), glm::translate( glm::mat4(1.0), glm::vec3(1.0f,0.0f, 0.0f ) ) ), GLFW_KEY_RIGHT, GLFW_PRESS );
 
 			DEBUGLOG->log("De-/Increase background transparency   : lower / upper left corner");
 			// TODO create some actual GUI elements for these
