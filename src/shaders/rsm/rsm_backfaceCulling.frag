@@ -42,7 +42,8 @@ void main(){
     positionOutput = passWorldPosition;
     
     // save normal
-    normalOutput = vec4( normalize( passWorldNormal ), 0);
+    normalOutput = vec4( passWorldNormal , 0);
+    
     vec4 diffuseColor = texture( diffuseTexture, passUVCoord );
     
     // save flux 

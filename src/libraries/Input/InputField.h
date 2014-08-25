@@ -3,6 +3,7 @@
 
 #include <Input/InputManager.h>
 #include <Utility/SubjectListenerPattern.h>
+#include <glm/glm.hpp>
 
 // class that resembles a field on screen that can be clicked and hovered
 class InputField : public Subject
@@ -42,6 +43,8 @@ public:
 	void setHovered(bool hovered);
 	bool isPressed() const;
 	void setPressed(bool pressed);
+
+	glm::vec3 getCenter();
 };
 
 // listener that calls hover() when called

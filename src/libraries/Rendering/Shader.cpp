@@ -24,6 +24,7 @@ void Shader::requestUniformNames()
 	DEBUGLOG->log("Shader ProgramHandle : ", m_programHandle);
 	DEBUGLOG->log("Uniforms in this Shader: ", total);
 
+	DEBUGLOG->indent();
 	int i= 0;
 	for(i=0; i<total; ++i)  {
 		int name_len=-1, num=-1;
@@ -40,6 +41,7 @@ void Shader::requestUniformNames()
 
 		m_uniformNames.push_back(name);
 	}
+	DEBUGLOG->outdent();
 }
 
 Shader::~Shader()

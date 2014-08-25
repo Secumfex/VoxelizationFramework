@@ -161,3 +161,7 @@ void InputField::setPressed(bool pressed) {
 void InputField::setHovered(bool hovered) {
 	m_hovered = hovered;
 }
+
+glm::vec3 InputField::getCenter() {
+	return glm::vec3( m_xPos + m_width / 2, m_yPos + m_height / 2, 0.0f );
+}

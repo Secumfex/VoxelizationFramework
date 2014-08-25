@@ -21,7 +21,8 @@
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
 
-#include <Input/InputField.h>
+#include <Input/Frame.h>
+//#include <Input/InputField.h>
 
 #include "VoxelGridTools.h"
 #include "VoxelizerTools.h"
@@ -179,7 +180,6 @@ private:
 	CameraNode* m_lightSourceNode;
 	Node* m_cameraParentNode;
 	Node* m_objectsNode;
-
 
 	CameraRenderPass* createReflectiveShadowMapRenderPass( )
 	{
@@ -807,31 +807,105 @@ public:
 		**************************************************************************************/
 		DEBUGLOG->log("Configuring GUI");
 		DEBUGLOG->indent();
+			DEBUGLOG->log("Creating GUI frame object");
+			Frame* guiFrame = new Frame( RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
 
-			Shader* guiShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
+			DEBUGLOG->log("Creating GUI render pass");
+			Shader* guiShader = new Shader(SHADERS_PATH "/myShader/simpleVertex.vert", SHADERS_PATH "/myShader/simpleColoring.frag");
 			RenderPass* guiRenderPass = new RenderPass( guiShader, 0);
-			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
 
-			// debug view
-			RenderableNode* dNode = new RenderableNode();
+			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
+			guiRenderPass->addUniform( new Uniform<glm::mat4>("uniformView", new glm::mat4(1.0f) ) );
+			guiRenderPass->addUniform( new Uniform<glm::mat4>("uniformProjection", new glm::mat4( glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, -0.5f, 0.5f ) ) ) );
+
+			int inputFieldWidth = 128;
+			int inputFieldHeight = 128;
+
+			DEBUGLOG->log("Creating some debug views");
+
+			// create display fields
+			Node* dPosNode = new Node();
+			RenderableNode* dScaleNode = new RenderableNode(dPosNode);
 			Object* dObject = new Object( *m_resourceManager.getQuad() );
 			Material* dMaterial = new Material( *dObject->getMaterial() );
 			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
 			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
 			dMaterial->setTexture( "uniformTexture", rsmDepthMap );
 			dObject->setMaterial( dMaterial );
-			dNode->setObject( dObject );
+			dScaleNode->setObject( dObject );
 
 			// create input field
-			InputField* debugFrameInputField = new InputField(RENDER_FRAME_WIDTH, 0, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT);
-			debugFrameInputField->attachListenerOnPress( new DebugPrintListener(" OH BOY OH BOY" ) );
+			InputField* debugFrameInputField = guiFrame->createInputField( 0, 0, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
 
 			// place Node center and scale according to input field
-			// TODO
+			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
+			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
 
-			guiRenderPass->addRenderable( dNode );
+			// add to gui render pass
+			guiRenderPass->addRenderable( dScaleNode );
 
-			// TODO add some other buttons
+			// create display field
+			dPosNode = new Node();
+			dScaleNode = new RenderableNode(dPosNode);
+			dObject = new Object( *m_resourceManager.getQuad() );
+			dMaterial = new Material( *dObject->getMaterial() );
+			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
+			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
+			dMaterial->setTexture( "uniformTexture", rsmFluxMap );
+			dObject->setMaterial( dMaterial );
+			dScaleNode->setObject( dObject );
+
+			// create input field
+			debugFrameInputField = guiFrame->createInputField( 128, 0, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
+
+			// place Node center and scale according to input field
+			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
+			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
+
+			// add to gui render pass
+			guiRenderPass->addRenderable( dScaleNode );
+
+			// create display field
+			dPosNode = new Node();
+			dScaleNode = new RenderableNode(dPosNode);
+			dObject = new Object( *m_resourceManager.getQuad() );
+			dMaterial = new Material( *dObject->getMaterial() );
+			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
+			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
+			dMaterial->setTexture( "uniformTexture", rsmPositionMap );
+			dObject->setMaterial( dMaterial );
+			dScaleNode->setObject( dObject );
+
+			// create input field
+			debugFrameInputField = guiFrame->createInputField( 0, 128, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
+
+			// place Node center and scale according to input field
+			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
+			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
+
+			// add to gui render pass
+			guiRenderPass->addRenderable( dScaleNode );
+
+			// create display field
+			dPosNode = new Node();
+			dScaleNode = new RenderableNode(dPosNode);
+			dObject = new Object( *m_resourceManager.getQuad() );
+			dMaterial = new Material( *dObject->getMaterial() );
+			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
+			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
+			dMaterial->setTexture( "uniformTexture", rsmNormalMap );
+			dObject->setMaterial( dMaterial );
+			dScaleNode->setObject( dObject );
+
+			// create input field
+			debugFrameInputField = guiFrame->createInputField( 128, 128, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
+
+			// place Node center and scale according to input field
+			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
+			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
+
+			// add to gui render pass
+			guiRenderPass->addRenderable( dScaleNode );
 
 			m_renderManager.addRenderPass( guiRenderPass );
 
