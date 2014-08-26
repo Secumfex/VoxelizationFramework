@@ -399,9 +399,9 @@ public:
 			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformFlux" ) , &LIGHT_FLUX ) );
 
 			// for future use
-			Texture* rsmPositionMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0 ) );
-			Texture* rsmNormalMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT1 ) );
-			Texture* rsmFluxMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT2 ) );
+			Texture* rsmPositionMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) );
+			Texture* rsmNormalMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1 ) );
+			Texture* rsmFluxMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT2 ) );
 			Texture* rsmDepthMap = new Texture ( rsmRenderPass->getFramebufferObject()->getDepthTextureHandle() );
 
 			DEBUGLOG->log("Adding objects to reflective shadow map render pass");
@@ -817,13 +817,22 @@ public:
 			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
 			guiRenderPass->addUniform( new Uniform<glm::mat4>("uniformView", new glm::mat4(1.0f) ) );
 			guiRenderPass->addUniform( new Uniform<glm::mat4>("uniformProjection", new glm::mat4( glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, -0.5f, 0.5f ) ) ) );
+			guiRenderPass->addUniform( new Uniform<float >("uniformAlpha", new float( 1.0f ) ) );
+			guiRenderPass->addUniform( new Uniform<float >("uniformTextureTransparency", new float( -1.0f ) ) );
 
-			int inputFieldWidth = 128;
-			int inputFieldHeight = 128;
+			int buttonWidth = 128;
+			int buttonHeight = 128;
 
 			DEBUGLOG->log("Creating some debug views");
 
-			// create display fields
+			// RSM Debug view
+			std::vector<Texture* > debugRSMTextures;
+			debugRSMTextures.push_back( rsmDepthMap );
+			debugRSMTextures.push_back( rsmPositionMap );
+			debugRSMTextures.push_back( rsmFluxMap );
+			debugRSMTextures.push_back( rsmNormalMap );
+
+			// create display field
 			Node* dPosNode = new Node();
 			RenderableNode* dScaleNode = new RenderableNode(dPosNode);
 			Object* dObject = new Object( *m_resourceManager.getQuad() );
@@ -841,17 +850,31 @@ public:
 			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
 			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
 
+			// make interactive
+			SwitchThroughValuesListener<Texture* >* debugRSMSwitcher = new SwitchThroughValuesListener<Texture* >(
+							&( *dMaterial->getTexturesPtr() )["uniformTexture"]
+					        , debugRSMTextures
+					);
+			debugFrameInputField->attachListenerOnPress( debugRSMSwitcher );
+
 			// add to gui render pass
 			guiRenderPass->addRenderable( dScaleNode );
 
+			// other interesting debug textures
+			std::vector<Texture* > debugTextures;
+			debugTextures.push_back( textureAtlasRenderPass->getTextureAtlas() );
+			debugTextures.push_back( gbufferNormalMap );
+			debugTextures.push_back( gbufferColorMap );
+			debugTextures.push_back( new Texture( gbufferCompositing->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) ) );
+
 			// create display field
 			dPosNode = new Node();
-			dScaleNode = new RenderableNode(dPosNode);
+			dScaleNode = new RenderableNode( dPosNode );
 			dObject = new Object( *m_resourceManager.getQuad() );
 			dMaterial = new Material( *dObject->getMaterial() );
 			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
 			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
-			dMaterial->setTexture( "uniformTexture", rsmFluxMap );
+			dMaterial->setTexture( "uniformTexture", textureAtlasRenderPass->getTextureAtlas() );
 			dObject->setMaterial( dMaterial );
 			dScaleNode->setObject( dObject );
 
@@ -862,47 +885,12 @@ public:
 			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
 			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
 
-			// add to gui render pass
-			guiRenderPass->addRenderable( dScaleNode );
-
-			// create display field
-			dPosNode = new Node();
-			dScaleNode = new RenderableNode(dPosNode);
-			dObject = new Object( *m_resourceManager.getQuad() );
-			dMaterial = new Material( *dObject->getMaterial() );
-			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
-			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
-			dMaterial->setTexture( "uniformTexture", rsmPositionMap );
-			dObject->setMaterial( dMaterial );
-			dScaleNode->setObject( dObject );
-
-			// create input field
-			debugFrameInputField = guiFrame->createInputField( 0, 128, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
-
-			// place Node center and scale according to input field
-			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
-			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
-
-			// add to gui render pass
-			guiRenderPass->addRenderable( dScaleNode );
-
-			// create display field
-			dPosNode = new Node();
-			dScaleNode = new RenderableNode(dPosNode);
-			dObject = new Object( *m_resourceManager.getQuad() );
-			dMaterial = new Material( *dObject->getMaterial() );
-			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
-			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
-			dMaterial->setTexture( "uniformTexture", rsmNormalMap );
-			dObject->setMaterial( dMaterial );
-			dScaleNode->setObject( dObject );
-
-			// create input field
-			debugFrameInputField = guiFrame->createInputField( 128, 128, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
-
-			// place Node center and scale according to input field
-			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
-			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
+			// make interactive
+			SwitchThroughValuesListener<Texture* >* debugTexturesSwitcher = new SwitchThroughValuesListener<Texture* >(
+							&( *dMaterial->getTexturesPtr() )["uniformTexture"]
+					        , debugTextures
+					);
+			debugFrameInputField->attachListenerOnPress( debugTexturesSwitcher );
 
 			// add to gui render pass
 			guiRenderPass->addRenderable( dScaleNode );

@@ -1,4 +1,4 @@
-#version 330
+#version 430 core
 
 uniform bool uniformHasTexture;
 uniform sampler2D uniformTexture;
@@ -15,7 +15,7 @@ in vec2 passUV;
 out vec4 fragmentColor;
 
 void main() {
-	vec4 texColor = vec4(0,0,0,0);
+	vec4 texColor = vec4( 0, 0, 0, 0 );
 	if ( uniformHasTexture )
 	{
 		texColor = texture(uniformTexture, passUV);
