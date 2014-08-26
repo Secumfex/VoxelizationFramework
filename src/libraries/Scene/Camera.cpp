@@ -150,6 +150,10 @@ glm::mat4 Camera::getProjectionMatrix()
 	return m_projectionMatrix;
 }
 
+glm::mat4* Camera::getProjectionMatrixPointer() {
+	return &m_projectionMatrix;
+}
+
 void Camera::setDirection(glm::vec3 dir){
 	m_direction = glm::normalize(dir);
 	updatePhiTheta();	// update phi & theta by evaluating the new direction
@@ -179,3 +183,4 @@ void Camera::setTopDown(bool to){
 bool Camera::getTopDown(){
 	return m_topDown;
 }
+

@@ -198,6 +198,12 @@ public:
 	 */
 	glm::mat4 getProjectionMatrix();
 
+	/** \brief getter
+	 *
+	 * @return projectionMatrixPointer
+	 */
+	glm::mat4* getProjectionMatrixPointer();
+
 	/** \brief setter
 	 *
 	 * set projection matrix

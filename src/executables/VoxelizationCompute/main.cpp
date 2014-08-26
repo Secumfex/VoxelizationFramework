@@ -413,6 +413,46 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
+		* 				REFLECTIVE SHADOW MAP LIGHT GATHERING CONFIGURATION
+		**************************************************************************************/
+		DEBUGLOG->log("Configuring reflective shadow map light gathering");
+		DEBUGLOG->indent();
+
+		// TODO create sampling Pattern ( 400 points )
+
+		// compile rsm sampling shader
+		Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
+
+		// create framebuffer object as big as compositing output
+		FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( compositingFramebuffer->getWidth(), compositingFramebuffer->getHeight() );
+		// 2 attachments : direct light, indirect light
+		rsmLightGatheringFramebuffer->addColorAttachments( 2 );
+
+		// create render pass
+		TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLightGatheringFramebuffer, m_resourceManager.getScreenFillingTriangle() );
+		rsmLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
+
+		// upload reflective shadow map information
+		rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
+		rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap,   "uniformRSMNormalMap");
+		rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMFluxMap");
+		rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap,    "uniformRSMDepthMap");
+
+		rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView"      , m_lightSourceNode->getViewMatrixPointer() ) );
+		rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
+
+		// upload gbuffer information
+		rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
+		rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap,   "uniformGBufferNormalMap");
+
+		rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
+
+		// TODO load sampling Pattern as 1D Texture ( ? )
+		// TODO load number of samples
+
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
 		 * 								VOXELGRID CREATION
 		 **************************************************************************************/
 
