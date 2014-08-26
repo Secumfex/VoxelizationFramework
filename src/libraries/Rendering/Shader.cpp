@@ -35,7 +35,7 @@ void Shader::requestUniformNames()
 		name[name_len] = 0;
 		GLuint location = glGetUniformLocation( m_programHandle, name );
 
-		DEBUGLOG->log("UNIFORM : " + std::string( name ) + " | loc : ", location );
+//		DEBUGLOG->log("UNIFORM : " + std::string( name ) + " | loc : ", location );
 
 		m_uniformHandles.insert(std::pair<std::string, GLuint>(name, location));
 

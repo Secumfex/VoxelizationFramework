@@ -3,10 +3,12 @@
 
 #include <Input/InputManager.h>
 #include <Input/InputField.h>
+#include <Resources/ResourceManager.h>
 
 #include <list>
 
 class Node;
+class RenderableNode;
 
 class Frame
 {
@@ -23,6 +25,7 @@ public:
 	virtual ~Frame();
 
 	InputField* createInputField( int offsetX, int offsetY, int width, int height, InputManager* inputManager = 0, int button = GLFW_MOUSE_BUTTON_LEFT );
+	std::pair< InputField*, std::pair< Node*, RenderableNode* > > createButton( int offsetX, int offsetY, int width, int height, InputManager* inputManager = 0, int button = GLFW_MOUSE_BUTTON_LEFT, ResourceManager* resourceManager = 0, Texture* texture = 0);
 
 	glm::vec3 getRelativeCenter( InputField* inputField ); // returns the position relative to the top left corner of the frame
 	glm::vec3 getRelativeSize( InputField* inputField );   // returns the size relative to the size of of the frame

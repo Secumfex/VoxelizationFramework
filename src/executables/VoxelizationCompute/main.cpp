@@ -1,6 +1,8 @@
 #include <Application/Application.h>
 
 #include <iostream>
+#include <stdlib.h>
+#include <time.h>
 
 #include <windows.h>
 
@@ -27,6 +29,8 @@
 #include "VoxelGridTools.h"
 #include "VoxelizerTools.h"
 
+#define PI 3.14159265f
+
 static int VISIBLE_TEXTURE_LEVEL = 0;
 
 static bool USE_ROTATING_BUNNY = false;
@@ -43,8 +47,9 @@ static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 3.0f);
 static float LIGHT_FLUX = 1.0f;
 static bool USE_ORTHOLIGHTSOURCE = true;
 
-static int SHADOWMAP_WIDTH = 256;
-static int SHADOWMAP_HEIGHT = 256;
+static int RSM_WIDTH = 256;
+static int RSM_HEIGHT = 256;
+static int RSM_SAMPLES_AMOUNT = 100;
 
 static bool ENABLE_BACKFACE_CULLING = true;
 static bool USE_ORTHOCAM = true;
@@ -190,7 +195,7 @@ private:
 		GLenum internalFormat = FramebufferObject::static_internalFormat;
 		FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;
 
-		FramebufferObject* rsmFramebufferObject = new FramebufferObject ( SHADOWMAP_WIDTH, SHADOWMAP_HEIGHT );
+		FramebufferObject* rsmFramebufferObject = new FramebufferObject ( RSM_WIDTH, RSM_HEIGHT );
 		// 3 attachments : world position, normals, flux
 		rsmFramebufferObject->addColorAttachments(3);
 
@@ -221,6 +226,34 @@ private:
 
 		return writeRSMRenderPass;
 	}
+
+	std::vector< float > generateRandomSamplingPattern( int numSamples, float r_max = 1.0f)
+		{
+
+			srand( time( 0 ) );
+			std::vector< float > result;
+
+			for ( int i = 0; i < numSamples; i++)
+			{
+				// generate uniform random number
+				float r1 = (float) std::rand() / (float) RAND_MAX; // 0..1
+				float r2 = (float) std::rand() / (float) RAND_MAX; // 0..1
+
+				// generate polar coordinates and weight
+				float x = r_max * r1 * std::sin( 2 * PI * r2 );
+				float y = r_max * r1 * std::cos( 2 * PI * r2 );
+				float weight = r1 * r1;
+
+//				DEBUGLOG->log("Generated sample : ", glm::vec3(x,y,weight) );
+
+				// save generated values
+				result.push_back(x);
+				result.push_back(y);
+				result.push_back(weight);
+			}
+
+			return result;
+		}
 
 	CameraRenderPass* createGBufferRenderPass( )
 	{
@@ -418,37 +451,74 @@ public:
 		DEBUGLOG->log("Configuring reflective shadow map light gathering");
 		DEBUGLOG->indent();
 
-		// TODO create sampling Pattern ( 400 points )
+			// create sampling Pattern ( 400 points )
+			DEBUGLOG->log("Generating random samples : ", RSM_SAMPLES_AMOUNT);
+			std::vector<float> rsmSamples = generateRandomSamplingPattern( RSM_SAMPLES_AMOUNT, 1.0f );
 
-		// compile rsm sampling shader
-		Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
+			DEBUGLOG->log("Buffering samples to texture object");
+			Texture* rsmSamplesTexture = new Texture1D();
+			GLuint rsmSamplesTextureHandle;
+			glGenTextures(1, &rsmSamplesTextureHandle);
 
-		// create framebuffer object as big as compositing output
-		FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( compositingFramebuffer->getWidth(), compositingFramebuffer->getHeight() );
-		// 2 attachments : direct light, indirect light
-		rsmLightGatheringFramebuffer->addColorAttachments( 2 );
+			glBindTexture(GL_TEXTURE_1D, rsmSamplesTextureHandle);
 
-		// create render pass
-		TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLightGatheringFramebuffer, m_resourceManager.getScreenFillingTriangle() );
-		rsmLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
+			// allocate mem:  1D Texture,  1 level,   3 channel float format (32bit), same amount of texels as samples
+			glTexStorage1D( GL_TEXTURE_1D, 1 , GL_RGB32F , RSM_SAMPLES_AMOUNT );
 
-		// upload reflective shadow map information
-		rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
-		rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap,   "uniformRSMNormalMap");
-		rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMFluxMap");
-		rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap,    "uniformRSMDepthMap");
+			// buffer data to GPU
+			glTexSubImage1D( GL_TEXTURE_1D, 0, 0, RSM_SAMPLES_AMOUNT, GL_RGB, GL_FLOAT, &rsmSamples[0] );
 
-		rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView"      , m_lightSourceNode->getViewMatrixPointer() ) );
-		rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
+			// set filter parameters so samplers can work
+			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-		// upload gbuffer information
-		rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
-		rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap,   "uniformGBufferNormalMap");
+			rsmSamplesTexture->setTextureHandle( rsmSamplesTextureHandle );
+			glBindTexture(GL_TEXTURE_1D, 0);
 
-		rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
+			DEBUGLOG->log("Creating Light Gathering RenderPass");
+			// compile rsm sampling shader
+			Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
 
-		// TODO load sampling Pattern as 1D Texture ( ? )
-		// TODO load number of samples
+			// create framebuffer object as big as compositing output
+			FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( compositingFramebuffer->getWidth(), compositingFramebuffer->getHeight() );
+			// 2 attachments : direct light, indirect light
+			rsmLightGatheringFramebuffer->addColorAttachments( 2 );
+
+			// create render pass
+			TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLightGatheringFramebuffer, m_resourceManager.getScreenFillingTriangle() );
+			rsmLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
+
+			DEBUGLOG->log("Configuring uniforms");
+			DEBUGLOG->indent();
+
+				// upload reflective shadow map information
+				rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
+				rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap,   "uniformRSMNormalMap");
+				rsmLightGatheringRenderPass->addUniformTexture(rsmFluxMap, "uniformRSMFluxMap");
+				rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap,    "uniformRSMDepthMap");
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView"      , m_lightSourceNode->getViewMatrixPointer() ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
+
+				// upload gbuffer information
+				rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
+				rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap,   "uniformGBufferNormalMap");
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
+
+				// upload sampling pattern information
+				rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesTexture, "uniformSamplingPattern" );
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformNumSamples" , &RSM_SAMPLES_AMOUNT ) );
+
+			DEBUGLOG->outdent();
+
+			// for future use
+			Texture* rsmDirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) );
+			Texture* rsmIndirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1) );
+
+			DEBUGLOG->log("Adding RSM light gathering render pass to application");
+			m_renderManager.addRenderPass( rsmLightGatheringRenderPass );
 
 		DEBUGLOG->outdent();
 
@@ -872,33 +942,24 @@ public:
 			debugRSMTextures.push_back( rsmFluxMap );
 			debugRSMTextures.push_back( rsmNormalMap );
 
-			// create display field
-			Node* dPosNode = new Node();
-			RenderableNode* dScaleNode = new RenderableNode(dPosNode);
-			Object* dObject = new Object( *m_resourceManager.getQuad() );
-			Material* dMaterial = new Material( *dObject->getMaterial() );
-			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
-			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
-			dMaterial->setTexture( "uniformTexture", rsmDepthMap );
-			dObject->setMaterial( dMaterial );
-			dScaleNode->setObject( dObject );
-
 			// create input field
-			InputField* debugFrameInputField = guiFrame->createInputField( 0, 0, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
-
-			// place Node center and scale according to input field
-			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
-			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
+			std::pair<InputField*, std::pair< Node*, RenderableNode*> > button = guiFrame->createButton(
+				0, 0,
+				buttonWidth, buttonHeight,
+				&m_inputManager,
+				GLFW_MOUSE_BUTTON_LEFT,
+				&m_resourceManager,
+				rsmDepthMap);
 
 			// make interactive
 			SwitchThroughValuesListener<Texture* >* debugRSMSwitcher = new SwitchThroughValuesListener<Texture* >(
-							&( *dMaterial->getTexturesPtr() )["uniformTexture"]
+							&( *( button.second.second->getObject()->getMaterial()->getTexturesPtr() ) )["uniformTexture"]
 					        , debugRSMTextures
 					);
-			debugFrameInputField->attachListenerOnPress( debugRSMSwitcher );
+			button.first->attachListenerOnRelease( debugRSMSwitcher );
 
 			// add to gui render pass
-			guiRenderPass->addRenderable( dScaleNode );
+			guiRenderPass->addRenderable( button.second.second );
 
 			// other interesting debug textures
 			std::vector<Texture* > debugTextures;
@@ -907,33 +968,49 @@ public:
 			debugTextures.push_back( gbufferColorMap );
 			debugTextures.push_back( new Texture( gbufferCompositing->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) ) );
 
-			// create display field
-			dPosNode = new Node();
-			dScaleNode = new RenderableNode( dPosNode );
-			dObject = new Object( *m_resourceManager.getQuad() );
-			dMaterial = new Material( *dObject->getMaterial() );
-			dMaterial->setAttribute( "uniformHasTexture", 1.0f );
-			dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
-			dMaterial->setTexture( "uniformTexture", textureAtlasRenderPass->getTextureAtlas() );
-			dObject->setMaterial( dMaterial );
-			dScaleNode->setObject( dObject );
-
-			// create input field
-			debugFrameInputField = guiFrame->createInputField( 128, 0, 128, 128, &m_inputManager, GLFW_MOUSE_BUTTON_LEFT );
-
-			// place Node center and scale according to input field
-			guiFrame->alignNodeWithInputFieldCenter( debugFrameInputField, dPosNode );
-			guiFrame->alignNodeWithInputFieldSize( debugFrameInputField, dScaleNode );
+			// create button
+			button = guiFrame->createButton(
+				buttonWidth, 0,
+				buttonWidth, buttonHeight,
+				&m_inputManager,
+				GLFW_MOUSE_BUTTON_LEFT,
+				&m_resourceManager,
+				textureAtlasVertexGenerator->getTextureAtlas());
 
 			// make interactive
 			SwitchThroughValuesListener<Texture* >* debugTexturesSwitcher = new SwitchThroughValuesListener<Texture* >(
-							&( *dMaterial->getTexturesPtr() )["uniformTexture"]
+							&( *button.second.second->getObject()->getMaterial()->getTexturesPtr() )["uniformTexture"]
 					        , debugTextures
 					);
-			debugFrameInputField->attachListenerOnPress( debugTexturesSwitcher );
+			button.first->attachListenerOnRelease( debugTexturesSwitcher );
 
 			// add to gui render pass
-			guiRenderPass->addRenderable( dScaleNode );
+			guiRenderPass->addRenderable( button.second.second );
+
+			// RSM light gathering debug view
+			std::vector<Texture* > debugRSMLightMapTextures;
+			debugRSMLightMapTextures.push_back( rsmDirectLightMap );
+			debugRSMLightMapTextures.push_back( rsmIndirectLightMap );
+
+			// create button
+			button = guiFrame->createButton(
+				0, buttonHeight,
+				buttonWidth, buttonHeight,
+				&m_inputManager,
+				GLFW_MOUSE_BUTTON_LEFT,
+				&m_resourceManager,
+				rsmDirectLightMap );
+
+
+			// make interactive
+			SwitchThroughValuesListener<Texture* >* debugRSMLightMapSwitcher = new SwitchThroughValuesListener<Texture* >(
+							&( *button.second.second->getObject()->getMaterial()->getTexturesPtr() )["uniformTexture"]
+					        , debugRSMLightMapTextures
+					);
+			button.first->attachListenerOnRelease( debugRSMLightMapSwitcher );
+
+			// add to gui render pass
+			guiRenderPass->addRenderable( button.second.second );
 
 			m_renderManager.addRenderPass( guiRenderPass );
 
@@ -972,6 +1049,7 @@ public:
 
 			DEBUGLOG->log("Reset scenegraph                       : R");
 			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ),GLFW_KEY_R, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new SetValueListener<glm::vec3>(&LIGHT_POSITION, glm::vec3( 0.0f, 0.0f, 0.0f) ),GLFW_KEY_R, GLFW_PRESS);
 
 			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);

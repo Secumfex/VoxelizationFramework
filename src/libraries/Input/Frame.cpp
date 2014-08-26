@@ -1,6 +1,7 @@
 #include "Frame.h"
 
 #include <Scene/Node.h>
+#include <Scene/RenderableNode.h>
 
 Frame::Frame(int xPos, int yPos, int width, int height)
 {
@@ -21,6 +22,39 @@ InputField* Frame::createInputField( int offsetX, int offsetY, int width, int he
 	m_inputFields.push_back(result);
 
 	return result;
+}
+
+// returns a pair consisting of the input field and a position node with a scale node attached and both of which have a reference to the object
+std::pair< InputField*, std::pair < Node*, RenderableNode* > > Frame::createButton( int offsetX, int offsetY, int width, int height, InputManager* inputManager, int button, ResourceManager* resourceManager, Texture* texture)
+{
+	// create display object
+	Node* dPosNode = new Node();
+	RenderableNode* dScaleNode = new RenderableNode( dPosNode );
+	if ( resourceManager )
+	{
+		Object* dObject = new Object( *( resourceManager->getQuad() ) );
+		Material* dMaterial = new Material( *dObject->getMaterial() );
+		dMaterial->setAttribute( "uniformHasTexture", 1.0f );
+		dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
+
+		if ( texture )
+		{
+			dMaterial->setTexture( "uniformTexture", texture );
+		}
+
+		dObject->setMaterial( dMaterial );
+		dPosNode->setObject( dObject );
+		dScaleNode->setObject( dObject );
+	}
+
+	// create input field
+	InputField* inputField = createInputField( offsetX, offsetY, width, height, inputManager, button );
+
+	// place Node center and scale according to input field
+	alignNodeWithInputFieldCenter( inputField, dPosNode );
+	alignNodeWithInputFieldSize( inputField, dScaleNode );
+
+	return std::pair< InputField*, std::pair < Node*, RenderableNode* > > ( inputField, std::pair<Node*, RenderableNode* >( dPosNode, dScaleNode) );
 }
 
 glm::vec3 Frame::getRelativeCenter(InputField* inputField) {

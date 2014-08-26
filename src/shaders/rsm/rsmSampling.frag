@@ -26,12 +26,12 @@ void main()
 {
 	// retrieve position from GBuffer
 	vec4 worldPosition   = inverse( uniformGBufferView ) * texture( uniformGBufferPositionMap, passUV );
-	vec4 worldNormal   =   inverse( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
+	vec4 worldNormal   = transpose( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
 	
 	// project into reflective shadow map
-	vec4 rsmPosition = uniformRSMView * uniformRSMProjection * worldPosition; // -w..w
-	rsmPosition.rgb /= rsmPosition.w; //-1..1
-	rsmPosition.xyz += 0.5;	// 0..2
+	vec4 rsmPosition = uniformRSMProjection * uniformRSMView * worldPosition; // -w..w
+	rsmPosition.xyz /= rsmPosition.w; //-1..1
+	rsmPosition.xyz += 1.0;	// 0..2
 	rsmPosition.xyz *= 0.5; // 0..1
 	
 	// perform light gathering
@@ -75,8 +75,19 @@ void main()
 	// normalize
 	irradiance /= float( uniformNumSamples );
 	
-	// save
+	// save indirect light intensity
 	indirectLight = vec4( irradiance, 0 );
 	
+	// test for occlusion
+	float directLightIntensity = 1 - rsmPosition.z;
+	float rsmDepth = texture( uniformRSMDepthMap, rsmPosition.xy ).x;
 	
+	if ( rsmPosition.z > rsmDepth + 0.02 )
+	{
+		// some silly values
+		directLightIntensity = 0.1 + ( directLightIntensity / 10.0 );	
+	}
+	
+	// save direct light intensity
+	directLight = vec4 ( directLightIntensity, directLightIntensity, directLightIntensity, 1 );
 }
