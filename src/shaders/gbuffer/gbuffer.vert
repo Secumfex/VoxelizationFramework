@@ -18,5 +18,5 @@ void main(){
     passPosition = uniformView * uniformModel * positionAttribute;
     gl_Position =  uniformProjection * uniformView * uniformModel * positionAttribute;
 
-	passNormal = normalize ( ( transpose( inverse( uniformView * uniformModel ) ) * normalAttribute ).xyz );
+	passNormal = ( transpose( inverse( uniformView * uniformModel ) ) * normalAttribute ).xyz;
 }

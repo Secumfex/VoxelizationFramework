@@ -26,16 +26,18 @@ void main()
 {
 	// retrieve position from GBuffer
 	vec4 worldPosition   = inverse( uniformGBufferView ) * texture( uniformGBufferPositionMap, passUV );
-	vec4 worldNormal   = transpose( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
+	vec4 worldNormal   =   inverse( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
 	
 	// project into reflective shadow map
 	vec4 rsmPosition = uniformRSMProjection * uniformRSMView * worldPosition; // -w..w
 	rsmPosition.xyz /= rsmPosition.w; //-1..1
+	rsmPosition.w = 1.0;
 	rsmPosition.xyz += 1.0;	// 0..2
 	rsmPosition.xyz *= 0.5; // 0..1
 	
+	// INDIRECT LIGHT
 	// perform light gathering
-	vec2 center = vec2( rsmPosition.x, rsmPosition.y );
+	vec2 center = rsmPosition.xy;
 
 	vec3 surfacePosition = worldPosition.xyz;
 	vec3 surfaceNormal   = worldNormal.xyz;
@@ -44,9 +46,9 @@ void main()
 	for ( int i = 0; i < uniformNumSamples; i++ )
 	{
 		// retrieve sampling properties for next sample
-		vec4 samplingProperties= texture( uniformSamplingPattern, i );
+		vec4 samplingProperties= texture( uniformSamplingPattern, float( i ) / float( uniformNumSamples ) );
 		
-		vec2 sampleUV		   = samplingProperties.xy;
+		vec2 sampleUV		   = center + samplingProperties.xy;
 		float sampleWeight     = samplingProperties.z;
 
 		// retrieve sample point light information
@@ -54,17 +56,21 @@ void main()
 		vec3 rsmSampleNormal   = texture( uniformRSMNormalMap  , sampleUV ).xyz;
 		vec4 rsmSampleFlux     = texture( uniformRSMFluxMap    , sampleUV );
 		
+		// move pixel light a little bit back
+		rsmSamplePosition -= rsmSampleNormal * 0.1;
+		
 		// help vectors
 		vec3 sampleToSurface = surfacePosition - rsmSamplePosition;
-		vec3 surfaceToSample = (-1.0) * sampleToSurface;
+		vec3 surfaceToSample = rsmSamplePosition - sampleToSurface;
 		
 		// compute irradiance at surface point due to sample point light
 		vec3 sampleIrradiance = 
 				rsmSampleFlux.xyz  // sample point light color
 			  * rsmSampleFlux.w    // sample point light flux
-			  *	( max ( 0, dot ( rsmSampleNormal, sampleToSurface ) ) ) // radiant intensity from sample point light to surface 
-			  * ( max ( 0, dot ( surfaceNormal,   surfaceToSample ) ) ) // radiant intensity from surface to sample point light
-			  / pow( length( sampleToSurface ), 4);	// distance to the power of 4
+			  *	( max ( 0.0, dot ( rsmSampleNormal, sampleToSurface ) ) ) // radiant intensity from sample point light to surface 
+			  * ( max ( 0.0, dot ( surfaceNormal,   surfaceToSample ) ) ) // radiant intensity from surface to sample point light
+			  / pow( length( sampleToSurface ), 4 )// distance to the power of 4
+			;	
 		
 		// apply weight
 		sampleIrradiance *= sampleWeight;
@@ -72,20 +78,31 @@ void main()
 		// add to total irradiance
 		irradiance += sampleIrradiance;
 	}
+	
 	// normalize
-	irradiance /= float( uniformNumSamples );
+	irradiance *= 1.0 / float( uniformNumSamples );
 	
 	// save indirect light intensity
-	indirectLight = vec4( irradiance, 0 );
+	indirectLight = vec4( irradiance * 100.0, 1.0 );
 	
-	// test for occlusion
-	float directLightIntensity = 1 - rsmPosition.z;
-	float rsmDepth = texture( uniformRSMDepthMap, rsmPosition.xy ).x;
+	// DIRECT LIGHT
+	// test for visibility
+	float directLightIntensity = 1.0 - rsmPosition.z;
 	
-	if ( rsmPosition.z > rsmDepth + 0.02 )
+	// outside of light view
+	if ( rsmPosition.x >= 1.0 || rsmPosition.y >= 1.0 || rsmPosition.x <= 0.0 || rsmPosition.y <= 0.0)
 	{
-		// some silly values
-		directLightIntensity = 0.1 + ( directLightIntensity / 10.0 );	
+		directLightIntensity = 0.0;
+	}
+	else
+	{
+		float rsmDepth = texture( uniformRSMDepthMap, rsmPosition.xy ).x;
+		
+		// dark if invisible
+		if ( rsmPosition.z > rsmDepth + 0.04 )
+		{
+			directLightIntensity = 0.0;	
+		}		
 	}
 	
 	// save direct light intensity

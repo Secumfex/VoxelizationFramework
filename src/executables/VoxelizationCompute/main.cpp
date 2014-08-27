@@ -47,9 +47,11 @@ static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 3.0f);
 static float LIGHT_FLUX = 1.0f;
 static bool USE_ORTHOLIGHTSOURCE = true;
 
-static int RSM_WIDTH = 256;
-static int RSM_HEIGHT = 256;
-static int RSM_SAMPLES_AMOUNT = 100;
+static bool ENABLE_RSM_OVERLAY = true;	// view in render frame
+static int RSM_WIDTH = 512;
+static int RSM_HEIGHT = 512;
+static int RSM_SAMPLES_AMOUNT = 200;
+static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
 
 static bool ENABLE_BACKFACE_CULLING = true;
 static bool USE_ORTHOCAM = true;
@@ -211,7 +213,7 @@ private:
 		m_lightParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
 		m_lightSourceNode = new CameraNode( m_lightParentNode );
 		m_lightSourceNode->translate( LIGHT_POSITION );
-		m_lightSourceNode->setProjectionMatrix( glm::ortho( -5.0f, 5.0f, -5.0f, 5.0f, 0.0f, 10.0f) );
+		m_lightSourceNode->setProjectionMatrix( glm::ortho( -6.0f, 6.0f, -6.0f, 6.0f, 0.0f, 15.0f) );
 
 		// TODO implement setCenter for CameraNode
 //		m_lightSourceNode->setCenter( glm::vec3(0.0f, 0.0f, 0.0f) );
@@ -229,20 +231,21 @@ private:
 
 	std::vector< float > generateRandomSamplingPattern( int numSamples, float r_max = 1.0f)
 		{
-
 			srand( time( 0 ) );
 			std::vector< float > result;
 
 			for ( int i = 0; i < numSamples; i++)
 			{
 				// generate uniform random number
-				float r1 = (float) std::rand() / (float) RAND_MAX; // 0..1
-				float r2 = (float) std::rand() / (float) RAND_MAX; // 0..1
+				float r1 = ( (float) std::rand() / (float) RAND_MAX - 0.5f ) * 2.0f; // -1..1
+				float r2 = ( (float) std::rand() / (float) RAND_MAX - 0.5f ) * 2.0f; // -1..1
 
 				// generate polar coordinates and weight
-				float x = r_max * r1 * std::sin( 2 * PI * r2 );
-				float y = r_max * r1 * std::cos( 2 * PI * r2 );
+				float x = r_max * r1 * sin( 2.0f * PI * r2 );
+				float y = r_max * r1 * cos( 2.0f * PI * r2 );
 				float weight = r1 * r1;
+
+				// make normalized by bringing the samples into 0..1
 
 //				DEBUGLOG->log("Generated sample : ", glm::vec3(x,y,weight) );
 
@@ -365,7 +368,7 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
-		 * 									REGULAR RENDERING
+		 * 									GBUFFER RENDERING
 		 **************************************************************************************/
 
 		DEBUGLOG->log("Configuring Rendering");
@@ -386,35 +389,6 @@ public:
 			{
 				gbufferRenderPass->addRenderable( renderables[i] );
 			}
-
-			DEBUGLOG->log("Creating compositing render passes");
-			DEBUGLOG->indent();
-
-				DEBUGLOG->log("Creating gbuffer compositing shader");
-					Shader* gbufferCompositingShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/screenspace/gbuffer_compositing_phong.frag");
-
-				DEBUGLOG->log("Creating framebuffer for compositing render pass");
-					FramebufferObject* compositingFramebuffer = new FramebufferObject(512,512);
-					compositingFramebuffer->addColorAttachments(1);
-					Texture* compositingOutput = new Texture( compositingFramebuffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
-
-				DEBUGLOG->indent();
-					DEBUGLOG->log("Creating compositing render pass");
-					TriangleRenderPass* gbufferCompositing = new TriangleRenderPass(gbufferCompositingShader, compositingFramebuffer, m_resourceManager.getScreenFillingTriangle());
-					gbufferCompositing->setClearColor( 0.1f ,0.1f, 0.1f, 1.0 );
-					gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
-					gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
-
-					gbufferCompositing->addUniformTexture( gbufferPositionMap, "uniformPositionMap" );
-					gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
-					gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
-
-					gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &LIGHT_POSITION  ) );
-					gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    mainCamera->getViewMatrixPointer() ) );
-
-					DEBUGLOG->log("Adding compositing render pass now");
-					m_renderManager.addRenderPass(gbufferCompositing);
-				DEBUGLOG->outdent();
 
 			DEBUGLOG->outdent();
 
@@ -451,9 +425,9 @@ public:
 		DEBUGLOG->log("Configuring reflective shadow map light gathering");
 		DEBUGLOG->indent();
 
-			// create sampling Pattern ( 400 points )
+			// create sampling Pattern
 			DEBUGLOG->log("Generating random samples : ", RSM_SAMPLES_AMOUNT);
-			std::vector<float> rsmSamples = generateRandomSamplingPattern( RSM_SAMPLES_AMOUNT, 1.0f );
+			std::vector<float> rsmSamples = generateRandomSamplingPattern( RSM_SAMPLES_AMOUNT, RSM_SAMPLES_MAX_OFFSET );
 
 			DEBUGLOG->log("Buffering samples to texture object");
 			Texture* rsmSamplesTexture = new Texture1D();
@@ -463,7 +437,7 @@ public:
 			glBindTexture(GL_TEXTURE_1D, rsmSamplesTextureHandle);
 
 			// allocate mem:  1D Texture,  1 level,   3 channel float format (32bit), same amount of texels as samples
-			glTexStorage1D( GL_TEXTURE_1D, 1 , GL_RGB32F , RSM_SAMPLES_AMOUNT );
+			glTexStorage1D( GL_TEXTURE_1D, 1 , GL_RGB32F_ARB , RSM_SAMPLES_AMOUNT );
 
 			// buffer data to GPU
 			glTexSubImage1D( GL_TEXTURE_1D, 0, 0, RSM_SAMPLES_AMOUNT, GL_RGB, GL_FLOAT, &rsmSamples[0] );
@@ -471,6 +445,19 @@ public:
 			// set filter parameters so samplers can work
 			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+			float* pixels = new float[RSM_SAMPLES_AMOUNT * 3];
+			glGetTexImage(GL_TEXTURE_1D, 0, GL_RGB, GL_FLOAT, pixels);
+			for ( int i = 0; i < RSM_SAMPLES_AMOUNT; i++)
+			{
+				DEBUGLOG->log("pixel            : ", i);
+				DEBUGLOG->log("Value in buffer x: " ,	pixels[i*3 +0]);
+				DEBUGLOG->log("Value in buffer y: " ,	pixels[i*3 +1]);
+//				DEBUGLOG->log("Value in buffer w: " ,	pixels[i*3 +2]);
+//				DEBUGLOG->log("Value in sample x: ", rsmSamples[ i*3 + 0 ]);
+//				DEBUGLOG->log("Value in sample y: ", rsmSamples[ i*3 + 1 ]);
+//				DEBUGLOG->log("Value in sample w: ", rsmSamples[ i*3 + 2 ]);
+			}
 
 			rsmSamplesTexture->setTextureHandle( rsmSamplesTextureHandle );
 			glBindTexture(GL_TEXTURE_1D, 0);
@@ -480,7 +467,7 @@ public:
 			Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
 
 			// create framebuffer object as big as compositing output
-			FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( compositingFramebuffer->getWidth(), compositingFramebuffer->getHeight() );
+			FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( gbufferRenderPass->getFramebufferObject()->getWidth(), gbufferRenderPass->getFramebufferObject()->getHeight() );
 			// 2 attachments : direct light, indirect light
 			rsmLightGatheringFramebuffer->addColorAttachments( 2 );
 
@@ -521,6 +508,45 @@ public:
 			m_renderManager.addRenderPass( rsmLightGatheringRenderPass );
 
 		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 								FINAL COMPOSITING RENDERING
+		 **************************************************************************************/
+
+		DEBUGLOG->log("Creating compositing render passes");
+		DEBUGLOG->indent();
+
+			DEBUGLOG->log("Creating gbuffer compositing shader");
+				Shader* gbufferCompositingShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/screenspace/gbuffer_compositing_phong.frag");
+
+			DEBUGLOG->log("Creating framebuffer for compositing render pass");
+				FramebufferObject* compositingFramebuffer = new FramebufferObject(512,512);
+				compositingFramebuffer->addColorAttachments(1);
+				Texture* compositingOutput = new Texture( compositingFramebuffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
+
+			DEBUGLOG->indent();
+				DEBUGLOG->log("Creating compositing render pass");
+				TriangleRenderPass* gbufferCompositing = new TriangleRenderPass(gbufferCompositingShader, compositingFramebuffer, m_resourceManager.getScreenFillingTriangle());
+				gbufferCompositing->setClearColor( 0.1f ,0.1f, 0.1f, 1.0 );
+				gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
+				gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
+
+				gbufferCompositing->addUniformTexture( gbufferPositionMap, "uniformPositionMap" );
+				gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
+				gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
+
+				gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &LIGHT_POSITION  ) );
+				gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    mainCamera->getViewMatrixPointer() ) );
+
+				gbufferCompositing->addUniform(new Uniform< bool >( std::string( "uniformEnableRSMOverlay" ),   &ENABLE_RSM_OVERLAY) );
+
+				gbufferCompositing->addUniformTexture( rsmDirectLightMap, "uniformRSMDirectLightMap" );
+				gbufferCompositing->addUniformTexture( rsmIndirectLightMap, "uniformRSMIndirectLightMap" );
+
+
+				DEBUGLOG->log("Adding compositing render pass now");
+				m_renderManager.addRenderPass(gbufferCompositing);
+			DEBUGLOG->outdent();
 
 		/**************************************************************************************
 		 * 								VOXELGRID CREATION
