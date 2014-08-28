@@ -31,6 +31,8 @@ public:
 	glm::mat4 perspective;
 	glm::mat4 view;
 	glm::mat4 worldToVoxel;
+	glm::mat4 worldToVoxelParam; // will scale to 0 .. 1 etc.
+	glm::mat4 voxelToVoxelParam; // will scale from 0..width to 0..1 etc.
 
 	GLuint handle;
 

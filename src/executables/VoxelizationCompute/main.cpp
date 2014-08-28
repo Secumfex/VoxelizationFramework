@@ -41,8 +41,8 @@ static bool VOXELIZE_ACTIVE = true;
 
 static int TEXATLAS_RESOLUTION  = 512;
 static int VOXELGRID_RESOLUTION = 64;
-static float VOXELGRID_WIDTH = 8.0f;
-static float VOXELGRID_HEIGHT = 8.0f;
+static float VOXELGRID_WIDTH = 6.0f;
+static float VOXELGRID_HEIGHT = 6.0f;
 
 static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 10.0f);
 static float LIGHT_FLUX = 1.0f;
@@ -55,8 +55,11 @@ static glm::mat4 LIGHT_PERSPECTIVE_PROJECTION = glm::perspective( LIGHT_ANGLE_RA
 static bool ENABLE_RSM_OVERLAY = true;	// view in render frame
 static int RSM_WIDTH = 512;
 static int RSM_HEIGHT = 512;
-static int RSM_SAMPLES_AMOUNT = 200;
+static int RSM_SAMPLES_AMOUNT = 100;
 static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
+static bool RSM_ENABLE_OCCLUSION_TESTING = true;
+static bool RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = false;
+static int RSM_HIGHEST_TEXTURE_LEVEL = 0;
 
 static bool ENABLE_BACKFACE_CULLING = true;
 static bool USE_ORTHOCAM = true;
@@ -66,6 +69,47 @@ static int RENDER_FRAME_WIDTH = 512;
 static int RENDER_FRAME_HEIGHT = 512;
 static int GUI_FRAME_WIDTH = 256;
 static int GUI_FRAME_HEIGHT = 512;
+
+///**
+// * Renderpass that overlays the slice map ontop of fbo
+// */
+//class RSMLightGatheringRenderPass : public TriangleRenderPass
+//{
+//private:
+//	VoxelGridGPU* p_voxelGrid;
+//
+//public:
+//	RSMLightGatheringRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* triangle, VoxelGridGPU* voxelGrid )
+//	: TriangleRenderPass(shader, fbo, triangle)
+//	{
+//		p_voxelGrid = voxelGrid;
+//	}
+//
+//	virtual void uploadUniforms()
+//	{
+//		TriangleRenderPass::uploadUniforms();
+//
+//		// upload texture
+//		glBindImageTexture(0,           // image unit binding
+//		p_voxelGrid->texture->getTextureHandle(),  // texture
+//		VISIBLE_TEXTURE_LEVEL,			// texture level
+//		GL_FALSE,                       // layered
+//		0,                              // layer
+//		GL_READ_ONLY,                   // access
+//		GL_R32UI                        // format
+//		);
+//	}
+//
+//	virtual void postRender()
+//	{
+//		TriangleRenderPass::postRender();
+//		//unbind texture
+//		glBindImageTexture(0, 0, 0,
+//		GL_FALSE, 0,
+//		GL_READ_ONLY,
+//		GL_R32UI);
+//	}
+//};
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -414,10 +458,10 @@ public:
 			CameraRenderPass* rsmRenderPass = createReflectiveShadowMapRenderPass();
 
 			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &ENABLE_BACKFACE_CULLING ) );
-			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &USE_ORTHOLIGHTSOURCE ) );
-			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformFlux" ) , &LIGHT_FLUX ) );
-			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformAngle" ) , &LIGHT_ANGLE_RAD ) );
-			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformMinCosAngle" ) , &LIGHT_MINIMUM_COSINE ) );
+			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" )		, &USE_ORTHOLIGHTSOURCE ) );
+			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformFlux" ) 		, &LIGHT_FLUX ) );
+			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformAngle" ) 		, &LIGHT_ANGLE_RAD ) );
+			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformMinCosAngle" )  , &LIGHT_MINIMUM_COSINE ) );
 
 			// for future use
 			Texture* rsmPositionMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) );
@@ -432,136 +476,6 @@ public:
 			}
 
 		DEBUGLOG->outdent();
-
-		/**************************************************************************************
-		* 				REFLECTIVE SHADOW MAP LIGHT GATHERING CONFIGURATION
-		**************************************************************************************/
-		DEBUGLOG->log("Configuring reflective shadow map light gathering");
-		DEBUGLOG->indent();
-
-			// create sampling Pattern
-			DEBUGLOG->log("Generating random samples : ", RSM_SAMPLES_AMOUNT);
-			std::vector<float> rsmSamples = generateRandomSamplingPattern( RSM_SAMPLES_AMOUNT, RSM_SAMPLES_MAX_OFFSET );
-
-			DEBUGLOG->log("Buffering samples to texture object");
-			Texture* rsmSamplesLUT = new Texture1D();
-			GLuint rsmSamplesTextureHandle;
-			glGenTextures(1, &rsmSamplesTextureHandle);
-
-			glBindTexture(GL_TEXTURE_1D, rsmSamplesTextureHandle);
-
-			// allocate mem:  1D Texture,  1 level,   3 channel float format (32bit), same amount of texels as samples
-			glTexStorage1D( GL_TEXTURE_1D, 1 , GL_RGB32F_ARB , RSM_SAMPLES_AMOUNT );
-
-			// buffer data to GPU
-			glTexSubImage1D( GL_TEXTURE_1D, 0, 0, RSM_SAMPLES_AMOUNT, GL_RGB, GL_FLOAT, &rsmSamples[0] );
-
-			// set filter parameters so samplers can work
-			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-//			float* pixels = new float[RSM_SAMPLES_AMOUNT * 3];
-//			glGetTexImage(GL_TEXTURE_1D, 0, GL_RGB, GL_FLOAT, pixels);
-//			for ( int i = 0; i < RSM_SAMPLES_AMOUNT; i++)
-//			{
-//				DEBUGLOG->log("pixel            : ", i);
-//				DEBUGLOG->log("Value in buffer x: " ,	pixels[i*3 +0]);
-//				DEBUGLOG->log("Value in buffer y: " ,	pixels[i*3 +1]);
-//				DEBUGLOG->log("Value in buffer w: " ,	pixels[i*3 +2]);
-//				DEBUGLOG->log("Value in sample x: ", rsmSamples[ i*3 + 0 ]);
-//				DEBUGLOG->log("Value in sample y: ", rsmSamples[ i*3 + 1 ]);
-//				DEBUGLOG->log("Value in sample w: ", rsmSamples[ i*3 + 2 ]);
-//			}
-
-			rsmSamplesLUT->setTextureHandle( rsmSamplesTextureHandle );
-			glBindTexture(GL_TEXTURE_1D, 0);
-
-			DEBUGLOG->log("Creating Light Gathering RenderPass");
-			// compile rsm sampling shader
-			Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
-
-			// create framebuffer object as big as compositing output
-			FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( gbufferRenderPass->getFramebufferObject()->getWidth(), gbufferRenderPass->getFramebufferObject()->getHeight() );
-			// 2 attachments : direct light, indirect light
-			rsmLightGatheringFramebuffer->addColorAttachments( 2 );
-
-			// create render pass
-			TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLightGatheringFramebuffer, m_resourceManager.getScreenFillingTriangle() );
-			rsmLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
-
-			DEBUGLOG->log("Configuring uniforms");
-			DEBUGLOG->indent();
-
-				// upload reflective shadow map information
-				rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
-				rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap,   "uniformRSMNormalMap");
-				rsmLightGatheringRenderPass->addUniformTexture(rsmFluxMap, "uniformRSMFluxMap");
-				rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap,    "uniformRSMDepthMap");
-
-				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView"      , m_lightSourceNode->getViewMatrixPointer() ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
-
-				// upload gbuffer information
-				rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
-				rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap,   "uniformGBufferNormalMap");
-
-				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
-
-				// upload sampling pattern information
-				rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesLUT, "uniformSamplingPattern" );
-
-				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformNumSamples" , &RSM_SAMPLES_AMOUNT ) );
-
-			DEBUGLOG->outdent();
-
-			// for future use
-			Texture* rsmDirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) );
-			Texture* rsmIndirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1) );
-
-			DEBUGLOG->log("Adding RSM light gathering render pass to application");
-			m_renderManager.addRenderPass( rsmLightGatheringRenderPass );
-
-		DEBUGLOG->outdent();
-
-		/**************************************************************************************
-		 * 								FINAL COMPOSITING RENDERING
-		 **************************************************************************************/
-
-		DEBUGLOG->log("Creating compositing render passes");
-		DEBUGLOG->indent();
-
-			DEBUGLOG->log("Creating gbuffer compositing shader");
-				Shader* gbufferCompositingShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/screenspace/gbuffer_compositing_phong.frag");
-
-			DEBUGLOG->log("Creating framebuffer for compositing render pass");
-				FramebufferObject* compositingFramebuffer = new FramebufferObject(512,512);
-				compositingFramebuffer->addColorAttachments(1);
-				Texture* compositingOutput = new Texture( compositingFramebuffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
-
-			DEBUGLOG->indent();
-				DEBUGLOG->log("Creating compositing render pass");
-				TriangleRenderPass* gbufferCompositing = new TriangleRenderPass(gbufferCompositingShader, compositingFramebuffer, m_resourceManager.getScreenFillingTriangle());
-				gbufferCompositing->setClearColor( 0.1f ,0.1f, 0.1f, 1.0 );
-				gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
-				gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
-
-				// upload gbuffer information
-				gbufferCompositing->addUniformTexture( gbufferPositionMap, "uniformPositionMap" );
-				gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
-				gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
-
-				gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformLightViewMatrix" ), m_lightSourceNode->getModelMatrixPtr() ) );
-				gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    mainCamera->getViewMatrixPointer() ) );
-
-				// upload RSM information
-				gbufferCompositing->addUniform(new Uniform< bool >( std::string( "uniformEnableRSMOverlay" ),   &ENABLE_RSM_OVERLAY) );
-
-				gbufferCompositing->addUniformTexture( rsmDirectLightMap, "uniformRSMDirectLightMap" );
-				gbufferCompositing->addUniformTexture( rsmIndirectLightMap, "uniformRSMIndirectLightMap" );
-
-				DEBUGLOG->log("Adding compositing render pass now");
-				m_renderManager.addRenderPass(gbufferCompositing);
-			DEBUGLOG->outdent();
 
 		/**************************************************************************************
 		 * 								VOXELGRID CREATION
@@ -594,7 +508,9 @@ public:
 				DEBUGLOG->outdent();
 				voxelGrid->numMipmaps += 1;
 			}
+
 			DEBUGLOG->log("Number of mipmap levels : ", voxelGrid->numMipmaps );
+			RSM_HIGHEST_TEXTURE_LEVEL = voxelGrid->numMipmaps;
 
 			// allocate memory
 			glTexStorage2D(
@@ -853,6 +769,136 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
+				* 				REFLECTIVE SHADOW MAP LIGHT GATHERING CONFIGURATION
+				**************************************************************************************/
+		DEBUGLOG->log("Configuring reflective shadow map light gathering");
+		DEBUGLOG->indent();
+
+			// create sampling Pattern
+			DEBUGLOG->log("Generating random samples : ", RSM_SAMPLES_AMOUNT);
+			std::vector<float> rsmSamples = generateRandomSamplingPattern( RSM_SAMPLES_AMOUNT, RSM_SAMPLES_MAX_OFFSET );
+
+			DEBUGLOG->log("Buffering samples to texture object");
+			Texture* rsmSamplesLUT = new Texture1D();
+			GLuint rsmSamplesTextureHandle;
+			glGenTextures(1, &rsmSamplesTextureHandle);
+
+			glBindTexture(GL_TEXTURE_1D, rsmSamplesTextureHandle);
+
+			// allocate mem:  1D Texture,  1 level,   3 channel float format (32bit), same amount of texels as samples
+			glTexStorage1D( GL_TEXTURE_1D, 1 , GL_RGB32F_ARB , RSM_SAMPLES_AMOUNT );
+
+			// buffer data to GPU
+			glTexSubImage1D( GL_TEXTURE_1D, 0, 0, RSM_SAMPLES_AMOUNT, GL_RGB, GL_FLOAT, &rsmSamples[0] );
+
+			// set filter parameters so samplers can work
+			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+			rsmSamplesLUT->setTextureHandle( rsmSamplesTextureHandle );
+			glBindTexture(GL_TEXTURE_1D, 0);
+
+			DEBUGLOG->log("Creating Light Gathering RenderPass");
+			// compile rsm sampling shader
+			Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
+
+			// create framebuffer object as big as compositing output
+			FramebufferObject* rsmLightGatheringFramebuffer = new FramebufferObject( gbufferRenderPass->getFramebufferObject()->getWidth(), gbufferRenderPass->getFramebufferObject()->getHeight() );
+			// 2 attachments : direct light, indirect light
+			rsmLightGatheringFramebuffer->addColorAttachments( 2 );
+
+			// create render pass
+			TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLightGatheringFramebuffer, m_resourceManager.getScreenFillingTriangle() );
+			rsmLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
+
+			DEBUGLOG->log("Configuring uniforms");
+			DEBUGLOG->indent();
+
+				// upload reflective shadow map information
+				rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
+				rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap,   "uniformRSMNormalMap");
+				rsmLightGatheringRenderPass->addUniformTexture(rsmFluxMap, "uniformRSMFluxMap");
+				rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap,    "uniformRSMDepthMap");
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView"      , m_lightSourceNode->getViewMatrixPointer() ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
+
+				// upload gbuffer information
+				rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
+				rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap,   "uniformGBufferNormalMap");
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
+
+				// upload sampling pattern information
+				rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesLUT, "uniformSamplingPattern" );
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformNumSamples" , &RSM_SAMPLES_AMOUNT ) );
+
+				// upload voxel grid information
+				rsmLightGatheringRenderPass->addUniformTexture(voxelGrid->texture, "voxel_grid_texture" );
+				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintMask(), "uniformBitMask");
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxel" , &voxelGrid->worldToVoxel ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformVoxelToVoxelParam" , &voxelGrid->voxelToVoxelParam ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxelParam" , &voxelGrid->worldToVoxelParam ) );
+
+				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformHighestMipMapLevel" , &RSM_HIGHEST_TEXTURE_LEVEL ) );
+
+			DEBUGLOG->outdent();
+
+			// for future use
+			Texture* rsmDirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) );
+			Texture* rsmIndirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1) );
+
+			DEBUGLOG->log("Adding RSM light gathering render pass to application");
+			m_renderManager.addRenderPass( rsmLightGatheringRenderPass );
+
+		DEBUGLOG->outdent();
+
+		/**************************************************************************************
+		 * 								FINAL COMPOSITING RENDERING
+		 **************************************************************************************/
+
+		DEBUGLOG->log("Creating compositing render passes");
+		DEBUGLOG->indent();
+
+			DEBUGLOG->log("Creating gbuffer compositing shader");
+			Shader* gbufferCompositingShader = new Shader(SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/screenspace/gbuffer_compositing_phong.frag");
+
+			DEBUGLOG->log("Creating framebuffer for compositing render pass");
+			FramebufferObject* compositingFramebuffer = new FramebufferObject(512,512);
+			compositingFramebuffer->addColorAttachments(1);
+			Texture* compositingOutput = new Texture( compositingFramebuffer->getColorAttachmentTextureHandle(GL_COLOR_ATTACHMENT0) );
+
+			DEBUGLOG->indent();
+			DEBUGLOG->log("Creating compositing render pass");
+			TriangleRenderPass* gbufferCompositing = new TriangleRenderPass(gbufferCompositingShader, compositingFramebuffer, m_resourceManager.getScreenFillingTriangle());
+			gbufferCompositing->setClearColor( 0.1f ,0.1f, 0.1f, 1.0 );
+			gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
+			gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
+
+			// upload gbuffer information
+			gbufferCompositing->addUniformTexture( gbufferPositionMap, "uniformPositionMap" );
+			gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
+			gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
+
+			gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformLightViewMatrix" ), m_lightSourceNode->getModelMatrixPtr() ) );
+			gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ), mainCamera->getViewMatrixPointer() ) );
+
+			// upload RSM information
+			gbufferCompositing->addUniform(new Uniform< bool >( std::string( "uniformEnableRSMOverlay" ), &ENABLE_RSM_OVERLAY) );
+
+			gbufferCompositing->addUniformTexture( rsmDirectLightMap, "uniformRSMDirectLightMap" );
+			gbufferCompositing->addUniformTexture( rsmIndirectLightMap, "uniformRSMIndirectLightMap" );
+
+			DEBUGLOG->log("Adding compositing render pass now");
+			m_renderManager.addRenderPass(gbufferCompositing);
+			DEBUGLOG->outdent();
+
+
+		/**************************************************************************************
 		 * 								VOXELIZATION DISPLAY RENDERING
 		 **************************************************************************************/
 		DEBUGLOG->log("Configuring display of voxelized scene");
@@ -1092,8 +1138,14 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ),GLFW_KEY_R, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new SetValueListener<glm::vec3>(&LIGHT_POSITION, LIGHT_POSITION ),GLFW_KEY_R, GLFW_PRESS);
 
-			DEBUGLOG->log("Dis-/Enable Reflective Shadow Mapping  : S");
-			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &ENABLE_RSM_OVERLAY ), GLFW_KEY_S, GLFW_PRESS );
+			DEBUGLOG->log("Dis-/Enable Reflective Shadow Mapping  : Z");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &ENABLE_RSM_OVERLAY ), GLFW_KEY_Z, GLFW_PRESS );
+
+			DEBUGLOG->log("Dis-/Enable RSM Voxel Occl. Testing    : O");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &RSM_ENABLE_OCCLUSION_TESTING ), GLFW_KEY_O, GLFW_PRESS );
+
+			DEBUGLOG->log("Switch RSM Voxel Occl. Testing Method  : P");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ), GLFW_KEY_P, GLFW_PRESS );
 
 			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);

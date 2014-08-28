@@ -1,5 +1,8 @@
 #include "SliceMapRendering.h"
 
+static Texture* global_32BitUintMask = 0;
+static Texture* global_8BitRGBAMask = 0;
+
 SliceMap::SliceMapRenderPass::SliceMapRenderPass(Shader* shader,
 		FramebufferObject* fbo)
 {
@@ -71,6 +74,8 @@ void SliceMap::SliceMapRenderPass::setBitMask(Texture* bitMask)
 
 Texture* SliceMap::get8BitRGBAMask()
 {
+	if ( global_8BitRGBAMask == 0)
+	{
 		Texture* bitMask = new Texture();
 		GLuint bitMaskHandle;
 										// z =   0    ,    1     ,     2    ,     3    ,     4     ,     5     ,    6      ,      7, ...
@@ -88,13 +93,17 @@ Texture* SliceMap::get8BitRGBAMask()
 		glBindTexture(GL_TEXTURE_1D, 0);
 
 		bitMask->setTextureHandle(bitMaskHandle);
-		return bitMask;
+		global_8BitRGBAMask = bitMask;
+	}
+	return global_8BitRGBAMask;
 }
 
 
 Texture* SliceMap::get32BitUintMask()
 {
-		Texture* bitMask = new Texture();
+	if ( global_32BitUintMask == 0)
+	{
+		Texture* bitMask = new Texture1D();
 		GLuint bitMaskHandle = 0;
 		// 32 bit values
 		unsigned long int bitMaskData[32] =
@@ -133,7 +142,9 @@ Texture* SliceMap::get32BitUintMask()
 		glBindTexture(GL_TEXTURE_1D, 0);
 
 		bitMask->setTextureHandle(bitMaskHandle);
-		return bitMask;
+		global_32BitUintMask = bitMask;
+	}
+		return global_32BitUintMask;
 }
 
 SliceMap::SliceMapRenderPass* SliceMap::getSliceMapRenderPass(float width, float height,

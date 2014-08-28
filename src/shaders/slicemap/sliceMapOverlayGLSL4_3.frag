@@ -3,7 +3,6 @@
 in vec2 passUV;
 
 uniform sampler2D uniformBaseTexture;
-uniform uint uniformMaxUINT;
 
 uniform float uniformBackgroundTransparency;
 
@@ -34,5 +33,5 @@ void main() {
 	vec4 sliceAdd = vec4( r + a , g + a, b + a, 1.0);
 	
 	// add
-    fragmentColor = vec4 ( baseTex.rgb + sliceAdd.rgb, baseTex.a);
+    fragmentColor = vec4 ( baseTex.rgb + sliceAdd.rgb, 1.0);
 }

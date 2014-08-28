@@ -14,6 +14,8 @@ VoxelGridGPU::VoxelGridGPU() {
 	view = glm::lookAt( glm::vec3(0,0,0), glm::vec3(0,0,-1), glm::vec3(0,1,0) );
 	texture = 0;
 	worldToVoxel  = glm::mat4(1.0f);
+	worldToVoxelParam  = glm::mat4(1.0f);
+	voxelToVoxelParam = glm::mat4(1.0f);
 }
 
 VoxelGridGPU::~VoxelGridGPU() {
@@ -90,7 +92,12 @@ void VoxelGridGPU::computeWorldToVoxel() {
 			glm::translate( glm::mat4(1.0f), glm::vec3(hw, hh, hd)  ) *
 			view *
 			glm::mat4(1.0f);
-}
+
+	voxelToVoxelParam = glm::scale( glm::mat4( 1.0f ), glm::vec3( 1.0f / (float) resX, 1.0f / (float) resY, 1.0f/ (float) resZ) );
+
+	worldToVoxelParam =	voxelToVoxelParam * worldToVoxel;
+
+	}
 
 void VoxelGridGPU::setView( glm::mat4 view ) {
 	this->view = view;
