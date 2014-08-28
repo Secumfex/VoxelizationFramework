@@ -31,9 +31,11 @@ uniform mat4 uniformWorldToVoxel;
 uniform mat4 uniformVoxelToVoxelParam;
 uniform mat4 uniformWorldToVoxelParam;
 
+// occlusion related uniforms
 uniform bool uniformEnableOcclusionTesting;
 uniform bool uniformUseHierarchicalIntersectionTesting;
 uniform int uniformHighestMipMapLevel;
+uniform int uniformMaxNumSteps;
 
 // output
 layout(location = 0) out vec4 directLight;
@@ -59,6 +61,19 @@ vec4 computeDirectLight( vec3 rsmPosition )
 	return directLightIntensity;
 }
 
+// test whether provided voxel coordinates are within 0..1
+bool validVoxelCoordinates( vec3 voxelNDC )
+{
+	if ( voxelNDC.x > 1.0 || voxelNDC.x < 0.0 || voxelNDC.y > 1.0 || voxelNDC.y < 0.0 || voxelNDC.z > 1.0 || voxelNDC.z < 0.0)
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
 bool testOcclusionAtMipMapLevel( vec3 from, vec3 to, float mipMapLevel )
 {
 	// retrieve start voxel column value
@@ -82,62 +97,68 @@ bool testOcclusionAtMipMapLevel( vec3 from, vec3 to, float mipMapLevel )
 	}
 }
 
-// startVoxel in NDC [ 0..1 ]³
-bool testOcclusionTraverseRay( vec3 from, vec3 to )
+bool testOcclusionTraverseRay( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 {
 	// compute start and end voxel
-	vec3 currentVoxel = ( uniformWorldToVoxel * vec4( from, 1.0 ) ).xyz; // [ 0.. res ] ...
-	vec3 currentVoxelParam = ( uniformVoxelToVoxelParam * vec4( currentVoxel, 1.0 ) ).xyz;
-	vec3 endVoxel = ( uniformWorldToVoxel * vec4( to, 1.0 ) ).xyz; // 0..res
-	vec3 rayDir = normalize ( endVoxel - currentVoxel ); // direction
+//	vec3 currentVoxel = ( uniformWorldToVoxel * vec4( from, 1.0 ) ).xyz; // [ 0.. res ] ...
+//	vec3 currentVoxelParam = ( uniformVoxelToVoxelParam * vec4( currentVoxel, 1.0 ) ).xyz;
+//	vec3 endVoxel = ( uniformWorldToVoxel * vec4( to, 1.0 ) ).xyz; // 0..res
 	
+	vec3 currentVoxel = fromVoxel; // 0..1
+	vec3 currentVoxelIndex = floor ( ( inverse( uniformVoxelToVoxelParam ) * vec4( fromVoxel, 1.0) ).xyz ); // 0..res
+	vec3 currentVoxelBase = ( uniformVoxelToVoxelParam * vec4( currentVoxelIndex, 1.0 ) ).xyz;
+	
+	vec3 rayDir = toVoxel - currentVoxel; // t --> 0..1 between both voxels
+		
 	// init step direction
-	vec3 step = vec3 (1.0, 1.0, 1.0);
+	vec3 step = voxelSize;
 	if ( rayDir.x < 0.0 )
 	{
-		step.x = -1.0;
+		step.x *= -1.0;
 	}
 	if ( rayDir.y < 0.0)
 	{
-		step.y = -1.0;
+		step.y *= -1.0;
 	}
 	if ( rayDir.z < 0.0)
 	{
-		step.z = -1.0;
+		step.z *= -1.0;
 	}
 
 	// init max t traversal before next voxel
 	vec3 tMax = vec3(0.0, 0.0, 0.0);
-	tMax.x = ( currentVoxel.x - floor( currentVoxel.x ) ) / rayDir.x;
-	tMax.y = ( currentVoxel.y - floor( currentVoxel.y ) ) / rayDir.y;
-	tMax.z = ( currentVoxel.z - floor( currentVoxel.z ) ) / rayDir.z;
+	tMax = ( currentVoxelBase + voxelSize - currentVoxel) / rayDir;
 	
 	// init max Delta per axis to traverse a voxel in that direction
-	vec3 tDelta = vec3 ( 1.0 / rayDir.x , 1.0 / rayDir.y , 1.0 / rayDir.z);
+	vec3 tDelta = voxelSize / rayDir;
 	
-	// soon abort
-	int maxRadius = 10; 
-	int radius = 0;
+	// early break condition
+	int numSteps    = 0;
 	
+	float t = 0.0;
 	// traverse ray
-	while ( radius < maxRadius )
+	while ( numSteps < uniformMaxNumSteps && t <= 1.0 )
 	{	
-		// retrieve BYTE value from bitmask corresponding to depth
-		int depth = int ( currentVoxelParam.z );
-		uvec4 bitMask = texture( uniformBitMask, depth );			
-		uint byte = bitMask.r;	
-		
-		// retrieve current voxel collumn
-		uvec4 voxelGridTexel = texture( voxel_grid_texture, currentVoxelParam.xy );
-		uint voxelGridCollumn = voxelGridTexel.x;
-		
-		// AND with byte currently written in voxel grid texture
-		uint test = ( voxelGridCollumn & byte );
-			
-		if ( test != 0 ) // voxel is set
+		// only test if current voxel inside voxel grid
+		if ( validVoxelCoordinates ( currentVoxel ) )
 		{
-			return true;
-		}	
+			// retrieve BYTE value from bitmask corresponding to depth
+			float depth = currentVoxel.z;
+			uvec4 bitMask = texture( uniformBitMask, depth );			
+			uint byte = bitMask.r;	
+			
+			// retrieve current voxel collumn
+			uvec4 voxelGridTexel = texture( voxel_grid_texture, currentVoxel.xy );
+			uint voxelGridCollumn = voxelGridTexel.x;
+			
+			// AND with byte currently written in voxel grid texture
+			uint test = ( voxelGridCollumn & byte );
+				
+			if ( test != 0 ) // voxel is set
+			{
+				return true;
+			}	
+		}
 		
 		// proceed to next voxel
 		if ( tMax.x < tMax.y )
@@ -146,11 +167,13 @@ bool testOcclusionTraverseRay( vec3 from, vec3 to )
 			{
 				currentVoxel.x += step.x;
 				tMax.x += tDelta.x;
+				t += tDelta.x;
 			}
 			else
 			{
 				currentVoxel.z += step.z;
 				tMax.z += tDelta.z;
+				t += tDelta.z;
 			}
 		}
 		else
@@ -159,63 +182,61 @@ bool testOcclusionTraverseRay( vec3 from, vec3 to )
 			{
 				currentVoxel.y += step.y;
 				tMax.y += tDelta.y;
+				t += tDelta.y;
 			}
 			else
 			{
 				currentVoxel.z += step.z;
 				tMax.z +=tDelta.z;
+				t += tDelta.z;
 			}
 		}
 		
-		// update parameter space voxel
-		currentVoxelParam = ( uniformVoxelToVoxelParam * vec4( currentVoxel, 1.0 ) ).xyz;
-		radius++;
+		numSteps++;
 	}
 	
 	return false;
 }
 
 bool testOcclusion( vec3 from, vec3 fromNormal, vec3 to , vec3 toNormal )
-{
-	// project into voxel space
-	vec3 fromVoxel = ( uniformWorldToVoxelParam * vec4( from, 1.0 ) ).xyz ; // 0..1
-	vec3 toVoxel   = ( uniformWorldToVoxelParam * vec4( to, 1.0 ) ).xyz;    // 0..1
+{	
+	// size of a voxel in NDC
+	vec3 voxelSize = ( vec4( 1.0, 1.0, 1.0, 0.0 ) * uniformVoxelToVoxelParam ).xyz; // 0..res --> 0..1 
 	
-	// test whether ray starts in the voxel grid	
-	if ( fromVoxel.x < 1.0 && fromVoxel.x > 0.0 
-	  && fromVoxel.y < 1.0 && fromVoxel.y > 0.0 
-	  && fromVoxel.z < 1.0 && fromVoxel.z > 0.0 )
+	// move a little bit out along normals 
+	vec3 offsetFrom = 0.2 * fromNormal;
+	vec3 offsetTo   = 0.2 * toNormal;
+	
+	// project into voxel space
+	vec3 fromVoxel = ( uniformWorldToVoxelParam * vec4( from + offsetFrom, 1.0 ) ).xyz ; // 0..1
+	vec3 toVoxel   = ( uniformWorldToVoxelParam * vec4( to   + offsetTo, 1.0 ) ).xyz;    // 0..1
+
+	if ( uniformUseHierarchicalIntersectionTesting )
 	{
-		if ( uniformUseHierarchicalIntersectionTesting )
+		// start at coarsest mip map level
+		float mipMapLevel = float ( uniformHighestMipMapLevel );
+		float rayLength   = distance ( fromVoxel, toVoxel );
+					
+		while ( rayLength > 0.0 && mipMapLevel >= 0.0)
 		{
-			// start at coarsest mipMap level
-			float mipMapLevel = float ( uniformHighestMipMapLevel );
-			float rayLength   = distance ( from, to );
+			bool occlusionFound = testOcclusionAtMipMapLevel( fromVoxel, toVoxel, mipMapLevel ) ;
 					
-			while ( rayLength > 0.0 && mipMapLevel >= 0.0)
+			if ( occlusionFound ) // go deeper
 			{
-				bool occlusionFound = testOcclusionAtMipMapLevel( from, to, mipMapLevel ) ;
-					
-				if ( occlusionFound ) // go deeper
-				{
-					return true;
-							mipMapLevel -= 1.0;	
-				}
-				else	// proceed in ray direction
-				{
-//							clipRay( from, to ); // TODO at bounding box 
-				}
+				mipMapLevel -= 1.0;	
+				return true;	// TODO 
+			}
+			else	// proceed in ray direction
+			{
+				// TODO clip ray to next voxel column
+//						clipRay( from, to ); // TODO at bounding box 
 			}
 		}
-		else
-		{
-			// use simple ray traversal approach
-			if ( testOcclusionTraverseRay( from, to ) )
-			{
-				return true;
-			}
-			
-		}
+	}
+	else
+	{
+		// use ray traversal approach
+		return testOcclusionTraverseRay( fromVoxel, toVoxel, voxelSize );
 	}
 	
 	return false;
@@ -237,17 +258,13 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 			vec3 rsmSampleNormal   = texture( uniformRSMNormalMap  , sampleUV ).xyz;	// world normal   of sample
 			vec4 rsmSampleFlux     = texture( uniformRSMFluxMap    , sampleUV );		// diffuse light intensity of sample
 			
-			// help vectors
-			vec3 sampleToSurface = surfacePosition - rsmSamplePosition;
-			vec3 surfaceToSample = rsmSamplePosition - sampleToSurface;
-			
 			// test for occlusion
 			if ( uniformEnableOcclusionTesting )
 			{
 				bool isOccluded = testOcclusion( surfacePosition, surfaceNormal, rsmSamplePosition, rsmSampleNormal );
 				if ( isOccluded )
 				{
-					// skip this light
+					// skip this light source
 					continue;
 				}
 			}
@@ -255,9 +272,12 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 			// move pixel light a little bit back
 			rsmSamplePosition -= rsmSampleNormal * 0.1;
 
+			vec3 sampleToSurface = surfacePosition - rsmSamplePosition;
+			vec3 surfaceToSample = rsmSamplePosition - sampleToSurface;
+			
 			// radiance between the surfaces
-						float radiantIntensitySampleToSurface = ( max ( 0.0, dot ( rsmSampleNormal, sampleToSurface ) ) );
-						float radiantIntensitySurfaceToSample = ( max ( 0.0, dot ( surfaceNormal,   surfaceToSample ) ) );
+			float radiantIntensitySampleToSurface = ( max ( 0.0, dot ( rsmSampleNormal, sampleToSurface ) ) );
+			float radiantIntensitySurfaceToSample = ( max ( 0.0, dot ( surfaceNormal,   surfaceToSample ) ) );
 						
 			// compute irradiance at surface point due to sample point light
 			vec3 sampleIrradiance = 

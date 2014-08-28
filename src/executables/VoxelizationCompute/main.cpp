@@ -41,75 +41,35 @@ static bool VOXELIZE_ACTIVE = true;
 
 static int TEXATLAS_RESOLUTION  = 512;
 static int VOXELGRID_RESOLUTION = 64;
-static float VOXELGRID_WIDTH = 6.0f;
-static float VOXELGRID_HEIGHT = 6.0f;
+static float VOXELGRID_WIDTH = 8.0f;
+static float VOXELGRID_HEIGHT = 8.0f;
 
-static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 10.0f);
-static float LIGHT_FLUX = 1.0f;
-static bool USE_ORTHOLIGHTSOURCE = true;
+static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 6.0f);
+static bool      USE_ORTHOLIGHTSOURCE = true;
+static float     LIGHT_FLUX = 1.0f;
 static glm::mat4 LIGHT_ORTHO_PROJECTION = glm::ortho( -6.0f, 6.0f, -6.0f, 6.0f, 0.0f, 20.0f);
-static float LIGHT_ANGLE_RAD = 60.0f * DEG_TO_RAD;
-static float LIGHT_MINIMUM_COSINE = cos( LIGHT_ANGLE_RAD / 2.0f );
+static float     LIGHT_ANGLE_RAD = 60.0f * DEG_TO_RAD;
+static float     LIGHT_MINIMUM_COSINE = cos( LIGHT_ANGLE_RAD / 2.0f );
 static glm::mat4 LIGHT_PERSPECTIVE_PROJECTION = glm::perspective( LIGHT_ANGLE_RAD / DEG_TO_RAD, 1.0f, 1.0f, 20.0f);
 
-static bool ENABLE_RSM_OVERLAY = true;	// view in render frame
-static int RSM_WIDTH = 512;
-static int RSM_HEIGHT = 512;
-static int RSM_SAMPLES_AMOUNT = 100;
+static bool  ENABLE_RSM_OVERLAY = true;	// view in render frame
+static int   RSM_WIDTH = 512;
+static int   RSM_HEIGHT = 512;
+static int   RSM_SAMPLES_AMOUNT = 200;
 static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
-static bool RSM_ENABLE_OCCLUSION_TESTING = true;
-static bool RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = false;
-static int RSM_HIGHEST_TEXTURE_LEVEL = 0;
+static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
+static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = false;
+static int   RSM_MAX_TEXTURE_LEVEL = 0;
+static int   RSM_MAX_RAY_TRAVERSAL_STEPS = 5;
 
-static bool ENABLE_BACKFACE_CULLING = true;
-static bool USE_ORTHOCAM = true;
+static bool  ENABLE_BACKFACE_CULLING = true;
+static bool  USE_ORTHOCAM = true;
 static float BACKGROUND_TRANSPARENCY = 0.25;
 
 static int RENDER_FRAME_WIDTH = 512;
 static int RENDER_FRAME_HEIGHT = 512;
 static int GUI_FRAME_WIDTH = 256;
 static int GUI_FRAME_HEIGHT = 512;
-
-///**
-// * Renderpass that overlays the slice map ontop of fbo
-// */
-//class RSMLightGatheringRenderPass : public TriangleRenderPass
-//{
-//private:
-//	VoxelGridGPU* p_voxelGrid;
-//
-//public:
-//	RSMLightGatheringRenderPass(Shader* shader, FramebufferObject* fbo, Renderable* triangle, VoxelGridGPU* voxelGrid )
-//	: TriangleRenderPass(shader, fbo, triangle)
-//	{
-//		p_voxelGrid = voxelGrid;
-//	}
-//
-//	virtual void uploadUniforms()
-//	{
-//		TriangleRenderPass::uploadUniforms();
-//
-//		// upload texture
-//		glBindImageTexture(0,           // image unit binding
-//		p_voxelGrid->texture->getTextureHandle(),  // texture
-//		VISIBLE_TEXTURE_LEVEL,			// texture level
-//		GL_FALSE,                       // layered
-//		0,                              // layer
-//		GL_READ_ONLY,                   // access
-//		GL_R32UI                        // format
-//		);
-//	}
-//
-//	virtual void postRender()
-//	{
-//		TriangleRenderPass::postRender();
-//		//unbind texture
-//		glBindImageTexture(0, 0, 0,
-//		GL_FALSE, 0,
-//		GL_READ_ONLY,
-//		GL_R32UI);
-//	}
-//};
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -510,7 +470,7 @@ public:
 			}
 
 			DEBUGLOG->log("Number of mipmap levels : ", voxelGrid->numMipmaps );
-			RSM_HIGHEST_TEXTURE_LEVEL = voxelGrid->numMipmaps;
+			RSM_MAX_TEXTURE_LEVEL = voxelGrid->numMipmaps;
 
 			// allocate memory
 			glTexStorage2D(
@@ -844,7 +804,8 @@ public:
 
 				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformHighestMipMapLevel" , &RSM_HIGHEST_TEXTURE_LEVEL ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformHighestMipMapLevel" , &RSM_MAX_TEXTURE_LEVEL ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxNumSteps" , &RSM_MAX_RAY_TRAVERSAL_STEPS) );
 
 			DEBUGLOG->outdent();
 
@@ -1140,12 +1101,15 @@ public:
 
 			DEBUGLOG->log("Dis-/Enable Reflective Shadow Mapping  : Z");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &ENABLE_RSM_OVERLAY ), GLFW_KEY_Z, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&ENABLE_RSM_OVERLAY, "Overlay RSM enabled : "), GLFW_KEY_Z, GLFW_PRESS);
 
 			DEBUGLOG->log("Dis-/Enable RSM Voxel Occl. Testing    : O");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &RSM_ENABLE_OCCLUSION_TESTING ), GLFW_KEY_O, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&RSM_ENABLE_OCCLUSION_TESTING , "RSM Occlusion Testing enabled : "), GLFW_KEY_O, GLFW_PRESS);
 
 			DEBUGLOG->log("Switch RSM Voxel Occl. Testing Method  : P");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ), GLFW_KEY_P, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&RSM_USE_HIERARCHICAL_INTERSECTION_TESTING , "RSM Hierarchical Occl. Testing enabled : "), GLFW_KEY_P, GLFW_PRESS);
 
 			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
