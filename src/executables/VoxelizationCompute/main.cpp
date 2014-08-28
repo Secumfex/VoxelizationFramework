@@ -30,6 +30,7 @@
 #include "VoxelizerTools.h"
 
 #define PI 3.14159265f
+#define DEG_TO_RAD 0.01745329f
 
 static int VISIBLE_TEXTURE_LEVEL = 0;
 
@@ -43,9 +44,13 @@ static int VOXELGRID_RESOLUTION = 64;
 static float VOXELGRID_WIDTH = 8.0f;
 static float VOXELGRID_HEIGHT = 8.0f;
 
-static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 3.0f);
+static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 10.0f);
 static float LIGHT_FLUX = 1.0f;
 static bool USE_ORTHOLIGHTSOURCE = true;
+static glm::mat4 LIGHT_ORTHO_PROJECTION = glm::ortho( -6.0f, 6.0f, -6.0f, 6.0f, 0.0f, 20.0f);
+static float LIGHT_ANGLE_RAD = 60.0f * DEG_TO_RAD;
+static float LIGHT_MINIMUM_COSINE = cos( LIGHT_ANGLE_RAD / 2.0f );
+static glm::mat4 LIGHT_PERSPECTIVE_PROJECTION = glm::perspective( LIGHT_ANGLE_RAD / DEG_TO_RAD, 1.0f, 1.0f, 20.0f);
 
 static bool ENABLE_RSM_OVERLAY = true;	// view in render frame
 static int RSM_WIDTH = 512;
@@ -213,7 +218,14 @@ private:
 		m_lightParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
 		m_lightSourceNode = new CameraNode( m_lightParentNode );
 		m_lightSourceNode->translate( LIGHT_POSITION );
-		m_lightSourceNode->setProjectionMatrix( glm::ortho( -6.0f, 6.0f, -6.0f, 6.0f, 0.0f, 15.0f) );
+		if ( USE_ORTHOLIGHTSOURCE )
+		{
+			m_lightSourceNode->setProjectionMatrix( LIGHT_ORTHO_PROJECTION );
+		}
+		else
+		{
+			m_lightSourceNode->setProjectionMatrix( LIGHT_PERSPECTIVE_PROJECTION );
+		}
 
 		// TODO implement setCenter for CameraNode
 //		m_lightSourceNode->setCenter( glm::vec3(0.0f, 0.0f, 0.0f) );
@@ -404,6 +416,8 @@ public:
 			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformEnableBackfaceCulling" ),    &ENABLE_BACKFACE_CULLING ) );
 			rsmRenderPass->addUniform(new Uniform< bool >( std::string( "uniformOrtho" ),    &USE_ORTHOLIGHTSOURCE ) );
 			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformFlux" ) , &LIGHT_FLUX ) );
+			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformAngle" ) , &LIGHT_ANGLE_RAD ) );
+			rsmRenderPass->addUniform(new Uniform<float >( std::string( "uniformMinCosAngle" ) , &LIGHT_MINIMUM_COSINE ) );
 
 			// for future use
 			Texture* rsmPositionMap = new Texture( rsmRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) );
@@ -430,7 +444,7 @@ public:
 			std::vector<float> rsmSamples = generateRandomSamplingPattern( RSM_SAMPLES_AMOUNT, RSM_SAMPLES_MAX_OFFSET );
 
 			DEBUGLOG->log("Buffering samples to texture object");
-			Texture* rsmSamplesTexture = new Texture1D();
+			Texture* rsmSamplesLUT = new Texture1D();
 			GLuint rsmSamplesTextureHandle;
 			glGenTextures(1, &rsmSamplesTextureHandle);
 
@@ -446,20 +460,20 @@ public:
 			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-			float* pixels = new float[RSM_SAMPLES_AMOUNT * 3];
-			glGetTexImage(GL_TEXTURE_1D, 0, GL_RGB, GL_FLOAT, pixels);
-			for ( int i = 0; i < RSM_SAMPLES_AMOUNT; i++)
-			{
-				DEBUGLOG->log("pixel            : ", i);
-				DEBUGLOG->log("Value in buffer x: " ,	pixels[i*3 +0]);
-				DEBUGLOG->log("Value in buffer y: " ,	pixels[i*3 +1]);
+//			float* pixels = new float[RSM_SAMPLES_AMOUNT * 3];
+//			glGetTexImage(GL_TEXTURE_1D, 0, GL_RGB, GL_FLOAT, pixels);
+//			for ( int i = 0; i < RSM_SAMPLES_AMOUNT; i++)
+//			{
+//				DEBUGLOG->log("pixel            : ", i);
+//				DEBUGLOG->log("Value in buffer x: " ,	pixels[i*3 +0]);
+//				DEBUGLOG->log("Value in buffer y: " ,	pixels[i*3 +1]);
 //				DEBUGLOG->log("Value in buffer w: " ,	pixels[i*3 +2]);
 //				DEBUGLOG->log("Value in sample x: ", rsmSamples[ i*3 + 0 ]);
 //				DEBUGLOG->log("Value in sample y: ", rsmSamples[ i*3 + 1 ]);
 //				DEBUGLOG->log("Value in sample w: ", rsmSamples[ i*3 + 2 ]);
-			}
+//			}
 
-			rsmSamplesTexture->setTextureHandle( rsmSamplesTextureHandle );
+			rsmSamplesLUT->setTextureHandle( rsmSamplesTextureHandle );
 			glBindTexture(GL_TEXTURE_1D, 0);
 
 			DEBUGLOG->log("Creating Light Gathering RenderPass");
@@ -494,7 +508,7 @@ public:
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
 
 				// upload sampling pattern information
-				rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesTexture, "uniformSamplingPattern" );
+				rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesLUT, "uniformSamplingPattern" );
 
 				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformNumSamples" , &RSM_SAMPLES_AMOUNT ) );
 
@@ -531,18 +545,19 @@ public:
 				gbufferCompositing->addClearBit(GL_COLOR_BUFFER_BIT);
 				gbufferCompositing->addClearBit(GL_DEPTH_BUFFER_BIT);
 
+				// upload gbuffer information
 				gbufferCompositing->addUniformTexture( gbufferPositionMap, "uniformPositionMap" );
 				gbufferCompositing->addUniformTexture( gbufferNormalMap, "uniformNormalMap" );
 				gbufferCompositing->addUniformTexture( gbufferColorMap, "uniformColorMap" );
 
-				gbufferCompositing->addUniform(new Uniform< glm::vec3 >( std::string( "uniformLightPosition" ), &LIGHT_POSITION  ) );
+				gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformLightViewMatrix" ), m_lightSourceNode->getModelMatrixPtr() ) );
 				gbufferCompositing->addUniform(new Uniform< glm::mat4 >( std::string( "uniformViewMatrix" ),    mainCamera->getViewMatrixPointer() ) );
 
+				// upload RSM information
 				gbufferCompositing->addUniform(new Uniform< bool >( std::string( "uniformEnableRSMOverlay" ),   &ENABLE_RSM_OVERLAY) );
 
 				gbufferCompositing->addUniformTexture( rsmDirectLightMap, "uniformRSMDirectLightMap" );
 				gbufferCompositing->addUniformTexture( rsmIndirectLightMap, "uniformRSMIndirectLightMap" );
-
 
 				DEBUGLOG->log("Adding compositing render pass now");
 				m_renderManager.addRenderPass(gbufferCompositing);
@@ -1075,7 +1090,10 @@ public:
 
 			DEBUGLOG->log("Reset scenegraph                       : R");
 			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ),GLFW_KEY_R, GLFW_PRESS);
-			m_inputManager.attachListenerOnKeyPress( new SetValueListener<glm::vec3>(&LIGHT_POSITION, glm::vec3( 0.0f, 0.0f, 0.0f) ),GLFW_KEY_R, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new SetValueListener<glm::vec3>(&LIGHT_POSITION, LIGHT_POSITION ),GLFW_KEY_R, GLFW_PRESS);
+
+			DEBUGLOG->log("Dis-/Enable Reflective Shadow Mapping  : S");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &ENABLE_RSM_OVERLAY ), GLFW_KEY_S, GLFW_PRESS );
 
 			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);

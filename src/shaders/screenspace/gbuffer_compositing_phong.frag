@@ -6,7 +6,7 @@ uniform sampler2D uniformPositionMap;
 uniform sampler2D uniformNormalMap;
 uniform sampler2D uniformColorMap;
 
-uniform vec3 uniformLightPosition;
+uniform mat4 uniformLightViewMatrix;
 uniform mat4 uniformViewMatrix;
 
 uniform bool uniformEnableRSMOverlay;
@@ -25,7 +25,7 @@ void main(){
 	
 	// eye vector : negative gbufferPosition
 	vec3 toEye    = normalize( - gbufferPosition.xyz );
-	vec3 lightPos = ( uniformViewMatrix * vec4( uniformLightPosition, 1.0 ) ).xyz;
+	vec3 lightPos = ( uniformViewMatrix * uniformLightViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 ) ).xyz;
 	vec3 toLight  = lightPos.xyz - gbufferPosition.xyz;
 	vec3 reflect  = normalize ( reflect ( - toLight, gbufferNormal.xyz ) );
 	
@@ -34,14 +34,15 @@ void main(){
 	// diffuse : dot between toLight and surface normal
 	float diffuseStrength     = max ( 0.0, min( 1.0, dot ( gbufferNormal.xyz, normalize( toLight ) ) ) );
 	// specular : dot between reflected toLight and toEye
-	float specularStrength    = pow( max( 0.0, min( 1.0, dot ( toEye, reflect ) ) ), 20.0 );
+	float specularStrength    = pow( max( 0.0, min( 1.0, dot ( toEye, reflect ) ) ), 10.0 );
 	// ambient minimal amount of brightness
 	vec4 ambientLight = 0.1 * diffuseColor;
 	
 	if ( uniformEnableRSMOverlay )
 	{
 		vec4 directLight = texture( uniformRSMDirectLightMap, passUV );
-		diffuseStrength *= directLight.x;
+		diffuseStrength *= directLight.w;
+		specularStrength*= directLight.w;
 		
 		vec4 indirectLight = texture( uniformRSMIndirectLightMap, passUV );
 		ambientLight.rgb = indirectLight.rgb;

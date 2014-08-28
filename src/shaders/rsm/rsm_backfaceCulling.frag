@@ -12,6 +12,9 @@ uniform sampler2D diffuseTexture;
 uniform bool uniformEnableBackfaceCulling; // enable culling?
 uniform bool uniformOrtho;	// orthographic or perspective projection?
 
+uniform float uniformAngle; // light spot opening angle
+uniform float uniformMinCosAngle; // maximum angle of light
+
 uniform float uniformFlux;	// should be set if light source is orthographic
 
 uniform bool uniformHasReflectionCoefficient; // should be set per material, false by default
@@ -59,12 +62,16 @@ void main(){
     }
     else
     {
-    	// TODO should be in actual relation to spot angle
-    	vec3 pixelDirection = normalize( passViewPosition.xyz );
-    	vec3 lightDirection = vec3(0.0, 0.0, -1.0);
+    	// compute angle to light direction
+    	vec3 pixelDirection = normalize ( passViewPosition.xyz );
+    	vec3 lightDirection = vec3( 0.0, 0.0, -1.0 );
     	
     	// compute flux factor
-    	flux = dot ( lightDirection, pixelDirection );
+    	flux = dot ( pixelDirection, lightDirection ); // [ -1.0..1.0 ]
+    	
+    	// bring into correct interval
+    	flux -= uniformMinCosAngle; // [ -minCos -1.0 .. 1.0 - minCos ]
+    	flux = min( 1.0, max( 0.0, flux / ( 1.0 - uniformMinCosAngle ) ) ); // [ 0.0 .. 1.0 ]	
     }
  	
     // if material has reflection coefficient
@@ -76,5 +83,5 @@ void main(){
     vec4 diffuseColor = texture( diffuseTexture, passUVCoord );
         
     // save flux as homogeneous coordinate
-    fluxOutput = vec4 ( diffuseColor.rgb, flux );
+    fluxOutput = vec4 ( diffuseColor.rgb * flux, flux );
 }

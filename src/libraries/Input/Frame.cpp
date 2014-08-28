@@ -34,12 +34,16 @@ std::pair< InputField*, std::pair < Node*, RenderableNode* > > Frame::createButt
 	{
 		Object* dObject = new Object( *( resourceManager->getQuad() ) );
 		Material* dMaterial = new Material( *dObject->getMaterial() );
-		dMaterial->setAttribute( "uniformHasTexture", 1.0f );
-		dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
 
 		if ( texture )
 		{
-			dMaterial->setTexture( "uniformTexture", texture );
+		dMaterial->setAttribute( "uniformHasTexture", 1.0f );
+		dMaterial->setAttribute( "uniforTextureTransparency", 0.0f );
+		dMaterial->setTexture( "uniformTexture", texture );
+		}
+		else
+		{
+			dMaterial->setAttribute( "uniformHasTexture", 0.0f );
 		}
 
 		dObject->setMaterial( dMaterial );
