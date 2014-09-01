@@ -181,11 +181,6 @@ bool overlapsVoxel( vec3 voxel, vec3 v0, vec3 v1, vec3 v2, vec3 normal )
 	return true;
 }
 
-//float dot2D( vec2 v0, vec2 v1)
-//{
-//	return (v0.x * v1.x + v0.y * v1.y);
-//}
-
 // fill a single voxel
 void fillVoxel( vec3 voxel )
 {

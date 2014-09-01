@@ -74,39 +74,59 @@ bool validVoxelCoordinates( vec3 voxelNDC )
 	}
 }
 
-bool testOcclusionAtMipMapLevel( vec3 from, vec3 to, float mipMapLevel )
+bool testOcclusionFromMipMapLevel( vec3 from, vec3 to, float mipMapLevel, vec3 voxelSize )
 {
+	vec3 rayDir = to-from;
+	
 	// retrieve start voxel column value
 	uvec4 voxelStart = textureLod( voxel_grid_texture, from.xy, mipMapLevel );
-	uvec4 voxelEnd   = textureLod( voxel_grid_texture, to.xy,   mipMapLevel );
+//	uvec4 voxelEnd   = textureLod( voxel_grid_texture, to.xy,   mipMapLevel );
 
 	// texture value at this mipmap level aka. bitmask in texel
 	uint voxelStartValue = voxelStart.x;
-	uint voxelEndValue   = voxelEnd.x;
+//	uint voxelEndValue   = voxelEnd.x;
 				
-	// TODO compute "bounding box" of texel
-	// TODO by using the bit mask
-	// TODO compute intersection with ray
-	// TODO compute adaptive bit mask from ray
+	// compute "bounding box" of texel
+	float texelSize = pow( 2.0, mipMapLevel );
 	
-	// TODO AND bit masks			
+	vec3 bboxMin = vec3( 0.0, 0.0, 0.0);
+	bboxMin.x = ( floor( from.x / voxelSize.x ) * voxelSize.x ) * texelSize;
+	bboxMin.y = ( floor( from.y / voxelSize.y ) * voxelSize.y ) * texelSize;
+			
+	vec3 bbox = vec3( 0.0, 0.0, 1.0 );// depth  : constantly depth of a full collumn
+	bbox.x = voxelSize.x * texelSize; // width  : width of a voxel * texel width at this mipmap level
+	bbox.y = voxelSize.y * texelSize; // height : height of a voxel * texel height at this mipmap level
+
 	
-	if ( voxelStartValue != 0 )
+	// generate adaptive bit mask
+	uint adaptiveBitMask = 0;
+	
+	// TODO compute intersection with BBOX	
+	vec3 bboxIn;
+	vec3 bboxOut;
+	
+	// compute adaptive bit mask from ray bbox	
+	for ( float voxel = bboxIn.z + 0.5 * voxelSize.z; voxel <= bboxOut.z+ 0.5 * voxelSize.z; voxel += voxelSize.z )
+	{
+		adaptiveBitMask = adaptiveBitMask & texture( uniformBitMask, voxel );
+	}
+	
+	// TODO AND bit masks of adaptive bit mask and actual voxel value
+	uint intersectionBits = adaptiveBitMask & voxelStartValue;
+	
+	if ( intersectionBits != 0 )
 	{
 		return true;
+		// TODO go to next mipMapLevel
 	}
 }
 
 bool testOcclusionTraverseRay( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 {
 	// compute start and end voxel
-//	vec3 currentVoxel = ( uniformWorldToVoxel * vec4( from, 1.0 ) ).xyz; // [ 0.. res ] ...
-//	vec3 currentVoxelParam = ( uniformVoxelToVoxelParam * vec4( currentVoxel, 1.0 ) ).xyz;
-//	vec3 endVoxel = ( uniformWorldToVoxel * vec4( to, 1.0 ) ).xyz; // 0..res
-	
 	vec3 currentVoxel = fromVoxel; // 0..1
 	vec3 currentVoxelIndex = floor ( ( inverse( uniformVoxelToVoxelParam ) * vec4( fromVoxel, 1.0) ).xyz ); // 0..res
-	vec3 currentVoxelBase = ( uniformVoxelToVoxelParam * vec4( currentVoxelIndex, 1.0 ) ).xyz;
+	vec3 currentVoxelBase = ( uniformVoxelToVoxelParam * vec4( currentVoxelIndex, 1.0 ) ).xyz; // 0..1, lower left corner
 	
 	vec3 rayDir = toVoxel - currentVoxel; // t --> 0..1 between both voxels
 		
@@ -133,7 +153,7 @@ bool testOcclusionTraverseRay( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 	vec3 tDelta = voxelSize / rayDir;
 	
 	// early break condition
-	int numSteps    = 0;
+	int numSteps = 0;
 	
 	float t = 0.0;
 	// traverse ray
@@ -219,12 +239,11 @@ bool testOcclusion( vec3 from, vec3 fromNormal, vec3 to , vec3 toNormal )
 					
 		while ( rayLength > 0.0 && mipMapLevel >= 0.0)
 		{
-			bool occlusionFound = testOcclusionAtMipMapLevel( fromVoxel, toVoxel, mipMapLevel ) ;
+			bool occlusionFound = testOcclusionFromMipMapLevel( fromVoxel, toVoxel, mipMapLevel, voxelSize ) ;
 					
 			if ( occlusionFound ) // go deeper
 			{
 				mipMapLevel -= 1.0;	
-				return true;	// TODO 
 			}
 			else	// proceed in ray direction
 			{
