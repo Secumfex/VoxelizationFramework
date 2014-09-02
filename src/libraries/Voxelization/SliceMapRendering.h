@@ -17,7 +17,6 @@ namespace SliceMap
 	public:
 		SliceMapRenderPass(Shader* shader, FramebufferObject* fbo);
 
-
 		~SliceMapRenderPass();
 
 		void preRender();
@@ -44,6 +43,13 @@ namespace SliceMap
 	 * @return bit mask
 	 */
 	Texture* get32BitUintMask();
+
+	/**
+	 * Compute a 32 bit mask which simply holds information about which depth value corresponds with which 32bit uint value
+	 * which sets all lower bits to 1, primarily used for XORing
+	 * @return bit mask
+	 */
+	Texture* get32BitUintXORMask();
 
 	enum ShaderType{ BITMASK_MULTIPLETARGETS, BITMASK_SINGLETARGET, COMPUTATION };
 

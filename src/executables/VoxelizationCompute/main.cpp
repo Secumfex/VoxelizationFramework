@@ -59,8 +59,8 @@ static int   RSM_SAMPLES_AMOUNT = 200;
 static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
 static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
 static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = false;
-static int   RSM_MAX_TEXTURE_LEVEL = 0;
-static int   RSM_MAX_RAY_TRAVERSAL_STEPS = 5;
+static int   RSM_START_TEXTURE_LEVEL = 4;
+static int   RSM_MAX_TEST_ITERATIONS = 10;
 
 static bool  ENABLE_BACKFACE_CULLING = true;
 static bool  USE_ORTHOCAM = true;
@@ -470,7 +470,7 @@ public:
 			}
 
 			DEBUGLOG->log("Number of mipmap levels : ", voxelGrid->numMipmaps );
-			RSM_MAX_TEXTURE_LEVEL = voxelGrid->numMipmaps;
+			RSM_START_TEXTURE_LEVEL = voxelGrid->numMipmaps;
 
 			// allocate memory
 			glTexStorage2D(
@@ -797,6 +797,7 @@ public:
 				// upload voxel grid information
 				rsmLightGatheringRenderPass->addUniformTexture(voxelGrid->texture, "voxel_grid_texture" );
 				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintMask(), "uniformBitMask");
+				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintXORMask(), "uniformBitXORMask");
 
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxel" , &voxelGrid->worldToVoxel ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformVoxelToVoxelParam" , &voxelGrid->voxelToVoxelParam ) );
@@ -804,8 +805,8 @@ public:
 
 				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformHighestMipMapLevel" , &RSM_MAX_TEXTURE_LEVEL ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxNumSteps" , &RSM_MAX_RAY_TRAVERSAL_STEPS) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations" , &RSM_MAX_TEST_ITERATIONS) );
 
 			DEBUGLOG->outdent();
 

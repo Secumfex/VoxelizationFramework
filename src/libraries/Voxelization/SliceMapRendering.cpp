@@ -1,6 +1,7 @@
 #include "SliceMapRendering.h"
 
 static Texture* global_32BitUintMask = 0;
+static Texture* global_32BitUintXORMask = 0;
 static Texture* global_8BitRGBAMask = 0;
 
 SliceMap::SliceMapRenderPass::SliceMapRenderPass(Shader* shader,
@@ -98,7 +99,6 @@ Texture* SliceMap::get8BitRGBAMask()
 	return global_8BitRGBAMask;
 }
 
-
 Texture* SliceMap::get32BitUintMask()
 {
 	if ( global_32BitUintMask == 0)
@@ -133,7 +133,7 @@ Texture* SliceMap::get32BitUintMask()
 		// retrieve the image and save as an array
 //		GLuint* pixels = new GLuint[ 32 ];
 //		glGetTexImage(GL_TEXTURE_1D, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, pixels);
-//		// PRINT THE FUCKING TEXTURE
+
 //		for ( unsigned int i = 0; i < 32; i++)
 //		{
 //			DEBUGLOG->log(" TEXEL : ", pixels[i]);
@@ -145,6 +145,63 @@ Texture* SliceMap::get32BitUintMask()
 		global_32BitUintMask = bitMask;
 	}
 		return global_32BitUintMask;
+}
+
+Texture* SliceMap::get32BitUintXORMask() {
+	if ( global_32BitUintXORMask == 0)
+		{
+			Texture* bitMask = new Texture1D();
+			GLuint bitMaskHandle = 0;
+
+			// 32 bit values
+			unsigned long int bitMaskData[32] =
+		// z =   0 ,      1 ,        2 ,       3 ,       4 ,        5 ,        6 ,         7,
+			{    1u,       2u,         4u,        8u,        16u,       32u,        64u,         128u,
+		// z =   8  ,     9 ,       10 ,      11 ,      12 ,       13 ,       14 ,        15,
+			    256u,     512u,      1024u,     2048u,     4096u,      8192u,     16384u,      32768u,
+		// z =   16 ,     17 ,      18 ,      19 ,      20 ,       21 ,       22 ,        23,
+			   65536u,    131072u,   262144u,   524288u,  1048576u,  2097152u,   4194304u,     8388608u,
+		// z =   24 ,     25 ,      26 ,      27 ,      28 ,       29 ,       30 ,        31,
+			  16777216u, 33554432u, 67108864u, 134217728u, 268435456u, 536870912u, 1073741824u, 2147483648u
+			};
+
+			// set all bits from 0 up to the current value
+			for ( int i = 31; i >= 0; i-- )
+			{
+				for ( int setBit = i - 1; setBit >= 0; setBit-- )
+				{
+					// OR with lesser bit value
+					bitMaskData[i] = bitMaskData[i] | bitMaskData[setBit];
+				}
+			}
+
+			glGenTextures(1, &bitMaskHandle);
+			glBindTexture(GL_TEXTURE_1D, bitMaskHandle);
+
+			// allocate mem:  1D Texture,  1 level,   long uint format (32bit)
+			glTexStorage1D( GL_TEXTURE_1D, 1		, GL_R32UI					, 32 );
+
+			// buffer data to GPU
+			glTexSubImage1D( GL_TEXTURE_1D, 0, 0, 32, GL_RED_INTEGER, GL_UNSIGNED_INT, &bitMaskData);
+
+			// set filter parameters so samplers can work
+			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+//			// retrieve the image and save as an array
+//			GLuint* pixels = new GLuint[ 32 ];
+//			glGetTexImage(GL_TEXTURE_1D, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, pixels);
+//			for ( unsigned int i = 0; i < 32; i++)
+//			{
+//				DEBUGLOG->log(" TEXEL : ", pixels[i]);
+//			}
+
+			glBindTexture(GL_TEXTURE_1D, 0);
+
+			bitMask->setTextureHandle( bitMaskHandle );
+			global_32BitUintXORMask = bitMask;
+		}
+			return global_32BitUintXORMask;
 }
 
 SliceMap::SliceMapRenderPass* SliceMap::getSliceMapRenderPass(float width, float height,

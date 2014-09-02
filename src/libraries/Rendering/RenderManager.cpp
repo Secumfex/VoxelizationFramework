@@ -2,7 +2,7 @@
 
 RenderManager::RenderManager()
 {
-
+	m_activeWindow = 0;
 }
 
 RenderManager::~RenderManager()
