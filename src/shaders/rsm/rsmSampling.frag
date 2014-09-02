@@ -97,6 +97,12 @@ float intersect( vec3 from, vec3 rayDir, vec3 clipPoint, vec3 clipNormal )
 // test whether the a ray intersects with a set voxel at the provided mipmalLevel
 bool testOcclusionMipMap( vec3 from, vec3 to, float startMipMapLevel, vec3 voxelSize )
 {
+	// skip test if outside of voxel grid // TODO : move to first valid voxel
+	if ( !validVoxelCoordinates(from) || !validVoxelCoordinates(to) )
+	{
+		return false; 
+	}
+	
 	// initialize values
 	bool  foundIntersection = false;
 	int   iteration         = 1;
@@ -116,14 +122,14 @@ bool testOcclusionMipMap( vec3 from, vec3 to, float startMipMapLevel, vec3 voxel
 	vec3  clipPoint;        // current clip plane support point
 	vec3  currentPosition;  // current position on ray
 	
-	float currentTexelSize; // texel size of a texel at current mip map level
+	vec3 currentTexelSize; // texel size of a texel at current mip map level
 	float tClip;            // currently computed t-parameter to intersect plane
 	float tOut = 1.0;       // currently lowest t-parameter to leave bbox
 
 	// ray direction
 	vec3  rayDir = to - from;
 	
-	// signs decide which planes to test agains, at most 3 tests
+	// signs decide which planes to test against, at most 3 tests
 	vec3  clipDirections = sign ( rayDir );	
 	
 	// break conditions
@@ -133,17 +139,18 @@ bool testOcclusionMipMap( vec3 from, vec3 to, float startMipMapLevel, vec3 voxel
 		currentPosition = from + t * rayDir;
 					
 		// current texel size ( in amount of combined texels ) at current mip map level
-		currentTexelSize = pow( 2.0, currentMipMapLevel );
+		currentTexelSize.xy = pow( 2.0, currentMipMapLevel ) * voxelSize.xy;
+		currentTexelSize.z = voxelSize.z;
 		
 		// lower left corner
 		bboxTexelMin = vec3( 0.0, 0.0, 0.0 );	
-		bboxTexelMin.x = ( floor( currentPosition.x / voxelSize.x ) * voxelSize.x ) * currentTexelSize;
-		bboxTexelMin.y = ( floor( currentPosition.y / voxelSize.y ) * voxelSize.y ) * currentTexelSize;
+		bboxTexelMin.x = floor( currentPosition.x / ( currentTexelSize.x ) ) * ( currentTexelSize.x );
+		bboxTexelMin.y = floor( currentPosition.y / ( currentTexelSize.y ) ) * ( currentTexelSize.y );
 		
 		// bounding box dimensions
 		bboxTexel = vec3( 0.0, 0.0, 1.0 );// depth  : always depth of a full collumn
-		bboxTexel.x = voxelSize.x * currentTexelSize; // width  : width of a voxel * texel width at this mip map level
-		bboxTexel.y = voxelSize.y * currentTexelSize; // height : height of a voxel * texel height at this mip map level
+		bboxTexel.x = currentTexelSize.x; // width  : width of a voxel * texel width at this mip map level
+		bboxTexel.y = currentTexelSize.y; // height : height of a voxel * texel height at this mip map level
 		
 		// upper right corner
 		bboxTexelMax = bboxTexelMin + bboxTexel;
@@ -205,10 +212,13 @@ bool testOcclusionMipMap( vec3 from, vec3 to, float startMipMapLevel, vec3 voxel
 		bboxOut = from + ( tOut + 0.01 ) * rayDir; 
 		
 		// generate adaptive bit mask by XOR-ing bit masks of current depth and box intersection depth
-		adaptiveBitMask = texture( uniformBitXORMask, currentPosition.z ).r ^ texture( uniformBitXORMask, bboxOut.z ).r;
+		float sampleBegin = floor( currentPosition.z / voxelSize.z ) * voxelSize.z + 0.5 * voxelSize.z;
+		float sampleEnd   = floor( bboxOut.z / voxelSize.z ) * voxelSize.z + 0.5 * voxelSize.z;
+		adaptiveBitMask   = texture( uniformBitXORMask, sampleBegin ).r ^ texture( uniformBitXORMask, sampleEnd ).r;
 		
 		// retrieve current position voxel column bit value at current mip map level
-		currentTexelValue = textureLod( voxel_grid_texture, currentPosition.xy, currentMipMapLevel ).r;
+		vec2 sampleTexel  = floor( currentPosition.xy / currentTexelSize.xy ) * currentTexelSize.xy + 0.5 * currentTexelSize.xy;
+		currentTexelValue = textureLod( voxel_grid_texture, sampleTexel, currentMipMapLevel ).r;
 		
 		// test for collision by AND-ing bit masks of adaptive bit mask and actual voxel collumn value
 		intersectionBits = adaptiveBitMask & currentTexelValue;
@@ -287,7 +297,7 @@ bool testOcclusionRayMarching( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 		{
 			// retrieve BYTE value from bitmask corresponding to depth
 			float depth = currentVoxel.z;
-			uvec4 bitMask = texture( uniformBitMask, depth );			
+			uvec4 bitMask = texture( uniformBitMask, floor ( depth / voxelSize.z ) * voxelSize.z + 0.5 * voxelSize.z );			
 			uint byte = bitMask.r;	
 			
 			// retrieve current voxel collumn
@@ -347,7 +357,7 @@ bool testOcclusionRayMarching( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 bool testOcclusion( vec3 from, vec3 fromNormal, vec3 to , vec3 toNormal)
 {	
 	// size of a voxel in NDC
-	vec3 voxelSizeNCD = ( vec4( 1.0, 1.0, 1.0, 0.0 ) * uniformVoxelToVoxelParam ).xyz; // 0..res --> 0..1 
+	vec3 voxelSizeNDC = ( vec4( 1.0, 1.0, 1.0, 0.0 ) * uniformVoxelToVoxelParam ).xyz; // 0..res --> 0..1 
 	
 	// move a little bit out along normals 
 	vec3 offsetFrom = 0.1 * fromNormal;

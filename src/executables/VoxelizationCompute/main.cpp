@@ -58,8 +58,8 @@ static int   RSM_HEIGHT = 512;
 static int   RSM_SAMPLES_AMOUNT = 200;
 static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
 static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
-static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = false;
-static int   RSM_START_TEXTURE_LEVEL = 4;
+static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = true;
+static float RSM_START_TEXTURE_LEVEL = 4.0;
 static int   RSM_MAX_TEST_ITERATIONS = 10;
 
 static bool  ENABLE_BACKFACE_CULLING = true;
@@ -470,7 +470,7 @@ public:
 			}
 
 			DEBUGLOG->log("Number of mipmap levels : ", voxelGrid->numMipmaps );
-			RSM_START_TEXTURE_LEVEL = voxelGrid->numMipmaps;
+			RSM_START_TEXTURE_LEVEL = (float) voxelGrid->numMipmaps;
 
 			// allocate memory
 			glTexStorage2D(
@@ -803,10 +803,10 @@ public:
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformVoxelToVoxelParam" , &voxelGrid->voxelToVoxelParam ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxelParam" , &voxelGrid->worldToVoxelParam ) );
 
-				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform<bool>( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
-				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations" , &RSM_MAX_TEST_ITERATIONS) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations", &RSM_MAX_TEST_ITERATIONS) );
 
 			DEBUGLOG->outdent();
 
