@@ -32,17 +32,19 @@
 #define PI 3.14159265f
 #define DEG_TO_RAD 0.01745329f
 
-static int VISIBLE_TEXTURE_LEVEL = 0;
+static int   VISIBLE_TEXTURE_LEVEL = 0;
 
-static bool USE_ROTATING_BUNNY = false;
+static bool  USE_ROTATING_BUNNY = false;
 
-static bool VOXELIZE_REGULAR_ACTIVE = true;
-static bool VOXELIZE_ACTIVE = true;
+static bool  VOXELIZE_REGULAR_ACTIVE = true;
+static bool  VOXELIZE_ACTIVE = true;
 
-static int TEXATLAS_RESOLUTION  = 512;
-static int VOXELGRID_RESOLUTION = 64;
-static float VOXELGRID_WIDTH = 8.0f;
-static float VOXELGRID_HEIGHT = 8.0f;
+static int   TEXATLAS_RESOLUTION  = 512;
+
+static bool  ENABLE_VOXELGRID_OVERLAY = true;
+static int   VOXELGRID_RESOLUTION = 64;
+static float VOXELGRID_WIDTH = 7.0f;
+static float VOXELGRID_HEIGHT = 7.0f;
 
 static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 6.0f);
 static bool      USE_ORTHOLIGHTSOURCE = true;
@@ -55,8 +57,9 @@ static glm::mat4 LIGHT_PERSPECTIVE_PROJECTION = glm::perspective( LIGHT_ANGLE_RA
 static bool  ENABLE_RSM_OVERLAY = true;	// view in render frame
 static int   RSM_WIDTH = 512;
 static int   RSM_HEIGHT = 512;
-static int   RSM_SAMPLES_AMOUNT = 200;
+static int   RSM_SAMPLES_AMOUNT = 100;
 static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
+static float RSM_NORMAL_OFFSET = 0.2f;
 static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
 static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = true;
 static float RSM_START_TEXTURE_LEVEL = 4.0;
@@ -354,13 +357,16 @@ public:
 			std::vector<Renderable* > renderables;
 			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
-			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
-			renderables.push_back(testRoomNode);
+//			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
+//			renderables.push_back(testRoomNode);
 
-			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
+//			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
+			RenderableNode* bunnyNode= SimpleScene::loadObject("/occlusionTestScene.dae" , this);
 
-			DEBUGLOG->log("Scaling bunny up by 25");
-			bunnyNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
+			bunnyNode->scale( glm::vec3( 1.5f, 1.5f, 1.5f ) );
+
+//			DEBUGLOG->log("Scaling bunny up by 25");
+//			bunnyNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
 
 			renderables.push_back(bunnyNode);
 
@@ -378,7 +384,7 @@ public:
 						bunnyNode->setParent( m_objectsNode );
 					}
 
-					testRoomNode->setParent( m_objectsNode );
+//					testRoomNode->setParent( m_objectsNode );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -470,7 +476,7 @@ public:
 			}
 
 			DEBUGLOG->log("Number of mipmap levels : ", voxelGrid->numMipmaps );
-			RSM_START_TEXTURE_LEVEL = (float) voxelGrid->numMipmaps;
+			RSM_START_TEXTURE_LEVEL = min ( RSM_START_TEXTURE_LEVEL, (float) voxelGrid->numMipmaps );
 
 			// allocate memory
 			glTexStorage2D(
@@ -729,8 +735,8 @@ public:
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
-				* 				REFLECTIVE SHADOW MAP LIGHT GATHERING CONFIGURATION
-				**************************************************************************************/
+		* 				REFLECTIVE SHADOW MAP LIGHT GATHERING CONFIGURATION
+		**************************************************************************************/
 		DEBUGLOG->log("Configuring reflective shadow map light gathering");
 		DEBUGLOG->indent();
 
@@ -799,12 +805,14 @@ public:
 				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintMask(), "uniformBitMask");
 				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintXORMask(), "uniformBitXORMask");
 
-				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxel" , &voxelGrid->worldToVoxel ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxel"      , &voxelGrid->worldToVoxel ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformVoxelToVoxelParam" , &voxelGrid->voxelToVoxelParam ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxelParam" , &voxelGrid->worldToVoxelParam ) );
 
 				rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< int  >( "uniformMaxMipMapLevel" ,   &voxelGrid->numMipmaps ) );
+				rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformNormalOffset" ,     &RSM_NORMAL_OFFSET) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
 				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations", &RSM_MAX_TEST_ITERATIONS) );
 
@@ -879,6 +887,7 @@ public:
 					voxelGrid->texture,
 					&VISIBLE_TEXTURE_LEVEL );
 			overlaySliceMap->addUniform( new Uniform<float>("uniformBackgroundTransparency", &BACKGROUND_TRANSPARENCY) );
+			overlaySliceMap->addUniform( new Uniform<bool>("enabled", &ENABLE_VOXELGRID_OVERLAY) );
 			overlaySliceMap->setViewport(0,0,RENDER_FRAME_WIDTH,RENDER_FRAME_HEIGHT);
 
 			Shader* projectSliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH"/sliceMap/sliceMapProjectionGLSL4_3.frag");
@@ -894,6 +903,7 @@ public:
 					);
 			projectSliceMap->addClearBit( GL_COLOR_BUFFER_BIT );
 			projectSliceMap->addUniform( new Uniform<float>( "uniformBackgroundTransparency", &BACKGROUND_TRANSPARENCY ) );
+			projectSliceMap->addUniform( new Uniform<bool>("enabled", &ENABLE_VOXELGRID_OVERLAY) );
 			projectSliceMap->setViewport(0,0,RENDER_FRAME_WIDTH,RENDER_FRAME_HEIGHT);
 
 			RenderPass* showSliceMap = projectSliceMap;
@@ -1096,6 +1106,10 @@ public:
 			);
 			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
 
+			DEBUGLOG->log("Dis-/Enable voxel grid display         : N");
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &ENABLE_VOXELGRID_OVERLAY), GLFW_KEY_N, GLFW_PRESS );
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&ENABLE_VOXELGRID_OVERLAY, "Overlay voxel grid enabled : " ), GLFW_KEY_N, GLFW_PRESS );
+
 			DEBUGLOG->log("Reset scenegraph                       : R");
 			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ),GLFW_KEY_R, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( new SetValueListener<glm::vec3>(&LIGHT_POSITION, LIGHT_POSITION ),GLFW_KEY_R, GLFW_PRESS);
@@ -1110,7 +1124,8 @@ public:
 
 			DEBUGLOG->log("Switch RSM Voxel Occl. Testing Method  : P");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ), GLFW_KEY_P, GLFW_PRESS );
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&RSM_USE_HIERARCHICAL_INTERSECTION_TESTING , "RSM Hierarchical Occl. Testing enabled : "), GLFW_KEY_P, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active Occlusion Testing  : mip map hierarchy" ), &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING, false ), GLFW_KEY_P, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new ConditionalProxyListener( new DebugPrintListener( "Active Occlusion Testing  : ray marching" ), &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING, true ), GLFW_KEY_P, GLFW_PRESS);
 
 			DEBUGLOG->log("Print compute shader execution times   : T");
 			m_inputManager.attachListenerOnKeyPress( dispatchClearVoxelGridComputeShader->getPrintExecutionTimeListener(		"Clear Voxel Grid      "), GLFW_KEY_T, GLFW_PRESS);
@@ -1144,12 +1159,17 @@ public:
 			inputFieldDecTransparency->attachListenerOnPress( new DecrementValueListener<float>( &BACKGROUND_TRANSPARENCY, 0.1f ) );
 			inputFieldDecTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &BACKGROUND_TRANSPARENCY, "background transparency : "));
 
-			DEBUGLOG->log("De-/Increase visible voxel grid level  : K / L    ( overlay view only )");
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_L);
-			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_K);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_L);
+			DEBUGLOG->log("De-/Increase visible voxel grid level  : J / K    ( overlay view only )");
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_K);
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_J);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_K);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_J);
 
+			DEBUGLOG->log("De-/Increase RSM mip map start level   : U / I ");
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_I);
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_U);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_I);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_U);
 
 		DEBUGLOG->outdent();
 

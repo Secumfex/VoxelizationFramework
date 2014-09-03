@@ -88,7 +88,8 @@ void VoxelGridGPU::computeWorldToVoxel() {
 	float hw = width / 2.0f;
 	float hh = height / 2.0f;
 	float hd = depth / 2.0f;
-	worldToVoxel = glm::scale( glm::mat4(1.0f), glm::vec3 (1.0f / cellSize, 1.0f / cellSize, 1.0f /  cellSize ) ) *
+	worldToVoxel =
+			glm::scale(     glm::mat4(1.0f), glm::vec3 (1.0f / cellSize, 1.0f / cellSize, 1.0f /  cellSize ) ) *
 			glm::translate( glm::mat4(1.0f), glm::vec3(hw, hh, hd)  ) *
 			view *
 			glm::mat4(1.0f);
