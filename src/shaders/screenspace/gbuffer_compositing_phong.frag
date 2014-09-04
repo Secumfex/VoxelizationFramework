@@ -34,7 +34,7 @@ void main(){
 	// diffuse : dot between toLight and surface normal
 	float diffuseStrength     = max ( 0.0, min( 1.0, dot ( gbufferNormal.xyz, normalize( toLight ) ) ) );
 	// specular : dot between reflected toLight and toEye
-	float specularStrength    = pow( max( 0.0, min( 1.0, dot ( toEye, reflect ) ) ), 10.0 );
+//	float specularStrength    = pow( max( 0.0, min( 1.0, dot ( toEye, reflect ) ) ), 10.0 );
 	// ambient minimal amount of brightness
 	vec4 ambientLight = 0.1 * diffuseColor;
 	
@@ -42,7 +42,7 @@ void main(){
 	{
 		vec4 directLight = texture( uniformRSMDirectLightMap, passUV );
 		diffuseStrength *= directLight.w;
-		specularStrength*= directLight.w;
+//		specularStrength*= directLight.w;
 		
 		vec4 indirectLight = texture( uniformRSMIndirectLightMap, passUV );
 		ambientLight.rgb = indirectLight.rgb;
@@ -53,7 +53,8 @@ void main(){
 			( diffuseStrength  ) * diffuseColor 
 //			+ ambientStrength  * diffuseColor
 			+ ambientLight
-			+ specularStrength * vec4( 1.0, 1.0, 1.0, 1.0 );
+//			+ specularStrength * vec4( 1.0, 1.0, 1.0, 1.0 )
+			;
 	
 	fragment_color.a = 1.0;
 }

@@ -358,7 +358,7 @@ public:
 			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
-			renderables.push_back(testRoomNode);
+//			renderables.push_back(testRoomNode);
 
 //			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
 			RenderableNode* bunnyNode= SimpleScene::loadObject("/occlusionTestScene.dae" , this);
@@ -1160,22 +1160,29 @@ public:
 			inputFieldDecTransparency->attachListenerOnPress( new DebugPrintValueListener<float>( &BACKGROUND_TRANSPARENCY, "background transparency : "));
 
 			DEBUGLOG->log("De-/Increase visible voxel grid level  : J / K    ( overlay view only )");
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_K);
-			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_J);
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_K);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &VISIBLE_TEXTURE_LEVEL, 1 ) , GLFW_KEY_J);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_K);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_J);
 
-			DEBUGLOG->log("De-/Increase RSM mip map start level   : U / I ");
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_I);
-			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_U);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_I);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_U);
+			DEBUGLOG->log("De-/Increase RSM max test iterations   : 6 / 7 ");
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &RSM_MAX_TEST_ITERATIONS, 1 ) , GLFW_KEY_6);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &RSM_MAX_TEST_ITERATIONS, 1 ) , GLFW_KEY_7);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &RSM_MAX_TEST_ITERATIONS,   "RSM max test iterations   : "), GLFW_KEY_6);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &RSM_MAX_TEST_ITERATIONS,   "RSM max test iterations   : "), GLFW_KEY_7);
 
-			DEBUGLOG->log("De-/Increase RSM normal sample offset  : 7 / 8 ");
-			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_NORMAL_OFFSET, 0.05 ) , GLFW_KEY_8);
-			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_NORMAL_OFFSET, 0.05 ) , GLFW_KEY_7);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_NORMAL_OFFSET,       "RSM normal offset         : "), GLFW_KEY_7);
-			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_NORMAL_OFFSET,       "RSM normal offset         : "), GLFW_KEY_8);
+			DEBUGLOG->log("De-/Increase RSM mip map start level   : 8 / 9 ");
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_8);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_9);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_8);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_9);
+
+			DEBUGLOG->log("De-/Increase RSM normal sample offset  : U / I ");
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_NORMAL_OFFSET, 0.05 ) , GLFW_KEY_U);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_NORMAL_OFFSET, 0.05 ) , GLFW_KEY_I);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_NORMAL_OFFSET,       "RSM normal offset         : "), GLFW_KEY_U);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_NORMAL_OFFSET,       "RSM normal offset         : "), GLFW_KEY_I);
+
 
 		DEBUGLOG->outdent();
 
