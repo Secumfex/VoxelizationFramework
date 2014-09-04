@@ -62,7 +62,7 @@ static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
 static float RSM_NORMAL_OFFSET = 0.2f;
 static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
 static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = true;
-static float RSM_START_TEXTURE_LEVEL = 4.0;
+static float RSM_START_TEXTURE_LEVEL = 3.0;
 static int   RSM_MAX_TEST_ITERATIONS = 10;
 
 static bool  ENABLE_BACKFACE_CULLING = true;
@@ -357,8 +357,8 @@ public:
 			std::vector<Renderable* > renderables;
 			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
-//			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
-//			renderables.push_back(testRoomNode);
+			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
+			renderables.push_back(testRoomNode);
 
 //			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
 			RenderableNode* bunnyNode= SimpleScene::loadObject("/occlusionTestScene.dae" , this);
@@ -384,7 +384,7 @@ public:
 						bunnyNode->setParent( m_objectsNode );
 					}
 
-//					testRoomNode->setParent( m_objectsNode );
+					testRoomNode->setParent( m_objectsNode );
 			DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -1170,6 +1170,12 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_START_TEXTURE_LEVEL, 1.0 ) , GLFW_KEY_U);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_I);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_START_TEXTURE_LEVEL, "RSM mip map start level   : "), GLFW_KEY_U);
+
+			DEBUGLOG->log("De-/Increase RSM normal sample offset  : 7 / 8 ");
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_NORMAL_OFFSET, 0.05 ) , GLFW_KEY_8);
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_NORMAL_OFFSET, 0.05 ) , GLFW_KEY_7);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_NORMAL_OFFSET,       "RSM normal offset         : "), GLFW_KEY_7);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_NORMAL_OFFSET,       "RSM normal offset         : "), GLFW_KEY_8);
 
 		DEBUGLOG->outdent();
 

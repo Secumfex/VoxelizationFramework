@@ -218,7 +218,7 @@ bool testOcclusionMipMap( vec3 from, vec3 to, float startMipMapLevel, vec3 voxel
 		// test for valid tOut
 		if ( tOut < t )
 		{
-			return false;
+//			return false;
 		}
 		
 		// intersection point at which ray leaves bbox ( TODO + offset )
@@ -271,40 +271,46 @@ bool testOcclusionRayMarching( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 {
 	// compute start and end voxel
 	vec3 currentVoxel = fromVoxel; // 0..1
-	vec3 currentVoxelBase = floor( fromVoxel / voxelSize ) * voxelSize; // 0..1, lower left corner
+	vec3 currentVoxelBase = floor( currentVoxel / voxelSize ) * voxelSize; // 0..1, lower left corner
 	
 	vec3 rayDir = toVoxel - currentVoxel; // t --> 0..1 between both voxels
 		
 	// init step direction
-	vec3 step = voxelSize * sign( rayDir );
+	vec3 signRayDir = sign( rayDir ); // signs of ray direction scalars
 	
-//	vec3 step = voxelSize;
-//	if ( rayDir.x < 0.0 )
-//	{
-//		step.x *= -1.0;
-//	}
-//	if ( rayDir.y < 0.0)
-//	{
-//		step.y *= -1.0;
-//	}
-//	if ( rayDir.z < 0.0)
-//	{
-//		step.z *= -1.0;
-//	}
+	// steps to move to next voxel
+	vec3 step = voxelSize * signRayDir; 
 
-	// init max t traversal before next voxel
-	vec3 tMax = vec3( 0.0, 0.0, 0.0 );
-	tMax = ( currentVoxelBase + voxelSize - currentVoxel) / rayDir;
+	// next axis boundaries that will be intersected : currentVoxel + 1.0 if ray direction positiv, currentVoxel else
+	vec3 next = currentVoxelBase + max( step, vec3(0.0,0.0,0.0) );
 	
-	// init max Delta per axis to traverse a voxel in that direction
-	vec3 tDelta = voxelSize / rayDir;
+	// init max t traversal before next voxel and t delta per axis to traverse a voxel in that direction
+	vec3 tMax = vec3( 10000.0, 10000.0, 10000.0 );
+	vec3 tDelta = vec3( 0.0, 0.0, 0.0 );
+	if ( signRayDir.x != 0.0 )
+	{
+		tMax.x = intersect( currentVoxel, rayDir, next, vec3( signRayDir.x, 0.0, 0.0 ) );
+		tDelta.x = voxelSize.x / abs ( rayDir.x );
+	}
+	if ( signRayDir.y != 0.0 )
+	{
+		tMax.y = intersect( currentVoxel, rayDir, next, vec3( 0.0, signRayDir.y, 0.0 ) );
+		tDelta.y = voxelSize.y / abs ( rayDir.y );
+	}
+	if ( signRayDir.z != 0.0 )
+	{
+		tMax.z = intersect( currentVoxel, rayDir, next, vec3( 0.0, 0.0, signRayDir.z ) );
+		tDelta.z = voxelSize.z / abs ( rayDir.z );
+	}
+			
+	//	tMax = ( ( currentVoxelBase + voxelSize ) - currentVoxel) / rayDir;
 	
 	// early break condition
 	int numSteps = 0;
 	
 	float t = 0.0;
 	// traverse ray
-	while ( numSteps < uniformMaxTestIterations && t <= 1.0 )
+	while ( numSteps < uniformMaxTestIterations && t < 1.0 )
 	{			
 		// proceed to next voxel
 		if ( tMax.x < tMax.y )
@@ -333,7 +339,7 @@ bool testOcclusionRayMarching( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 			else
 			{
 				currentVoxel.z += step.z;
-				tMax.z +=tDelta.z;
+				tMax.z += tDelta.z;
 				t += tDelta.z;
 			}
 		}
@@ -343,11 +349,13 @@ bool testOcclusionRayMarching( vec3 fromVoxel, vec3 toVoxel, vec3 voxelSize )
 		{
 			// retrieve BYTE value from bitmask corresponding to depth
 			float depth = currentVoxel.z;
-			uvec4 bitMask = texture( uniformBitMask, floor ( depth / voxelSize.z ) * voxelSize.z + 0.5 * voxelSize.z );			
+//			uvec4 bitMask = texture( uniformBitMask, floor ( depth / voxelSize.z ) * voxelSize.z + 0.5 * voxelSize.z );
+			uvec4 bitMask = texture( uniformBitMask, depth );			
 			uint byte = bitMask.r;	
 			
 			// retrieve current voxel collumn
-			uvec4 voxelGridTexel = texture( voxel_grid_texture, floor ( currentVoxel.xy / voxelSize.xy ) * voxelSize.xy + 0.5 * voxelSize.xy );
+//			uvec4 voxelGridTexel = texture( voxel_grid_texture, floor ( currentVoxel.xy / voxelSize.xy ) * voxelSize.xy + 0.5 * voxelSize.xy );
+			uvec4 voxelGridTexel = texture( voxel_grid_texture, currentVoxel.xy );
 			uint voxelGridCollumn = voxelGridTexel.x;
 			
 			// AND with byte currently written in voxel grid texture
