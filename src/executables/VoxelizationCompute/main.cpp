@@ -764,6 +764,14 @@ public:
 			rsmSamplesLUT->setTextureHandle( rsmSamplesTextureHandle );
 			glBindTexture(GL_TEXTURE_1D, 0);
 
+			// TODO LOW RES RENDER PASS
+
+			// TODO INTERPOLATION
+			Shader* rsmInterpolationShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmInterpolate.frag" );
+
+			// TODO HIH RES RENDER PASS
+
+
 			DEBUGLOG->log("Creating Light Gathering RenderPass");
 			// compile rsm sampling shader
 			Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmSampling.frag");
