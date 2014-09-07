@@ -29,9 +29,11 @@ layout(location = 0) out vec4 indirectLight;
 /****************** ***************** ****************/
 void main()
 {
+	mat4 invGBufferView = inverse( uniformGBufferView );
+	
 	// retrieve position and normal of pixel from gbuffer
-	vec4 pixelWorldPosition = inverse( uniformGBufferView ) * texture( uniformGBufferPositionMap, passUV );
-	vec4 pixelWorldNormal   = inverse( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
+	vec4 pixelWorldPosition = invGBufferView * texture( uniformGBufferPositionMap, passUV );
+	vec4 pixelWorldNormal   = invGBufferView * texture( uniformGBufferNormalMap,   passUV );
 
 	// retrieve nearest samples
 	vec2 resolution = vec2( uniformRSMLowResX, uniformRSMLowResY );
@@ -53,33 +55,92 @@ void main()
 	}
 	
 	// init values for interpolation
-	vec2 q11 = min( sampleTexelCenter, sampleTexelCenter + offsetDirection ); // bottom left
-	vec2 q12 = q11 + vec2( 0.0, 1.0); // top left
-	vec2 q21 = q11 + vec2( 1.0, 0.0); // bottom right
-	vec2 q22 = q11 + vec2( 1.0, 1.0); // top right
+	vec2 q00 = min( sampleTexelCenter, sampleTexelCenter + offsetDirection ); // bottom left
+	vec2 q01 = q00 + vec2( 0.0, 1.0); // top left
+	vec2 q10 = q00 + vec2( 1.0, 0.0); // bottom right
+	vec2 q11 = q00 + vec2( 1.0, 1.0); // top right
 	
-	vec2 xy = sampleTexelCoords - q11;// position in interpolation coordinates
-	
+	float x = sampleTexelCoords.x - q00.x;// position in interpolation coordinates
+	float y = sampleTexelCoords.y - q00.y;
+			
 	// retrieve texture values
-	vec4 f00 = texture( uniformRSMLowResIndirectLightMap, q11 * texelSize ); 
-	vec4 f10 = texture( uniformRSMLowResIndirectLightMap, q21 * texelSize );
-	vec4 f01 = texture( uniformRSMLowResIndirectLightMap, q12 * texelSize );
-	vec4 f11 = texture( uniformRSMLowResIndirectLightMap, q22 * texelSize );
+	vec4 f00 = texture( uniformRSMLowResIndirectLightMap, q00 * texelSize ); 
+	vec4 f10 = texture( uniformRSMLowResIndirectLightMap, q10 * texelSize );
+	vec4 f01 = texture( uniformRSMLowResIndirectLightMap, q01 * texelSize );
+	vec4 f11 = texture( uniformRSMLowResIndirectLightMap, q11 * texelSize );
 	
-	vec4 b1 = f00; 					 // f(0,0)
-	vec4 b2 = f10 - f00; 			 // f(1,0) - f(0,0)
-	vec4 b3 = f01 - f00; 			 // f(0,1) - f(0,0)
-	vec4 b4 = f00 - f10 - f01 + f11; // f(0,0) - f(1,0) - f(0,1) + f(1,1)
+//	vec4 b1 = f00; 					 // f(0,0)
+//	vec4 b2 = f10 - f00; 			 // f(1,0) - f(0,0)
+//	vec4 b3 = f01 - f00; 			 // f(0,1) - f(0,0)
+//	vec4 b4 = f00 - f10 - f01 + f11; // f(0,0) - f(1,0) - f(0,1) + f(1,1)
+//	
+//	// interpolate
+//	vec4 fxy = b1 + b2 * x + b3 * y + b4 * x * y;
 	
-	// interpolate
-	vec4 fxy = b1 + b2 * xy.x + b3 * xy.y + b4 * xy.x * xy.y;
+	// influences
+	float i00 = ( 1.0 - x ) * ( 1.0 - y );
+	float i01 = ( 1.0 - x ) *       y    ;
+	float i10 =       x     * ( 1.0 - y );
+	float i11 =       x     *       y    ;
 	
-	// check sample thresholds
-//	if ( distance( sampleCENTERPosition, pixelPosition ) <= uniformDistanceThreshold 
-//			&& 1.0 - dot( sampleCENTERNormal, pixelNormal <= uniformNormalThreshold ) )
-//	{
-//	}
+	// bias in case only 3 samples are used
+	float bias = 1.0;
+	int validSamples = 4;
+	
+	// world positions
+	vec4 worldPos00 = invGBufferView * texture( uniformGBufferPositionMap, q00 * texelSize ); 
+	vec4 worldPos10 = invGBufferView * texture( uniformGBufferPositionMap, q10 * texelSize );
+	vec4 worldPos01 = invGBufferView * texture( uniformGBufferPositionMap, q01 * texelSize );
+	vec4 worldPos11 = invGBufferView * texture( uniformGBufferPositionMap, q11 * texelSize );
+				
+	// world normal
+	vec4 worldNormal00 = invGBufferView * texture( uniformGBufferNormalMap, q00 * texelSize ); 
+	vec4 worldNormal10 = invGBufferView * texture( uniformGBufferNormalMap, q10 * texelSize );
+	vec4 worldNormal01 = invGBufferView * texture( uniformGBufferNormalMap, q01 * texelSize );
+	vec4 worldNormal11 = invGBufferView * texture( uniformGBufferNormalMap, q11 * texelSize );
 
+	// check sample thresholds
+	if ( distance( worldPos00, pixelWorldPosition )  >= uniformDistanceThreshold 
+			|| dot( worldNormal00, pixelWorldNormal ) <= uniformNormalThreshold )
+	{
+		bias =  1.0 / ( 1.0 - i00 );
+		i00 = 0.0;
+		validSamples--;
+	}
+	
+	if ( distance( worldPos01, pixelWorldPosition )  >= uniformDistanceThreshold 
+			|| dot( worldNormal01, pixelWorldNormal ) <= uniformNormalThreshold )
+	{
+		bias =  1.0 / ( 1.0 - i01 );
+		i01 = 0.0;
+		validSamples--;
+	}
+	
+	if ( distance( worldPos10, pixelWorldPosition )  >= uniformDistanceThreshold 
+			|| dot( worldNormal10, pixelWorldNormal ) <= uniformNormalThreshold )
+	{
+		bias =  1.0 / ( 1.0 - i10 );
+		i10 = 0.0;
+		validSamples--;
+	}
+	
+	if ( distance( worldPos11, pixelWorldPosition )  >= uniformDistanceThreshold 
+			|| dot( worldNormal11, pixelWorldNormal ) <= uniformNormalThreshold )
+	{
+		bias =  1.0 / ( 1.0 - i11 );
+		i11 = 0.0;
+		validSamples--;
+	}
+	
+	// too few samples
+	if ( validSamples < 3 )
+	{
+		// dont even try
+		discard;
+	}
+
+	vec4 fxy = ( f00 * i00 + f01 * i01 + f10 * i10 + f11 * i11 ) * bias;
+	
 	// save interpolated value
 	indirectLight = fxy;
 }

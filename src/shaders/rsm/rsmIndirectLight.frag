@@ -6,7 +6,6 @@ in vec2 passUV;
 uniform sampler2D uniformRSMPositionMap;
 uniform sampler2D uniformRSMNormalMap;
 uniform sampler2D uniformRSMFluxMap;
-uniform sampler2D uniformRSMDepthMap;
 
 uniform mat4 uniformRSMView;
 uniform mat4 uniformRSMProjection;
@@ -29,52 +28,22 @@ uniform usampler2D voxel_grid_texture;
 uniform usampler1D uniformBitMask;
 uniform usampler1D uniformBitXORMask;
 
-//uniform bool uniformOutputNormal;
-//uniform bool uniformOutputPosition;
-
 uniform mat4 uniformWorldToVoxel;
 uniform mat4 uniformVoxelToVoxelParam;
 uniform mat4 uniformWorldToVoxelParam;
 
 // occlusion related uniforms
-uniform bool uniformEnableOcclusionTesting;
-uniform bool uniformUseHierarchicalIntersectionTesting;
+uniform bool  uniformEnableOcclusionTesting;
+uniform bool  uniformUseHierarchicalIntersectionTesting;
 uniform float uniformStartMipMapLevel;
 uniform float uniformMaxMipMapLevel;
 uniform float uniformNormalOffset;
-uniform int uniformMaxTestIterations;
+uniform int   uniformMaxTestIterations;
 
 // output
-layout(location = 0) out vec4 directLight;
-layout(location = 1) out vec4 indirectLight;
+layout(location = 0) out vec4 indirectLight;
 
-//layout(location = 2) out vec4 outPosition;
-//layout(location = 3) out vec4 outNormal;
 
-/****************** ************ ****************/
-/****************** DIRECT LIGHT ****************/
-/****************** ************ ****************/
-// compute light intensity to position based on it's visibility to light source
-vec4 computeDirectLight( vec3 rsmPosition )
-{
-	// default : dark
-	vec4 directLightIntensity = vec4( 0.0f, 0.0f, 0.0f, 0.0f );
-		
-	// inside of light view
-	if ( rsmPosition.x < 1.0 && rsmPosition.y < 1.0 && rsmPosition.x > 0.0 && rsmPosition.y > 0.0)
-	{
-		float rsmDepth = texture( uniformRSMDepthMap, rsmPosition.xy ).x;
-		directLightIntensity = texture( uniformRSMFluxMap , rsmPosition.xy);
-			
-		// dark if invisible
-		if ( rsmPosition.z > rsmDepth + 0.03 )
-		{
-			directLightIntensity = vec4 ( 0.0f, 0.0f, 0.0f, 0.0f );	
-		}		
-	}
-	
-	return directLightIntensity;
-}
 /****************** **** ****************/
 /****************** MISC ****************/
 /****************** **** ****************/
@@ -501,19 +470,4 @@ void main()
 	
 	// save indirect light intensity
 	indirectLight = vec4( irradiance * 200.0, 1.0 );
-	
-	// DIRECT LIGHT
-	vec4 directLightIntensity = computeDirectLight( rsmPosition.xyz );	// surface point position in rsm
-	
-	// save direct light intensity
-	directLight = directLightIntensity;
-	
-//	if ( uniformOutputNormal )
-//	{
-//		outNormal = worldNormal;
-//	}
-//	if ( uniformOutputPosition )
-//	{
-//		outPosition = worldPosition;
-//	}
 }
