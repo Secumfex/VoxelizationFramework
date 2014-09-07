@@ -4,8 +4,8 @@ in vec2 passUV;
 
 // low res rsm indirect light map to sample from
 uniform sampler2D uniformRSMLowResIndirectLightMap;
-uniform sampler2D uniformRSMLowResPositionMap;
-uniform sampler2D uniformRSMLowResNormalMap;
+//uniform sampler2D uniformRSMLowResPositionMap;
+//uniform sampler2D uniformRSMLowResNormalMap;
 
 // low res light map resolution
 uniform float uniformRSMLowResX;
@@ -14,6 +14,8 @@ uniform float uniformRSMLowResY;
 // gbuffer maps to read from
 uniform sampler2D uniformGBufferPositionMap;
 uniform sampler2D uniformGBufferNormalMap;
+
+uniform mat4 uniformGBufferView;
 
 // thresholds to test against
 uniform float uniformNormalThreshold;
@@ -28,82 +30,56 @@ layout(location = 0) out vec4 indirectLight;
 void main()
 {
 	// retrieve position and normal of pixel from gbuffer
-	vec4 pixelPosition = inverse( uniformGBufferView ) * texture( uniformGBufferPositionMap, passUV );
-	vec4 pixelNormal   = inverse( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
+	vec4 pixelWorldPosition = inverse( uniformGBufferView ) * texture( uniformGBufferPositionMap, passUV );
+	vec4 pixelWorldNormal   = inverse( uniformGBufferView ) * texture( uniformGBufferNormalMap,   passUV );
 
 	// retrieve nearest samples
 	vec2 resolution = vec2( uniformRSMLowResX, uniformRSMLowResY );
 	vec2 texelSize = 1.0 / resolution; // pixel size in tex coords
 	
-	vec2 centerUV = ( floor( passUV * resolution ) + vec2( 0.5, 0.5 ) ) / resolution );
-	vec2 offsetCENTER   = centerUV - ( 0.5 * texelSize ); // in UV coord system
-	vec2 offsetDIAGONAL = sign( offsetCenter ) * texelSize;  // sample that is diagonal to center
-	if ( offsetDIAGONAL.x == 0.0 )
+	// sample texel center
+	vec2 sampleTexelCoords   = passUV * resolution;
+	vec2 sampleTexelCenter = ( floor( sampleTexelCoords ) + vec2( 0.5, 0.5 ) );
+	
+	// sampling direction relative to center of texel
+	vec2 offsetDirection= sign( sampleTexelCoords - sampleTexelCenter ); // {-1,0,1}
+	if ( offsetDirection.x == 0.0 )
 	{
-		offsetDIAGONAL.x  = texelSize.x;	
+		offsetDirection.x = 1.0;
 	}
-	if ( offsetDIAGONAL.x == 0.0 )
+	if ( offsetDirection.y == 0.0 )
 	{
-		offsetDIAGONAL.y  = texelSize.y;	
+		offsetDirection.y = 1.0;
 	}
-	vec2 offsetHORIZONTAL= vec2( offsetDIAGONAL.x, 0.0 );  // sample that is left or right
-	vec2 offsetVERTICAL  = vec2( 0.0, offsetDIAGONAL.y );  // sample that is up or down from center
 	
-	// retrieve position and normal of sample from low res maps
-	vec4 sampleCENTERPosition     = texture( uniformRSMLowResPositionMap, centerUV );
-	vec4 sampleCENTERNormal       = texture( uniformRSMLowResNormalMap,   centerUV );	
-	vec4 sampleDIAGONALPosition   = texture( uniformRSMLowResPositionMap, centerUV + offsetDIAGONAL);
-	vec4 sampleDIAGONALNormal     = texture( uniformRSMLowResNormalMap,   centerUV + offsetDIAGONAL );	
-	vec4 sampleHORIZONTALPosition = texture( uniformRSMLowResPositionMap, centerUV + offsetHORIZONTAL );
-	vec4 sampleHORIZONTALNormal   = texture( uniformRSMLowResNormalMap,   centerUV + offsetHORIZONTAL );
-	vec4 sampleVERTICALPosition   = texture( uniformRSMLowResPositionMap, centerUV + offsetVERTICAL );
-	vec4 sampleVERTICALNormal     = texture( uniformRSMLowResNormalMap,   centerUV + offsetVERTICAL );
+	// init values for interpolation
+	vec2 q11 = min( sampleTexelCenter, sampleTexelCenter + offsetDirection ); // bottom left
+	vec2 q12 = q11 + vec2( 0.0, 1.0); // top left
+	vec2 q21 = q11 + vec2( 1.0, 0.0); // bottom right
+	vec2 q22 = q11 + vec2( 1.0, 1.0); // top right
 	
-	// Init values for interpolation
-	int numValidSamples = 0;
+	vec2 xy = sampleTexelCoords - q11;// position in interpolation coordinates
 	
-	indirectLight = vec4( 0.0, 0.0, 0.0, 0.0);
-	vec4 sampleCENTERIndirectLight     = vec4 ( 0.0, 0.0, 0.0, 0.0 );
-	vec4 sampleDIAGONALIndirectLight   = vec4 ( 0.0, 0.0, 0.0, 0.0 );
-	vec4 sampleHORIZONTALIndirectLight = vec4 ( 0.0, 0.0, 0.0, 0.0 );
-	vec4 sampleVERTICALIndirectLight   = vec4 ( 0.0, 0.0, 0.0, 0.0 );
+	// retrieve texture values
+	vec4 f00 = texture( uniformRSMLowResIndirectLightMap, q11 * texelSize ); 
+	vec4 f10 = texture( uniformRSMLowResIndirectLightMap, q21 * texelSize );
+	vec4 f01 = texture( uniformRSMLowResIndirectLightMap, q12 * texelSize );
+	vec4 f11 = texture( uniformRSMLowResIndirectLightMap, q22 * texelSize );
 	
-	float influenceSampleCENTER     = 0.0;
-	float influenceSampleDIAGONAL   = 0.0;
-	float influenceSampleHORIZONTAL = 0.0;
-	float influenceSampleVERTICAL   = 0.0;
+	vec4 b1 = f00; 					 // f(0,0)
+	vec4 b2 = f10 - f00; 			 // f(1,0) - f(0,0)
+	vec4 b3 = f01 - f00; 			 // f(0,1) - f(0,0)
+	vec4 b4 = f00 - f10 - f01 + f11; // f(0,0) - f(1,0) - f(0,1) + f(1,1)
+	
+	// interpolate
+	vec4 fxy = b1 + b2 * xy.x + b3 * xy.y + b4 * xy.x * xy.y;
 	
 	// check sample thresholds
-	if ( distance( sampleCENTERPosition, pixelPosition ) <= uniformDistanceThreshold 
-			&& 1.0 - dot( sampleCENTERNormal, pixelNormal <= uniformNormalThreshold ) )
-	{
-		// read sample indirect light value
-		vec4 sampleCENTERIndirectLight = texture( uniformRSMLowResIndirectLightMap, centerUV);
-		numValidSamples++;
-	}
-	
-	// project into reflective shadow map
-	vec4 rsmPosition = uniformRSMProjection * uniformRSMView * worldPosition; // -w..w
-	rsmPosition.xyz /= rsmPosition.w; //-1..1
-	rsmPosition.w = 1.0;
-	rsmPosition.xyz += 1.0;	// 0..2
-	rsmPosition.xyz *= 0.5; // 0..1
-	
-	// INDIRECT LIGHT
-	vec2 center = rsmPosition.xy;
+//	if ( distance( sampleCENTERPosition, pixelPosition ) <= uniformDistanceThreshold 
+//			&& 1.0 - dot( sampleCENTERNormal, pixelNormal <= uniformNormalThreshold ) )
+//	{
+//	}
 
-	vec3 surfacePosition = worldPosition.xyz;
-	vec3 surfaceNormal   = worldNormal.xyz;
-	
-	// perform light gathering
-	vec3 irradiance = computeIndirectLight( center, surfacePosition, surfaceNormal );
-	
-	// save indirect light intensity
-	indirectLight = vec4( irradiance * 200.0, 1.0 );
-	
-	// DIRECT LIGHT
-	vec4 directLightIntensity = computeDirectLight( rsmPosition.xyz );	// surface point position in rsm
-	
-	// save direct light intensity
-	directLight = directLightIntensity;
+	// save interpolated value
+	indirectLight = fxy;
 }

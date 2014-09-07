@@ -29,6 +29,9 @@ uniform usampler2D voxel_grid_texture;
 uniform usampler1D uniformBitMask;
 uniform usampler1D uniformBitXORMask;
 
+//uniform bool uniformOutputNormal;
+//uniform bool uniformOutputPosition;
+
 uniform mat4 uniformWorldToVoxel;
 uniform mat4 uniformVoxelToVoxelParam;
 uniform mat4 uniformWorldToVoxelParam;
@@ -44,6 +47,9 @@ uniform int uniformMaxTestIterations;
 // output
 layout(location = 0) out vec4 directLight;
 layout(location = 1) out vec4 indirectLight;
+
+//layout(location = 2) out vec4 outPosition;
+//layout(location = 3) out vec4 outNormal;
 
 /****************** ************ ****************/
 /****************** DIRECT LIGHT ****************/
@@ -501,4 +507,13 @@ void main()
 	
 	// save direct light intensity
 	directLight = directLightIntensity;
+	
+//	if ( uniformOutputNormal )
+//	{
+//		outNormal = worldNormal;
+//	}
+//	if ( uniformOutputPosition )
+//	{
+//		outPosition = worldPosition;
+//	}
 }
