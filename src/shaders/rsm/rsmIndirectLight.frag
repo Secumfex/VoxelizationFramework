@@ -389,6 +389,7 @@ bool testOcclusion( vec3 from, vec3 fromNormal, vec3 to , vec3 toNormal)
 vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal )
 { 
 	vec3 irradiance = vec3( 0.0, 0.0, 0.0 );
+	float totalWeight = 0.0;
 	for ( int i = 0; i < uniformNumSamples; i++ )
 	{
 		// retrieve sampling properties for next sample
@@ -407,6 +408,9 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 		{
 			if ( testOcclusion( surfacePosition, surfaceNormal, rsmSamplePosition, rsmSampleNormal ) )
 			{
+				
+				totalWeight += sampleWeight;
+				
 				// skip this light source
 				continue;
 			}
@@ -435,10 +439,14 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 			
 		// add to total irradiance
 		irradiance += sampleIrradiance;
+		
+		// add to total weight
+		totalWeight += sampleWeight;
 	}
 		
 	// normalize
-	irradiance *= 1.0 / float( uniformNumSamples );
+//	irradiance *= 1.0 / float( uniformNumSamples );
+	irradiance *= 1.0 / totalWeight;
 		
 	return irradiance;
 }
@@ -469,5 +477,5 @@ void main()
 	vec3 irradiance = computeIndirectLight( center, surfacePosition, surfaceNormal );
 	
 	// save indirect light intensity
-	indirectLight = vec4( irradiance * 100.0, 1.0 );
+	indirectLight = vec4( irradiance * 25.0, 1.0 );
 }
