@@ -63,9 +63,9 @@ static float RSM_NORMAL_OFFSET = 0.2f;
 static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
 static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = true;
 static float RSM_START_TEXTURE_LEVEL = 3.0;
-static int   RSM_MAX_TEST_ITERATIONS = 10;
-static float RSM_LOW_RES_RESOLUTION = 32.0;
-static float RSM_INTERPOLATION_NORMAL_THRESHOLD = 0.5;
+static int   RSM_MAX_TEST_ITERATIONS = 15;
+static float RSM_LOW_RES_RESOLUTION = 64.0;
+static float RSM_INTERPOLATION_NORMAL_THRESHOLD = 0.1;
 static float RSM_INTERPOLATION_DISTANCE_THRESHOLD = 1.0;
 
 static bool  ENABLE_BACKFACE_CULLING = true;
@@ -767,7 +767,7 @@ public:
 			// upload gbuffer information
 			rsmDirectLightRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
 			rsmDirectLightRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
-
+			rsmDirectLightRenderPass->addUniform( new Uniform< bool >( "uniformOrthoLightSource", &USE_ORTHOLIGHTSOURCE ) );
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Adding RSM direct light render pass to application");
@@ -894,7 +894,12 @@ public:
 		// create renderpass
 		TriangleRenderPass* rsmInterpolationRenderPass = new TriangleRenderPass( rsmInterpolationShader, rsmIndirectLightFramebuffer, m_resourceManager.getScreenFillingTriangle() );
 		rsmInterpolationRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
-		rsmInterpolationRenderPass->setClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		rsmInterpolationRenderPass->setClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+
+		// enable depth testing
+		rsmInterpolationRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+		rsmInterpolationRenderPass->removeDisable( GL_DEPTH_TEST ); // remove from disable list
+		rsmInterpolationRenderPass->addEnable( GL_DEPTH_TEST );     // add to enable list
 
 		DEBUGLOG->log("Configuring uniforms");
 		DEBUGLOG->indent();
@@ -917,66 +922,68 @@ public:
 		DEBUGLOG->log("Adding RSM interpolation render pass to application");
 		m_renderManager.addRenderPass( rsmInterpolationRenderPass );
 
-			/*********************
-			 * HIGH RES RENDER PASS
-			 *********************/
-			// TODO HIGH RES RENDER PASS
-//			DEBUGLOG->log("Creating RSM High Resolution Light Gathering RenderPass");
+		/*********************
+		 * FULL RES RENDER PASS
+		 *********************/
 
+		DEBUGLOG->log("Creating RSM High Resolution Light Gathering RenderPass");
 //			// compile rsm sampling shader
-//			Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmIndirectLight.frag");
+//		Shader* rsmLightGatheringShader = new Shader( SHADERS_PATH "/screenspace/screenFill.vert", SHADERS_PATH "/rsm/rsmIndirectLight.frag");
 
-			// create render pass
-//			TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLightGatheringFramebuffer, m_resourceManager.getScreenFillingTriangle() );
-//			rsmLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
-//
-//			DEBUGLOG->log("Configuring uniforms");
-//			DEBUGLOG->indent();
-//
-//				// upload reflective shadow map information
-//				rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
-//				rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap,   "uniformRSMNormalMap");
-//				rsmLightGatheringRenderPass->addUniformTexture(rsmFluxMap, "uniformRSMFluxMap");
-//				rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap,    "uniformRSMDepthMap");
-//
-//				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView"      , m_lightSourceNode->getViewMatrixPointer() ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
-//
-//				// upload gbuffer information
-//				rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
-//				rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap,   "uniformGBufferNormalMap");
-//
-//				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
-//
-//				// upload sampling pattern information
-//				rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesLUT, "uniformSamplingPattern" );
-//
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformNumSamples" , &RSM_SAMPLES_AMOUNT ) );
-//
-//				// upload voxel grid information
-//				rsmLightGatheringRenderPass->addUniformTexture(voxelGrid->texture, "voxel_grid_texture" );
-//				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintMask(), "uniformBitMask");
-//				rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintXORMask(), "uniformBitXORMask");
-//
-//				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxel"      , &voxelGrid->worldToVoxel ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformVoxelToVoxelParam" , &voxelGrid->voxelToVoxelParam ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxelParam" , &voxelGrid->worldToVoxelParam ) );
-//
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< int  >( "uniformMaxMipMapLevel" ,   &voxelGrid->numMipmaps ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformNormalOffset" ,     &RSM_NORMAL_OFFSET) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
-//				rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations", &RSM_MAX_TEST_ITERATIONS) );
+		// create render pass
+		TriangleRenderPass* rsmLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmIndirectLightFramebuffer, m_resourceManager.getScreenFillingTriangle() );
 
-			DEBUGLOG->outdent();
+		// dont clear any bit
+		// enable depth testing
+		rsmLightGatheringRenderPass->removeDisable( GL_DEPTH_TEST );
+		rsmLightGatheringRenderPass->addEnable( GL_DEPTH_TEST );
 
-			// for future use
-//			Texture* rsmDirectLightMap = new Texture( rsmLightGatheringFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) );
-			Texture* rsmIndirectLightMap = new Texture( rsmIndirectLightFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) );
+		DEBUGLOG->log("Configuring uniforms");
+		DEBUGLOG->indent();
 
-//			DEBUGLOG->log("Adding RSM light gathering render pass to application");
-//			m_renderManager.addRenderPass( rsmLightGatheringRenderPass );
+			// upload reflective shadow map information
+			rsmLightGatheringRenderPass->addUniformTexture(rsmPositionMap, "uniformRSMPositionMap");
+			rsmLightGatheringRenderPass->addUniformTexture(rsmNormalMap, "uniformRSMNormalMap");
+			rsmLightGatheringRenderPass->addUniformTexture(rsmFluxMap, "uniformRSMFluxMap");
+			rsmLightGatheringRenderPass->addUniformTexture(rsmDepthMap, "uniformRSMDepthMap");
+
+			rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMView" , m_lightSourceNode->getViewMatrixPointer() ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformRSMProjection", m_lightSourceNode->getProjectionMatrixPointer() ) );
+
+			// upload gbuffer information
+			rsmLightGatheringRenderPass->addUniformTexture(gbufferPositionMap, "uniformGBufferPositionMap");
+			rsmLightGatheringRenderPass->addUniformTexture(gbufferNormalMap, "uniformGBufferNormalMap");
+
+			rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformGBufferView", mainCamera->getViewMatrixPointer() ) );
+
+			// upload sampling pattern information
+			rsmLightGatheringRenderPass->addUniformTexture( rsmSamplesLUT, "uniformSamplingPattern" );
+
+			rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformNumSamples" , &RSM_SAMPLES_AMOUNT ) );
+
+			// upload voxel grid information
+			rsmLightGatheringRenderPass->addUniformTexture(voxelGrid->texture, "voxel_grid_texture" );
+			rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintMask(), "uniformBitMask");
+			rsmLightGatheringRenderPass->addUniformTexture( SliceMap::get32BitUintXORMask(), "uniformBitXORMask");
+
+			rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxel" , &voxelGrid->worldToVoxel ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformVoxelToVoxelParam" , &voxelGrid->voxelToVoxelParam ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform<glm::mat4>( "uniformWorldToVoxelParam" , &voxelGrid->worldToVoxelParam ) );
+
+			rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformEnableOcclusionTesting" , &RSM_ENABLE_OCCLUSION_TESTING ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformUseHierarchicalIntersectionTesting" , &RSM_USE_HIERARCHICAL_INTERSECTION_TESTING ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< int >( "uniformMaxMipMapLevel" , &voxelGrid->numMipmaps ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformNormalOffset" , &RSM_NORMAL_OFFSET) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations", &RSM_MAX_TEST_ITERATIONS) );
+
+		DEBUGLOG->outdent();
+
+		// for future use
+		Texture* rsmIndirectLightMap = new Texture( rsmIndirectLightFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) );
+
+		DEBUGLOG->log("Adding RSM light gathering render pass to application");
+		m_renderManager.addRenderPass( rsmLightGatheringRenderPass );
 
 		DEBUGLOG->outdent();
 

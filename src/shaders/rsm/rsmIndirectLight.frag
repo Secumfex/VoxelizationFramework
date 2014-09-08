@@ -469,5 +469,5 @@ void main()
 	vec3 irradiance = computeIndirectLight( center, surfacePosition, surfaceNormal );
 	
 	// save indirect light intensity
-	indirectLight = vec4( irradiance * 200.0, 1.0 );
+	indirectLight = vec4( irradiance * 100.0, 1.0 );
 }

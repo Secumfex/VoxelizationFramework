@@ -63,6 +63,10 @@ public:
 	void addDisable(GLenum state);
 
 	void addUniform(Uploadable* uniform);
+
+	void removeEnable(GLenum state);
+	void removeDisable(GLenum state);
+	void removeClearBit(GLbitfield clearBit);
 };
 
 #endif

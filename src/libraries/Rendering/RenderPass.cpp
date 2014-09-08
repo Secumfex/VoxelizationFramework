@@ -204,3 +204,36 @@ void RenderPass::removeRenderable(Renderable* renderable) {
 void RenderPass::clearRenderables() {
 	m_renderables.clear();
 }
+
+void RenderPass::removeEnable(GLenum state) {
+	for ( std::vector< GLenum >::iterator it = m_enable.begin(); it != m_enable.end(); ++it)
+	{
+		if ( (*it) == state )
+		{
+			m_enable.erase( it );
+			return;
+		}
+	}
+}
+
+void RenderPass::removeDisable(GLenum state) {
+	for ( std::vector< GLenum >::iterator it = m_disable.begin(); it != m_disable.end(); ++it)
+	{
+		if ( (*it) == state )
+		{
+			m_disable.erase( it );
+			return;
+		}
+	}
+}
+
+void RenderPass::removeClearBit(GLbitfield clearBit) {
+	for ( std::vector< GLbitfield >::iterator it = m_clearBits.begin(); it != m_clearBits.end(); ++it)
+	{
+		if ( (*it) == clearBit)
+		{
+			m_clearBits.erase( it );
+			return;
+		}
+	}
+}

@@ -14,6 +14,9 @@ uniform sampler2D uniformGBufferPositionMap;
 
 uniform mat4 uniformGBufferView;
 
+// settings
+uniform bool uniformOrthoLightSource;
+
 // output
 layout(location = 0) out vec4 directLight;
 
@@ -32,9 +35,15 @@ vec4 computeDirectLight( vec3 rsmPosition )
 	{
 		float rsmDepth = texture( uniformRSMDepthMap, rsmPosition.xy ).x;
 		directLightIntensity = texture( uniformRSMFluxMap , rsmPosition.xy);
-			
+		
+		float epsilon = 0.0005;
+		if ( uniformOrthoLightSource )
+		{
+			epsilon = 0.01;
+		}
+		
 		// dark if invisible
-		if ( rsmPosition.z > rsmDepth + 0.03 )
+		if ( rsmPosition.z > rsmDepth + epsilon )
 		{
 			directLightIntensity = vec4 ( 0.0f, 0.0f, 0.0f, 0.0f );	
 		}		

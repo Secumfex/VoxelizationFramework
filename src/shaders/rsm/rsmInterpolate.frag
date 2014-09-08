@@ -38,31 +38,42 @@ void main()
 	// retrieve nearest samples
 	vec2 resolution = vec2( uniformRSMLowResX, uniformRSMLowResY );
 	vec2 texelSize = 1.0 / resolution; // pixel size in tex coords
+
 	
-	// sample texel center
-	vec2 sampleTexelCoords   = passUV * resolution;
-	vec2 sampleTexelCenter = ( floor( sampleTexelCoords ) + vec2( 0.5, 0.5 ) );
-	
-	// sampling direction relative to center of texel
-	vec2 offsetDirection= sign( sampleTexelCoords - sampleTexelCenter ); // {-1,0,1}
-	if ( offsetDirection.x == 0.0 )
-	{
-		offsetDirection.x = 1.0;
-	}
-	if ( offsetDirection.y == 0.0 )
-	{
-		offsetDirection.y = 1.0;
-	}
+//	// sample texel center
+//	vec2 sampleTexelCoords   = passUV * resolution;
+//	vec2 sampleTexelCenter = ( floor( sampleTexelCoords ) + vec2( 0.5, 0.5 ) );
+//	
+//	// sampling direction relative to center of texel
+//	vec2 offsetDirection= sign( sampleTexelCoords - sampleTexelCenter ); // {-1,0,1}
+//	if ( offsetDirection.x == 0.0 )
+//	{
+//		offsetDirection.x = 1.0;
+//	}
+//	if ( offsetDirection.y == 0.0 )
+//	{
+//		offsetDirection.y = 1.0;
+//	}
 	
 	// init values for interpolation
-	vec2 q00 = min( sampleTexelCenter, sampleTexelCenter + offsetDirection ); // bottom left
-	vec2 q01 = q00 + vec2( 0.0, 1.0); // top left
-	vec2 q10 = q00 + vec2( 1.0, 0.0); // bottom right
-	vec2 q11 = q00 + vec2( 1.0, 1.0); // top right
+//	vec2 q00 = min( sampleTexelCenter, sampleTexelCenter + offsetDirection ); // bottom left
+//	vec2 q01 = q00 + vec2( 0.0, 1.0); // top left
+//	vec2 q10 = q00 + vec2( 1.0, 0.0); // bottom right
+//	vec2 q11 = q00 + vec2( 1.0, 1.0); // top right
 	
-	float x = sampleTexelCoords.x - q00.x;// position in interpolation coordinates
-	float y = sampleTexelCoords.y - q00.y;
-			
+//	float x = sampleTexelCoords.x - q00.x;// position in interpolation coordinates
+//	float y = sampleTexelCoords.y - q00.y;
+	
+	vec2 sampleTexel = passUV * resolution;
+	
+	vec2 q00 = floor ( sampleTexel + vec2( -0.5, -0.5 ) ) + vec2(0.5, 0.5); // bottom left
+	vec2 q01 = floor ( sampleTexel  + vec2( -0.5, 0.5)  ) + vec2(0.5, 0.5); // top left
+	vec2 q10 = floor ( sampleTexel  + vec2( 0.5, -0.5)  ) + vec2(0.5, 0.5); // bottom right
+	vec2 q11 = floor ( sampleTexel  + vec2( 0.5, 0.5)   ) + vec2(0.5, 0.5); // top right
+	
+	float x = sampleTexel.x - q00.x;// position in interpolation coordinates
+	float y = sampleTexel.y - q00.y;
+		
 	// retrieve texture values
 	vec4 f00 = texture( uniformRSMLowResIndirectLightMap, q00 * texelSize ); 
 	vec4 f10 = texture( uniformRSMLowResIndirectLightMap, q10 * texelSize );
@@ -98,6 +109,18 @@ void main()
 	vec4 worldNormal10 = invGBufferView * texture( uniformGBufferNormalMap, q10 * texelSize );
 	vec4 worldNormal01 = invGBufferView * texture( uniformGBufferNormalMap, q01 * texelSize );
 	vec4 worldNormal11 = invGBufferView * texture( uniformGBufferNormalMap, q11 * texelSize );
+
+//	// world positions
+//	vec4 worldPos00 = invGBufferView * texture( uniformGBufferPositionMap, ( sampleTexel + vec2( -0.5, -0.5 ) ) * texelSize ); 
+//	vec4 worldPos10 = invGBufferView * texture( uniformGBufferPositionMap, ( sampleTexel + vec2( 0.5, -0.5 ) ) * texelSize );
+//	vec4 worldPos01 = invGBufferView * texture( uniformGBufferPositionMap, ( sampleTexel + vec2( -0.5, 0.5 ) ) * texelSize );
+//	vec4 worldPos11 = invGBufferView * texture( uniformGBufferPositionMap, ( sampleTexel + vec2( 0.5, 0.5 ) ) * texelSize );
+//				
+//	// world normal
+//	vec4 worldNormal00 = invGBufferView * texture( uniformGBufferNormalMap, (sampleTexel + vec2( -0.5, -0.5 ) ) * texelSize ); 
+//	vec4 worldNormal10 = invGBufferView * texture( uniformGBufferNormalMap, (sampleTexel + vec2( 0.5, -0.5 ) )  * texelSize );
+//	vec4 worldNormal01 = invGBufferView * texture( uniformGBufferNormalMap, (sampleTexel + vec2( -0.5, 0.5 ) )  * texelSize );
+//	vec4 worldNormal11 = invGBufferView * texture( uniformGBufferNormalMap, (sampleTexel + vec2( 0.5, 0.5 ) )   * texelSize );
 
 	// check sample thresholds
 	if ( distance( worldPos00, pixelWorldPosition )  >= uniformDistanceThreshold 
@@ -139,6 +162,7 @@ void main()
 		discard;
 	}
 
+	// interpolate
 	vec4 fxy = ( f00 * i00 + f01 * i01 + f10 * i10 + f11 * i11 ) * bias;
 	
 	// save interpolated value
