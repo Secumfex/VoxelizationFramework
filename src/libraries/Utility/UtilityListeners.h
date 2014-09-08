@@ -113,6 +113,23 @@ public:
 };
 
 template < class T >
+class CopyValueListener : public Listener
+{
+private:
+	T* p_value;
+	T* p_copyValue;
+public:
+	CopyValueListener(T* valuePtr, T* copyValuePtr) {
+		p_copyValue= copyValuePtr;
+		p_value = valuePtr;
+	}
+	virtual ~CopyValueListener() {};
+	void call() {
+		*p_value = *p_copyValue;
+	}
+};
+
+template < class T >
 class MultiplyValueListener : public Listener
 {
 private:

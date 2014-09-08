@@ -46,6 +46,7 @@ static int   VOXELGRID_RESOLUTION = 64;
 static float VOXELGRID_WIDTH = 7.0f;
 static float VOXELGRID_HEIGHT = 7.0f;
 
+
 static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 6.0f);
 static bool      USE_ORTHOLIGHTSOURCE = true;
 static float     LIGHT_FLUX = 1.0f;
@@ -69,7 +70,10 @@ static float RSM_INTERPOLATION_NORMAL_THRESHOLD = 0.1;
 static float RSM_INTERPOLATION_DISTANCE_THRESHOLD = 1.0;
 
 static bool  ENABLE_BACKFACE_CULLING = true;
-static bool  USE_ORTHOCAM = true;
+static bool  USE_ORTHOCAM = false;
+static glm::mat4 ORTHOCAM_PROJECTION;
+static glm::mat4 PERSPECTIVECAM_PROJECTION = glm::perspective( 65.0f, 1.0f, 0.1f, 30.0f);
+
 static float BACKGROUND_TRANSPARENCY = 0.25;
 
 static int RENDER_FRAME_WIDTH = 512;
@@ -304,6 +308,7 @@ private:
 
 		m_cameraParentNode = new Node( m_sceneManager.getActiveScene()->getSceneGraph()->getRootNode() );
 		CameraNode* camera = new CameraNode( m_cameraParentNode );
+		camera->setProjectionMatrix( glm::perspective(65.0f, 1.0f, 0.1f, 30.0f) );
 		writeGbufferRenderPass->setCamera( camera );
 
 		DEBUGLOG->log("Adding render pass to application");
@@ -831,7 +836,7 @@ public:
 		// create render pass
 		TriangleRenderPass* rsmLowResLightGatheringRenderPass = new TriangleRenderPass( rsmLightGatheringShader, rsmLowResIndirectLightFramebuffer, m_resourceManager.getScreenFillingTriangle() );
 		rsmLowResLightGatheringRenderPass->addClearBit( GL_COLOR_BUFFER_BIT );
-		rsmLowResLightGatheringRenderPass->setClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		rsmLowResLightGatheringRenderPass->setClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
 		DEBUGLOG->log("Configuring uniforms");
 		DEBUGLOG->indent();
@@ -1035,7 +1040,7 @@ public:
 		DEBUGLOG->indent();
 
 			// Align Camera with voxelization view
-			mainCamera->setProjectionMatrix( glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 15.0f) );
+			ORTHOCAM_PROJECTION = glm::ortho( voxelGrid->width * -0.5f, voxelGrid->width * 0.5f, voxelGrid->height * -0.5f, voxelGrid->height * 0.5f, -10.0f, 15.0f);
 			mainCamera->setPosition( glm::vec3 ( glm::inverse ( voxelGrid->view ) * glm::vec4 ( 0.0, 0.0f, voxelGrid->depth / 2.0f, 1.0f ) ) );
 
 			Shader* 			overlaySliceMapShader = new Shader( SHADERS_PATH "/screenspace/screenFillGLSL4_3.vert", SHADERS_PATH "/sliceMap/sliceMapOverLayGLSL4_3.frag");
@@ -1266,9 +1271,31 @@ public:
 			);
 			m_inputManager.attachListenerOnKeyPress( switchShowSliceMaps, GLFW_KEY_B, GLFW_PRESS );
 
+			std::vector<glm::mat4> projectionMatrices;
+			projectionMatrices.push_back( PERSPECTIVECAM_PROJECTION );
+			projectionMatrices.push_back( ORTHOCAM_PROJECTION );
+			SwitchThroughValuesListener< glm::mat4 >* switchProjectionMatrix = new SwitchThroughValuesListener< glm::mat4 >(
+					mainCamera->getProjectionMatrixPointer(),
+					projectionMatrices
+			);
+			m_inputManager.attachListenerOnKeyPress( switchProjectionMatrix, GLFW_KEY_B, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &USE_ORTHOCAM ), GLFW_KEY_B, GLFW_PRESS);
+
+
 			DEBUGLOG->log("Dis-/Enable voxel grid display         : N");
 			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &ENABLE_VOXELGRID_OVERLAY), GLFW_KEY_N, GLFW_PRESS );
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintBooleanListener(&ENABLE_VOXELGRID_OVERLAY, "Overlay voxel grid enabled : " ), GLFW_KEY_N, GLFW_PRESS );
+
+			DEBUGLOG->log("Switch ortho / spot light source       : E");
+			std::vector<glm::mat4> lightProjectionMatrices;
+			lightProjectionMatrices.push_back( LIGHT_ORTHO_PROJECTION );
+			lightProjectionMatrices.push_back( LIGHT_PERSPECTIVE_PROJECTION );
+			SwitchThroughValuesListener< glm::mat4 >* switchLightProjectionMatrix = new SwitchThroughValuesListener< glm::mat4 >(
+					m_lightSourceNode->getProjectionMatrixPointer(),
+					lightProjectionMatrices
+			);
+			m_inputManager.attachListenerOnKeyPress( switchLightProjectionMatrix, GLFW_KEY_E, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new InvertBooleanListener( &USE_ORTHOLIGHTSOURCE ),GLFW_KEY_E, GLFW_PRESS);
 
 			DEBUGLOG->log("Reset scenegraph                       : R");
 			m_inputManager.attachListenerOnKeyPress( new SimpleScene::SceneGraphState( scene->getSceneGraph() ),GLFW_KEY_R, GLFW_PRESS);
