@@ -25,5 +25,5 @@ void main()
 	value.r = valL.r | valR.r | valTL.r | valTR.r; 
 		
 	// write value
-	imageStore( mipmap_target, ivec2( index ), value );
+	imageStore( mipmap_target, index, value );
 }

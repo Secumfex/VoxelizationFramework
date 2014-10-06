@@ -332,7 +332,7 @@ void DispatchVoxelizeComputeShader::call()
 		p_computeShader->uploadUniform( numFaces,    "uniformNumFaces");
 
 		// set local group amount suitable for object size:
-		m_num_groups_x = numFaces / p_computeShader->getLocalGroupSizeX() + ( ( numVertices % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
+		m_num_groups_x = numFaces / p_computeShader->getLocalGroupSizeX() + ( ( numFaces % p_computeShader->getLocalGroupSizeX() == 0 ) ? 0 : 1 );
 		m_num_groups_y = 1;
 		m_num_groups_z = 1;
 

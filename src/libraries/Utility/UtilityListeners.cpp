@@ -79,3 +79,17 @@ DebugPrintListener::~DebugPrintListener() {
 void DebugPrintListener::call() {
 	DEBUGLOG->log(m_message);
 }
+
+SubjectListener::SubjectListener() {
+}
+
+SubjectListener::~SubjectListener() {
+}
+
+void SubjectListener::addListener(Listener* listener) {
+	attach(listener, "CALL");
+}
+
+void SubjectListener::call() {
+	Subject::call("CALL");
+}

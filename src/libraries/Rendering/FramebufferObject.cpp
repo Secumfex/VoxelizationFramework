@@ -94,9 +94,11 @@ void FramebufferObject::addColorAttachments(int amount)
 
 void FramebufferObject::setColorAttachmentTextureHandle( GLenum attachment, GLuint textureHandle )
 {
+	glBindTexture(GL_TEXTURE_2D, textureHandle);
 	int width, height;
-	glGetIntegerv(GL_TEXTURE_WIDTH, &width);
-	glGetIntegerv(GL_TEXTURE_HEIGHT, &height);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
+
 	if (  width != m_width || height != m_height )
 	{
 		DEBUGLOG->log("ERROR : size of texture differs from frame buffer size");
@@ -118,6 +120,7 @@ void FramebufferObject::setColorAttachmentTextureHandle( GLenum attachment, GLui
 	{
 		DEBUGLOG->log("ERROR : specified color attachment does not exist");
 	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 GLuint FramebufferObject::getColorAttachmentTextureHandle(GLenum attachment)
@@ -196,4 +199,38 @@ void FramebufferObject::setWidth(int width) {
 int FramebufferObject::getHeight()
 {
 	return m_height;
+}
+
+FramebufferObject::FramebufferObject(GLuint texture) {
+	// bind texture
+	int width = 0;
+	int height = 0;
+
+	glBindTexture(GL_TEXTURE_2D, texture);
+
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &height);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &m_framebufferHandle);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferHandle);
+
+	m_width = width;
+	m_height = height;
+
+	createDepthTexture();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferHandle);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	m_colorAttachments[GL_COLOR_ATTACHMENT0] = texture;
+	m_drawBuffers.push_back(GL_COLOR_ATTACHMENT0);
+
+	m_numColorAttachments = 1;
+
+	glDrawBuffers(m_drawBuffers.size(), &m_drawBuffers[0]);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

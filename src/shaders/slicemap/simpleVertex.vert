@@ -15,7 +15,7 @@ void main() {
 	vec4 position = uniformProjection * uniformView * uniformModel * positionAttribute;
     
 	// distance to cam : z value of position after projection
-	passDistanceToCam = ( position ).z ;	
+	passDistanceToCam = ( ( position ).z + 1.0 ) * 0.5;	
 	
     gl_Position = position;
 }

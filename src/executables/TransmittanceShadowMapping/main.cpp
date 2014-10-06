@@ -17,10 +17,10 @@
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
 
-static bool rotatingBunny = false;
+static bool rotatingObjects = false;
 
 static int textureAtlasResolution = 512;
-static int voxelGridResolution = 256;
+static int voxelGridResolution = 1024;
 
 static glm::vec3 lightPosition = glm::vec3(2.5f, 2.5f, 2.5f);
 
@@ -179,33 +179,45 @@ public:
 
 		DEBUGLOG->log("Loading some objects");
 		DEBUGLOG->indent();
-		std::vector<Renderable* > renderables;
+		std::vector<RenderableNode* > renderables;
 
-		RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
-		renderables.push_back(testRoomNode);
+//		RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
+//		renderables.push_back(testRoomNode);
 
-		RenderableNode* someObjectNode = SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
+		RenderableNode* groundNode = SimpleScene::loadObject("/ground.dae",this);
+		groundNode->translate( glm::vec3( 0.0f, -2.5f, 0.0f ) );
+		renderables.push_back(groundNode);
 
-		DEBUGLOG->log("Scaling bunny up by 25");
-		someObjectNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
+		RenderableNode* treeTrunkObjectNode = SimpleScene::loadObject("/tree_trunk.dae" , this);
+		treeTrunkObjectNode->translate( glm::vec3( 0.0f, -2.5f, 0.0f ) );
 
-		renderables.push_back(someObjectNode);
+		RenderableNode* treeCrownObjectNode = SimpleScene::loadObject("/tree_crown.dae" , this);
+		treeCrownObjectNode->translate( glm::vec3( 0.0f, -2.5f, 0.0f ) );
+
+		renderables.push_back(treeTrunkObjectNode);
+		renderables.push_back(treeCrownObjectNode);
 
 		DEBUGLOG->log("Attaching objects to scene graph");
 		DEBUGLOG->indent();
-		if ( rotatingBunny )
+		if ( rotatingObjects )
 		{
 			std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this, 0.1f, 0.1f);
 			rotatingNodes.first->setParent( scene->getSceneGraph()->getRootNode() );
 
-			someObjectNode->setParent( rotatingNodes.second );
+			for ( unsigned int i = 0; i < renderables.size(); i++ )
+			{
+				renderables[i]->setParent( rotatingNodes.second );
+			}
 		}
 		else
 		{
-			someObjectNode->setParent(scene->getSceneGraph()->getRootNode() );
+			for ( unsigned int i = 0; i < renderables.size(); i++ )
+			{
+				renderables[i]->setParent( scene->getSceneGraph()->getRootNode() );
+			}
 		}
 
-		testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
+//		testRoomNode->setParent(scene->getSceneGraph()->getRootNode() );
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->outdent();
@@ -218,7 +230,7 @@ public:
 		DEBUGLOG->indent();
 
 		// create TextureAtlas render pass
-		TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( someObjectNode , textureAtlasResolution);
+		TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = createTextureAtlasRenderPass( treeCrownObjectNode , textureAtlasResolution);
 
 		m_renderManager.addRenderPass( textureAtlasRenderPass );
 
@@ -301,24 +313,49 @@ public:
 		/**************************************************************************************
 		 * 								VOXELIZATION
 		 **************************************************************************************/
+//		DEBUGLOG->log("Configuring Voxelization");
+//		DEBUGLOG->indent();
+//
+//		DEBUGLOG->log("Creating slice map render pass");
+//		// shader using texture atlas vertex shader ( to move vertex to world position ) and slice map fragment shader ( to write into bit mask )
+//		std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
+//
+//		// create slice map renderpass
+//		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 6.0f, 6.0f, 3.2f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
+//
+//		DEBUGLOG->log("Configuring slice map render pass");
+//		// configure slice map render pass
+//		voxelizeWithTextureAtlas->getCamera()->setPosition(1.5f,1.5f,1.5f);
+//		voxelizeWithTextureAtlas->getCamera()->setCenter(glm::vec3(0.0f,0.0f,0.0f));
+//
+//		DEBUGLOG->log("Adding Texture Atlas vertices to slice map render pass");
+//		// add texture atlas vertices
+//		voxelizeWithTextureAtlas->addRenderable( verticesNode );
+//
+//		// add voxelization renderpass
+//		m_renderManager.addRenderPass( voxelizeWithTextureAtlas );
+//
+//		DEBUGLOG->outdent();
+
 		DEBUGLOG->log("Configuring Voxelization");
 		DEBUGLOG->indent();
 
 		DEBUGLOG->log("Creating slice map render pass");
 		// shader using texture atlas vertex shader ( to move vertex to world position ) and slice map fragment shader ( to write into bit mask )
-		std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
+		std::string vertexShader( SHADERS_PATH "/slicemap/simpleVertex.vert" );
 
 		// create slice map renderpass
-		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 6.0f, 6.0f, 3.2f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
+		SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 6.0f, 6.0f, 4.2f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_SINGLETARGET, vertexShader);
 
 		DEBUGLOG->log("Configuring slice map render pass");
 		// configure slice map render pass
-		voxelizeWithTextureAtlas->getCamera()->setPosition(1.5f,1.5f,1.5f);
-		voxelizeWithTextureAtlas->getCamera()->setCenter(glm::vec3(0.0f,0.0f,0.0f));
+		voxelizeWithTextureAtlas->getCamera()->setPosition(1.0f,1.0f,1.0f);
+		voxelizeWithTextureAtlas->getCamera()->setCenter(glm::vec3(-1.0f,-1.0f,-1.0f));
 
 		DEBUGLOG->log("Adding Texture Atlas vertices to slice map render pass");
 		// add texture atlas vertices
-		voxelizeWithTextureAtlas->addRenderable( verticesNode );
+//		voxelizeWithTextureAtlas->addRenderable( verticesNode );
+		voxelizeWithTextureAtlas->addRenderable( treeCrownObjectNode );
 
 		// add voxelization renderpass
 		m_renderManager.addRenderPass( voxelizeWithTextureAtlas );
@@ -385,6 +422,20 @@ public:
 		/**************************************************************************************
 		 * 									SHADOW MAPPING
 		 **************************************************************************************/
+		// Render Tree Trunk once
+		Shader* writeDepthBufferShader = new Shader( SHADERS_PATH "/myShader/simpleVertex.vert", SHADERS_PATH "/myShader/simpleDepth.frag");
+		FramebufferObject* depthFramebufferObject = new FramebufferObject( voxelGridResolution, voxelGridResolution);
+
+		CameraRenderPass* writeDepthBufferRenderPass = new CameraRenderPass(writeDepthBufferShader, depthFramebufferObject);
+		writeDepthBufferRenderPass->addEnable(GL_DEPTH_TEST);
+		writeDepthBufferRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
+		writeDepthBufferRenderPass->setCamera( voxelizeWithTextureAtlas->getCamera() );
+
+		writeDepthBufferRenderPass->addRenderable(treeTrunkObjectNode);
+		writeDepthBufferRenderPass->addRenderable(groundNode);
+
+		m_renderManager.addRenderPass( writeDepthBufferRenderPass );
+
 
 		// Render Scene into GBUFFER )
 		Shader* writeGbufferShader = new Shader(SHADERS_PATH "/gbuffer/gbuffer.vert", SHADERS_PATH "/gbuffer/gbuffer_backfaceCulling_persp.frag");
@@ -433,7 +484,8 @@ public:
 		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT1 ) ), "uniformNormalMap" );// normal   map
 		shadowMappingRenderPass->addUniformTexture( new Texture( gbufferFramebufferObject->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT2 ) ), "uniformColorMap" );// color    map
 
-		shadowMappingRenderPass->addUniformTexture( new Texture( voxelizeWithTextureAtlas->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformShadowMap" );// shadow  map
+		shadowMappingRenderPass->addUniformTexture( new Texture( voxelizeWithTextureAtlas->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformSliceMap" );// slice  map
+		shadowMappingRenderPass->addUniformTexture( new Texture( depthFramebufferObject->getDepthTextureHandle()), "uniformShadowMap" ); // shadow map
 
 		m_renderManager.addRenderPass( shadowMappingRenderPass );
 
@@ -441,7 +493,8 @@ public:
 		TriangleRenderPass* showShadowMappedGbuffer= new TriangleRenderPass(showTexture, 0, m_resourceManager.getScreenFillingTriangle());
 
 		showShadowMappedGbuffer->setViewport(2 * 188,512, 188, 188);
-		showShadowMappedGbuffer->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformTexture");
+//		showShadowMappedGbuffer->addUniformTexture( new Texture( shadowMappingRenderPass->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) ), "uniformTexture");
+		showShadowMappedGbuffer->addUniformTexture( new Texture( depthFramebufferObject->getDepthTextureHandle() ), "uniformTexture");
 
 		m_renderManager.addRenderPass(showShadowMappedGbuffer);
 

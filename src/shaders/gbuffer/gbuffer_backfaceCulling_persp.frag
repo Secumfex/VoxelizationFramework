@@ -15,7 +15,7 @@ layout(location = 2) out vec4 colorOutput;
 void main(){  
 	if ( dot( passPosition.xyz, passNormal ) >= 0.0f )
 	{
-		discard;	// back face culling
+//		discard;	// back face culling
 	}
 
     positionOutput = passPosition;

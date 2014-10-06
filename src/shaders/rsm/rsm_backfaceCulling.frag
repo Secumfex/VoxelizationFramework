@@ -70,8 +70,8 @@ void main(){
     	flux = dot ( pixelDirection, lightDirection ); // [ -1.0..1.0 ]
     	
     	// bring into correct interval
-    	flux -= uniformMinCosAngle; // [ -minCos -1.0 .. 1.0 - minCos ]
-    	flux = min( 1.0, max( 0.0, flux / ( 1.0 - uniformMinCosAngle ) ) ); // [ 0.0 .. 1.0 ]	
+//    	flux -= uniformMinCosAngle; // [ -minCos -1.0 .. 1.0 - minCos ]
+    	flux = min( 1.0, max( 0.0, (flux - uniformMinCosAngle) / ( 1.0 - uniformMinCosAngle ) ) ); // [ 0.0 .. 1.0 ]	
     }
  	
     // if material has reflection coefficient
@@ -83,5 +83,6 @@ void main(){
     vec4 diffuseColor = texture( diffuseTexture, passUVCoord );
         
     // save flux as homogeneous coordinate
-    fluxOutput = vec4 ( diffuseColor.rgb * flux, flux );
+//    fluxOutput = vec4 ( diffuseColor.rgb * flux, flux );
+    fluxOutput = vec4 ( diffuseColor.rgb, flux );
 }

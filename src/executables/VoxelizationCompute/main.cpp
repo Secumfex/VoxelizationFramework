@@ -43,24 +43,24 @@ static int   TEXATLAS_RESOLUTION  = 512;
 
 static bool  ENABLE_VOXELGRID_OVERLAY = false;
 static int   VOXELGRID_RESOLUTION = 64;
-static float VOXELGRID_WIDTH = 7.0f;
-static float VOXELGRID_HEIGHT = 7.0f;
+static float VOXELGRID_WIDTH = 6.0f;
+static float VOXELGRID_HEIGHT = 6.0f;
 
 
 static glm::vec3 LIGHT_POSITION = glm::vec3(0.0f, 0.0f, 6.0f);
 static bool      USE_ORTHOLIGHTSOURCE = true;
 static float     LIGHT_FLUX = 1.0f;
-static glm::mat4 LIGHT_ORTHO_PROJECTION = glm::ortho( -6.0f, 6.0f, -6.0f, 6.0f, 0.0f, 20.0f);
+static glm::mat4 LIGHT_ORTHO_PROJECTION = glm::ortho( -6.0f, 6.0f, -6.0f, 6.0f, 0.0f, 30.0f);
 static float     LIGHT_ANGLE_RAD = 60.0f * DEG_TO_RAD;
 static float     LIGHT_MINIMUM_COSINE = cos( LIGHT_ANGLE_RAD / 2.0f );
-static glm::mat4 LIGHT_PERSPECTIVE_PROJECTION = glm::perspective( LIGHT_ANGLE_RAD / DEG_TO_RAD, 1.0f, 1.0f, 20.0f);
+static glm::mat4 LIGHT_PERSPECTIVE_PROJECTION = glm::perspective( LIGHT_ANGLE_RAD / DEG_TO_RAD, 1.0f, 1.0f, 30.0f);
 
 static bool  ENABLE_RSM_OVERLAY = true;	// view in render frame
 static int   RSM_WIDTH = 512;
 static int   RSM_HEIGHT = 512;
 static int   RSM_SAMPLES_AMOUNT = 100;
 static float RSM_SAMPLES_MAX_OFFSET = 0.5f;
-static float RSM_NORMAL_OFFSET = 0.2f;
+static float RSM_NORMAL_OFFSET = 0.3f;
 static bool  RSM_ENABLE_OCCLUSION_TESTING = true;
 static bool  RSM_USE_HIERARCHICAL_INTERSECTION_TESTING = true;
 static float RSM_START_TEXTURE_LEVEL = 3.0;
@@ -69,17 +69,92 @@ static float RSM_LOW_RES_RESOLUTION = 64.0;
 static float RSM_INTERPOLATION_NORMAL_THRESHOLD = 0.1;
 static float RSM_INTERPOLATION_DISTANCE_THRESHOLD = 1.0;
 
+static bool  RSM_COUNT_RAYS = false;
+
 static bool  ENABLE_BACKFACE_CULLING = true;
 static bool  USE_ORTHOCAM = false;
 static glm::mat4 ORTHOCAM_PROJECTION;
 static glm::mat4 PERSPECTIVECAM_PROJECTION = glm::perspective( 65.0f, 1.0f, 0.1f, 30.0f);
 
-static float BACKGROUND_TRANSPARENCY = 0.25;
+static float BACKGROUND_TRANSPARENCY = 0.0;
 
 static int RENDER_FRAME_WIDTH = 512;
 static int RENDER_FRAME_HEIGHT = 512;
-static int GUI_FRAME_WIDTH = 256;
+static int GUI_FRAME_WIDTH = 512;
 static int GUI_FRAME_HEIGHT = 512;
+
+class AtomicCounter : public Uploadable
+{
+public:
+	GLuint m_atomicCounterBufferHandle;
+	GLuint m_lastValue[3];
+	AtomicCounter()
+	{
+		m_lastValue[0] = 0;
+		m_lastValue[1] = 0;
+		m_lastValue[2] = 0;
+		DEBUGLOG->log("Creating atomic counter buffer");
+		DEBUGLOG->indent();
+
+		// generate buffer
+		glGenBuffers(1, &m_atomicCounterBufferHandle);
+
+		//bind buffer
+		glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, m_atomicCounterBufferHandle);
+		glBufferData(GL_ATOMIC_COUNTER_BUFFER, sizeof(GLuint) * 3, NULL, GL_DYNAMIC_DRAW);
+		glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
+
+		DEBUGLOG->outdent();
+	}
+
+	~AtomicCounter()
+	{
+
+	}
+
+	void reset()
+	{
+		// retrieve last values first
+		retrieveValues();
+
+		// reset atomic counters
+		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, m_atomicCounterBufferHandle);
+		GLuint atomicCounterValues[3] = {0,0,0};
+		glBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint) * 3, atomicCounterValues);
+
+	}
+
+	virtual void uploadUniform(Shader* shader)
+	{
+		// bind buffer
+		glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, m_atomicCounterBufferHandle);
+	}
+
+	GLuint retrieveValues()
+	{
+		// barrier bla whatever
+		glMemoryBarrier( GL_ATOMIC_COUNTER_BARRIER_BIT );
+
+		// retrieve counter values
+		glGetBufferSubData( GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(GLuint) * 3, &m_lastValue);
+
+		return m_lastValue[0];
+	}
+};
+
+class ResetCounterListener : public Listener
+{
+	public:
+	AtomicCounter* p_atomicCounter;
+	ResetCounterListener(AtomicCounter* atomicCounter)
+	{
+		p_atomicCounter = atomicCounter;
+	}
+	void call()
+	{
+		p_atomicCounter->reset();
+	}
+};
 
 /**
  * Renderpass that overlays the slice map ontop of fbo
@@ -260,18 +335,21 @@ private:
 			srand( time( 0 ) );
 			std::vector< float > result;
 
+			// total weight to be distributed between samples
+			float totalWeight = 0.0f;
+
 			for ( int i = 0; i < numSamples; i++)
 			{
 				// generate uniform random number
-				float r1 = ( (float) std::rand() / (float) RAND_MAX - 0.5f ) * 2.0f; // -1..1
-				float r2 = ( (float) std::rand() / (float) RAND_MAX - 0.5f ) * 2.0f; // -1..1
+				float r1 = (float) std::rand() / (float) RAND_MAX; // 0..1
+				float r2 = (float) std::rand() / (float) RAND_MAX; // 0..1
 
 				// generate polar coordinates and weight
 				float x = r_max * r1 * sin( 2.0f * PI * r2 );
 				float y = r_max * r1 * cos( 2.0f * PI * r2 );
 				float weight = r1 * r1;
 
-				// make normalized by bringing the samples into 0..1
+				totalWeight+=weight;
 
 //				DEBUGLOG->log("Generated sample : ", glm::vec3(x,y,weight) );
 
@@ -279,6 +357,12 @@ private:
 				result.push_back(x);
 				result.push_back(y);
 				result.push_back(weight);
+			}
+
+			// normalize weights so sum == 1.0
+			for ( unsigned int i = 0; i < result.size() / 3; i++ )
+			{
+				result[i*3 + 2] /= totalWeight;
 			}
 
 			return result;
@@ -365,18 +449,26 @@ public:
 			std::vector<Renderable* > renderables;
 			m_objectsNode = new Node( scene->getSceneGraph()->getRootNode() );
 
+			RenderableNode* blackBox= SimpleScene::loadObject("/blackBox.dae" , this);
+//			RenderableNode* blackBox= SimpleScene::loadObject("/grayBox.dae" , this);
+			blackBox->setParent(scene->getSceneGraph()->getRootNode());
+			renderables.push_back(blackBox);
+
 			RenderableNode* testRoomNode = SimpleScene::loadTestRoomObject( this );
 			renderables.push_back(testRoomNode);
 
-//			RenderableNode* bunnyNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
-			RenderableNode* bunnyNode= SimpleScene::loadObject("/occlusionTestScene.dae" , this);
+			RenderableNode* mainObjectNode= SimpleScene::loadObject("/stanford/bunny/blender_bunny.dae" , this);
+//			RenderableNode* mainObjectNode= SimpleScene::loadObject("/stanford/buddha/blender_buddha.dae" , this);
 
-			bunnyNode->scale( glm::vec3( 1.5f, 1.5f, 1.5f ) );
 
-//			DEBUGLOG->log("Scaling bunny up by 25");
-//			bunnyNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
+//			RenderableNode* mainObjectNode= SimpleScene::loadObject("/occlusionTestScene.dae" , this);
 
-			renderables.push_back(bunnyNode);
+//			mainObjectNode->scale( glm::vec3( 1.5f, 1.5f, 1.5f ) );
+
+			DEBUGLOG->log("Scaling bunny up by 25");
+			mainObjectNode->scale( glm::vec3( 25.0f, 25.0f, 25.0f ) );
+
+			renderables.push_back(mainObjectNode);
 
 			DEBUGLOG->log("Attaching objects to scene graph");
 			DEBUGLOG->indent();
@@ -385,11 +477,11 @@ public:
 						std::pair<Node*, Node*> rotatingNodes = SimpleScene::createRotatingNodes( this, 0.1f, 0.1f);
 						rotatingNodes.first->setParent( m_objectsNode );
 
-						bunnyNode->setParent( rotatingNodes.second );
+						mainObjectNode->setParent( rotatingNodes.second );
 					}
 					else
 					{
-						bunnyNode->setParent( m_objectsNode );
+						mainObjectNode->setParent( m_objectsNode );
 					}
 
 					testRoomNode->setParent( m_objectsNode );
@@ -449,6 +541,29 @@ public:
 				rsmRenderPass->addRenderable( renderables[i] );
 			}
 
+			// change texture parameters
+			rsmPositionMap->bindToTextureUnit(0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			rsmPositionMap->unbindFromActiveUnit();
+
+			// change texture parameters
+			rsmNormalMap->bindToTextureUnit(0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			rsmNormalMap->unbindFromActiveUnit();
+
+			// change texture parameters
+			rsmFluxMap->bindToTextureUnit(0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			rsmFluxMap->unbindFromActiveUnit();
+
+			// change texture parameters
+			rsmDepthMap->bindToTextureUnit(0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			rsmDepthMap->unbindFromActiveUnit();
 		DEBUGLOG->outdent();
 
 		/**************************************************************************************
@@ -538,7 +653,7 @@ public:
 				FramebufferObject::static_internalFormat = GL_RGBA32F_ARB;// change this first
 
 				// create renderpass that generates a textureAtlas for models
-				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(bunnyNode, TEXATLAS_RESOLUTION, TEXATLAS_RESOLUTION, mainCamera );
+				TexAtlas::TextureAtlasRenderPass* textureAtlasRenderPass = new TexAtlas::TextureAtlasRenderPass(mainObjectNode, TEXATLAS_RESOLUTION, TEXATLAS_RESOLUTION, mainCamera );
 
 				FramebufferObject::static_internalFormat = internalFormat;	// restore default
 			DEBUGLOG->outdent();
@@ -631,8 +746,8 @@ public:
 			DEBUGLOG->log("Configuring list of objects to voxelize");
 
 			// objects and their corresponding scene graph node
-			std::vector<std::pair < Object*, RenderableNode*> > objects;
-			objects.push_back( std::pair< Object*, RenderableNode* >( bunnyNode->getObject(), bunnyNode ) );
+			std::vector<std::pair < Object*, RenderableNode*> > voxelizeObjects;
+			voxelizeObjects.push_back( std::pair< Object*, RenderableNode* >( mainObjectNode->getObject(), mainObjectNode ) );
 //			objects.push_back( std::pair< Object*, RenderableNode* >( testRoomNode->getObject(), testRoomNode ) );
 
 			// texture atlas pixel objects and their corresponding texture atlas
@@ -658,7 +773,7 @@ public:
 
 			DispatchVoxelizeComputeShader* dispatchVoxelizeComputeShader = new DispatchVoxelizeComputeShader(
 					voxelizeComputeShader,
-					objects,
+					voxelizeObjects,
 					voxelGrid,
 					SliceMap::get32BitUintMask()
 					);
@@ -818,6 +933,11 @@ public:
 		* 				REFLECTIVE SHADOW INDIRECT LIGHTING CONFIGURATION
 		**************************************************************************************/
 
+		// create Atomic Counter Object
+		AtomicCounter* rayCounter = new AtomicCounter();
+		ResetCounterListener* resetCounterListener = new ResetCounterListener(rayCounter);
+		attach(resetCounterListener, "CLEAR");
+
 		/*********************
 		 * LOW RES RENDER PASS
 		 *********************/
@@ -873,6 +993,10 @@ public:
 			rsmLowResLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
 			rsmLowResLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations", &RSM_MAX_TEST_ITERATIONS) );
 
+			rsmLowResLightGatheringRenderPass->addUniform( rayCounter );
+			rsmLowResLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformCountRays" , &RSM_COUNT_RAYS ) );
+			rsmLowResLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformPixelCounter", new int(1)) );
+
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("Adding RSM low res light gathering render pass to application");
@@ -880,6 +1004,12 @@ public:
 
 		// for future use
 		Texture* rsmLowResIndirectLightMap = new Texture( rsmLowResIndirectLightFramebuffer->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0 ) );
+
+		// change texture wrap parameters
+		rsmLowResIndirectLightMap->bindToTextureUnit(0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+		rsmLowResIndirectLightMap->unbindFromActiveUnit();
 
 		DEBUGLOG->outdent();
 
@@ -926,6 +1056,8 @@ public:
 
 		DEBUGLOG->log("Adding RSM interpolation render pass to application");
 		m_renderManager.addRenderPass( rsmInterpolationRenderPass );
+
+		Texture* rsmInterpolationDepthMap = new Texture( rsmIndirectLightFramebuffer->getDepthTextureHandle() );
 
 		/*********************
 		 * FULL RES RENDER PASS
@@ -981,6 +1113,12 @@ public:
 			rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformNormalOffset" , &RSM_NORMAL_OFFSET) );
 			rsmLightGatheringRenderPass->addUniform( new Uniform< float>( "uniformStartMipMapLevel" , &RSM_START_TEXTURE_LEVEL ) );
 			rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformMaxTestIterations", &RSM_MAX_TEST_ITERATIONS) );
+
+			rsmLightGatheringRenderPass->addUniform( rayCounter );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< bool >( "uniformCountRays" , &RSM_COUNT_RAYS ) );
+			rsmLightGatheringRenderPass->addUniform( new Uniform< int > ( "uniformPixelCounter", new int(2)) );
+			rsmLightGatheringRenderPass->addUniformTexture( rsmInterpolationDepthMap, "uniformInterpolationDepthMap" );
+
 
 		DEBUGLOG->outdent();
 
@@ -1111,7 +1249,7 @@ public:
 			boundingBox->setMaterial( vMaterial );
 			voxelGridDebugGeometry->scale( glm::vec3 ( voxelGrid->width, voxelGrid->height, voxelGrid->depth ) );
 			voxelGridDebugGeometry->setObject( boundingBox );
-			debugGeometry->addRenderable( voxelGridDebugGeometry );
+//			debugGeometry->addRenderable( voxelGridDebugGeometry );
 
 			DEBUGLOG->log("Configuring debug geometry : light source");
 			// debug geometry for light Source
@@ -1130,7 +1268,7 @@ public:
 			lightBox->setMaterial( lMaterial );
 			lightDebugGeometry->scale( glm::vec3 ( 0.1, 0.1, 0.1 ) );
 			lightDebugGeometry->setObject( lightBox );
-			debugGeometry->addRenderable( lightDebugGeometry );
+//			debugGeometry->addRenderable( lightDebugGeometry );
 
 			m_renderManager.addRenderPass( debugGeometry );
 
@@ -1151,74 +1289,113 @@ public:
 			guiRenderPass->setViewport(RENDER_FRAME_WIDTH, 0, GUI_FRAME_WIDTH, GUI_FRAME_HEIGHT );
 			guiRenderPass->addUniform( new Uniform<glm::mat4>("uniformView", new glm::mat4(1.0f) ) );
 			guiRenderPass->addUniform( new Uniform<glm::mat4>("uniformProjection", new glm::mat4( glm::ortho(0.0f, 1.0f, 0.0f, 1.0f, -0.5f, 0.5f ) ) ) );
-			guiRenderPass->addUniform( new Uniform<float >("uniformAlpha", new float( 1.0f ) ) );
 			guiRenderPass->addUniform( new Uniform<float >("uniformTextureTransparency", new float( -1.0f ) ) );
 
 			int buttonWidth = 128;
 			int buttonHeight = 128;
 
-			DEBUGLOG->log("Creating some debug views");
+			std::pair<InputField*, std::pair< Node*, RenderableNode*> > button;
 
-			// RSM Debug view
-			std::vector<Texture* > debugRSMTextures;
-			debugRSMTextures.push_back( rsmDepthMap );
-			debugRSMTextures.push_back( rsmPositionMap );
-			debugRSMTextures.push_back( rsmFluxMap );
-			debugRSMTextures.push_back( rsmNormalMap );
+//			DEBUGLOG->log("Creating some debug views");
+//
+//			// RSM Debug view
+//			std::vector<Texture* > debugRSMTextures;
+//			debugRSMTextures.push_back( rsmDepthMap );
+//			debugRSMTextures.push_back( rsmPositionMap );
+//			debugRSMTextures.push_back( rsmFluxMap );
+//			debugRSMTextures.push_back( rsmNormalMap );
+//
+//			// create input field
+//			std::pair<InputField*, std::pair< Node*, RenderableNode*> > button = guiFrame->createButton(
+//				0, 0,
+//				buttonWidth, buttonHeight,
+//				&m_inputManager,
+//				GLFW_MOUSE_BUTTON_LEFT,
+//				&m_resourceManager,
+//				rsmDepthMap);
+//
+//			// make interactive
+//			SwitchThroughValuesListener<Texture* >* debugRSMSwitcher = new SwitchThroughValuesListener<Texture* >(
+//							&( *( button.second.second->getObject()->getMaterial()->getTexturesPtr() ) )["uniformTexture"]
+//					        , debugRSMTextures
+//					);
+//			button.first->attachListenerOnRelease( debugRSMSwitcher );
+//
+//			// add to gui render pass
+//			guiRenderPass->addRenderable( button.second.second );
+//
+//			// other interesting debug textures
+//			std::vector<Texture* > debugTextures;
+//			debugTextures.push_back( textureAtlasRenderPass->getTextureAtlas() );
+//			debugTextures.push_back( gbufferNormalMap );
+//			debugTextures.push_back( gbufferColorMap );
+//			debugTextures.push_back( new Texture( gbufferCompositing->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) ) );
+//
+//			// create button
+//			button = guiFrame->createButton(
+//				buttonWidth, 0,
+//				buttonWidth, buttonHeight,
+//				&m_inputManager,
+//				GLFW_MOUSE_BUTTON_LEFT,
+//				&m_resourceManager,
+//				textureAtlasVertexGenerator->getTextureAtlas());
+//
+//			// make interactive
+//			SwitchThroughValuesListener<Texture* >* debugTexturesSwitcher = new SwitchThroughValuesListener<Texture* >(
+//							&( *button.second.second->getObject()->getMaterial()->getTexturesPtr() )["uniformTexture"]
+//					        , debugTextures
+//					);
+//			button.first->attachListenerOnRelease( debugTexturesSwitcher );
+//
+//			// add to gui render pass
+//			guiRenderPass->addRenderable( button.second.second );
+//
+//			// RSM light gathering debug view
+//			std::vector<Texture* > debugRSMLightMapTextures;
+//			debugRSMLightMapTextures.push_back( rsmDirectLightMap );
+//			debugRSMLightMapTextures.push_back( rsmLowResIndirectLightMap );
+//			debugRSMLightMapTextures.push_back( rsmIndirectLightMap );
+//
+//			// create button
+//			button = guiFrame->createButton(
+//				0, buttonHeight,
+//				buttonWidth, buttonHeight,
+//				&m_inputManager,
+//				GLFW_MOUSE_BUTTON_LEFT,
+//				&m_resourceManager,
+//				rsmDirectLightMap );
+//
+//
+//			// make interactive
+//			SwitchThroughValuesListener<Texture* >* debugRSMLightMapSwitcher = new SwitchThroughValuesListener<Texture* >(
+//							&( *button.second.second->getObject()->getMaterial()->getTexturesPtr() )["uniformTexture"]
+//					        , debugRSMLightMapTextures
+//					);
+//			button.first->attachListenerOnRelease( debugRSMLightMapSwitcher );
+//
+//			// add to gui render pass
+//			guiRenderPass->addRenderable( button.second.second );
+//
+//
 
-			// create input field
-			std::pair<InputField*, std::pair< Node*, RenderableNode*> > button = guiFrame->createButton(
-				0, 0,
-				buttonWidth, buttonHeight,
-				&m_inputManager,
-				GLFW_MOUSE_BUTTON_LEFT,
-				&m_resourceManager,
-				rsmDepthMap);
+			buttonWidth = 512;
+			buttonHeight = 512;
 
-			// make interactive
-			SwitchThroughValuesListener<Texture* >* debugRSMSwitcher = new SwitchThroughValuesListener<Texture* >(
-							&( *( button.second.second->getObject()->getMaterial()->getTexturesPtr() ) )["uniformTexture"]
-					        , debugRSMTextures
-					);
-			button.first->attachListenerOnRelease( debugRSMSwitcher );
-
-			// add to gui render pass
-			guiRenderPass->addRenderable( button.second.second );
-
-			// other interesting debug textures
-			std::vector<Texture* > debugTextures;
-			debugTextures.push_back( textureAtlasRenderPass->getTextureAtlas() );
-			debugTextures.push_back( gbufferNormalMap );
-			debugTextures.push_back( gbufferColorMap );
-			debugTextures.push_back( new Texture( gbufferCompositing->getFramebufferObject()->getColorAttachmentTextureHandle( GL_COLOR_ATTACHMENT0) ) );
-
-			// create button
-			button = guiFrame->createButton(
-				buttonWidth, 0,
-				buttonWidth, buttonHeight,
-				&m_inputManager,
-				GLFW_MOUSE_BUTTON_LEFT,
-				&m_resourceManager,
-				textureAtlasVertexGenerator->getTextureAtlas());
-
-			// make interactive
-			SwitchThroughValuesListener<Texture* >* debugTexturesSwitcher = new SwitchThroughValuesListener<Texture* >(
-							&( *button.second.second->getObject()->getMaterial()->getTexturesPtr() )["uniformTexture"]
-					        , debugTextures
-					);
-			button.first->attachListenerOnRelease( debugTexturesSwitcher );
-
-			// add to gui render pass
-			guiRenderPass->addRenderable( button.second.second );
-
+			// BIGGER VIEW
 			// RSM light gathering debug view
-			std::vector<Texture* > debugRSMLightMapTextures;
-			debugRSMLightMapTextures.push_back( rsmDirectLightMap );
-			debugRSMLightMapTextures.push_back( rsmIndirectLightMap );
+			std::vector<Texture* > debugMiscTextures;
+			debugMiscTextures.push_back( rsmDirectLightMap );
+			debugMiscTextures.push_back( rsmLowResIndirectLightMap );
+			debugMiscTextures.push_back( rsmIndirectLightMap );
+			debugMiscTextures.push_back( rsmFluxMap );
+			debugMiscTextures.push_back( rsmPositionMap );
+			debugMiscTextures.push_back( rsmNormalMap );
+			debugMiscTextures.push_back( rsmDepthMap );
+			debugMiscTextures.push_back( compositingOutput );
 
 			// create button
 			button = guiFrame->createButton(
-				0, buttonHeight,
+				0, 0,
 				buttonWidth, buttonHeight,
 				&m_inputManager,
 				GLFW_MOUSE_BUTTON_LEFT,
@@ -1227,11 +1404,11 @@ public:
 
 
 			// make interactive
-			SwitchThroughValuesListener<Texture* >* debugRSMLightMapSwitcher = new SwitchThroughValuesListener<Texture* >(
+			SwitchThroughValuesListener<Texture* >* debugMiscTexturesSwitcher = new SwitchThroughValuesListener<Texture* >(
 							&( *button.second.second->getObject()->getMaterial()->getTexturesPtr() )["uniformTexture"]
-					        , debugRSMLightMapTextures
+					        , debugMiscTextures
 					);
-			button.first->attachListenerOnRelease( debugRSMLightMapSwitcher );
+			button.first->attachListenerOnRelease( debugMiscTexturesSwitcher );
 
 			// add to gui render pass
 			guiRenderPass->addRenderable( button.second.second );
@@ -1320,6 +1497,11 @@ public:
 			m_inputManager.attachListenerOnKeyPress( dispatchVoxelizeWithTexAtlasComputeShader->getPrintExecutionTimeListener(	"Voxelize Texture Atlas"), GLFW_KEY_T, GLFW_PRESS);
 			m_inputManager.attachListenerOnKeyPress( dispatchMipmapVoxelGridComputeShader->getPrintExecutionTimeListener(       "Mipmap Voxel Grid     "), GLFW_KEY_T, GLFW_PRESS);
 
+			DEBUGLOG->log("Print ray and pixel count                        : M");
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener<GLuint>(&rayCounter->m_lastValue[0],"Traversed Rays: "), GLFW_KEY_M, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener<GLuint>(&rayCounter->m_lastValue[1],"LowResPixels  : "), GLFW_KEY_M, GLFW_PRESS);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener<GLuint>(&rayCounter->m_lastValue[2],"FullResPixels : "), GLFW_KEY_M, GLFW_PRESS);
+
 			DEBUGLOG->log("Turn objects                           : MOUSE - LEFT");
 			Turntable* turntable = SimpleScene::configureTurnTable( m_objectsNode, this, 0.05f, GLFW_MOUSE_BUTTON_LEFT, mainCamera );
 			Turntable* turntableCam = SimpleScene::configureTurnTable( m_cameraParentNode, this, 0.05f , GLFW_MOUSE_BUTTON_RIGHT, mainCamera );
@@ -1352,6 +1534,19 @@ public:
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_K);
 			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< int >( &VISIBLE_TEXTURE_LEVEL, "visible voxel grid level : "), GLFW_KEY_J);
 
+			DEBUGLOG->log("De-/Increase RSM interp. dist   thresh.: 2 / 3 ");
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_INTERPOLATION_DISTANCE_THRESHOLD, 0.1 ) , GLFW_KEY_2);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_INTERPOLATION_DISTANCE_THRESHOLD, 0.1 ) , GLFW_KEY_3);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_INTERPOLATION_DISTANCE_THRESHOLD,   "RSM max dist threshold   : "), GLFW_KEY_2);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_INTERPOLATION_DISTANCE_THRESHOLD,   "RSM max dist threshold   : "), GLFW_KEY_3);
+
+
+			DEBUGLOG->log("De-/Increase RSM interp. normal thresh.: 4 / 5 ");
+			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< float >( &RSM_INTERPOLATION_NORMAL_THRESHOLD, 0.1 ) , GLFW_KEY_4);
+			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< float >( &RSM_INTERPOLATION_NORMAL_THRESHOLD, 0.1 ) , GLFW_KEY_5);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_INTERPOLATION_NORMAL_THRESHOLD,   "RSM max normal threshold   : "), GLFW_KEY_4);
+			m_inputManager.attachListenerOnKeyPress( new DebugPrintValueListener< float >( &RSM_INTERPOLATION_NORMAL_THRESHOLD,   "RSM max normal threshold   : "), GLFW_KEY_5);
+
 			DEBUGLOG->log("De-/Increase RSM max test iterations   : 6 / 7 ");
 			m_inputManager.attachListenerOnKeyPress( new DecrementValueListener< int >( &RSM_MAX_TEST_ITERATIONS, 1 ) , GLFW_KEY_6);
 			m_inputManager.attachListenerOnKeyPress( new IncrementValueListener< int >( &RSM_MAX_TEST_ITERATIONS, 1 ) , GLFW_KEY_7);
@@ -1374,6 +1569,7 @@ public:
 		DEBUGLOG->outdent();
 
 		DEBUGLOG->log("---------------------------------------------------------");
+
 	}
 
 

@@ -19,7 +19,7 @@ public:
 template< class T>
 class Uniform : public Uploadable
 {
-protected:
+public:
 	T* p_value;
 	std::string m_name;
 public:

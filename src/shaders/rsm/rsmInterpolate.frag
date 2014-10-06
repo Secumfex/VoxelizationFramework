@@ -35,6 +35,16 @@ void main()
 	vec4 pixelWorldPosition = invGBufferView * texture( uniformGBufferPositionMap, passUV );
 	vec4 pixelWorldNormal   = invGBufferView * texture( uniformGBufferNormalMap,   passUV );
 
+	// discard if invalid pixel
+	if ( pixelWorldPosition == vec4( 0.0, 0.0, 0.0, 0.0) )
+	{
+		discard;
+	}
+	if ( pixelWorldNormal == vec4( 0.0, 0.0, 0.0, 0.0 ) )
+	{
+		discard;
+	}
+	
 	// retrieve nearest samples
 	vec2 resolution = vec2( uniformRSMLowResX, uniformRSMLowResY );
 	vec2 texelSize = 1.0 / resolution; // pixel size in tex coords
@@ -67,12 +77,12 @@ void main()
 	vec2 sampleTexel = passUV * resolution;
 	
 	vec2 q00 = floor ( sampleTexel + vec2( -0.5, -0.5 ) ) + vec2(0.5, 0.5); // bottom left
-	vec2 q01 = floor ( sampleTexel  + vec2( -0.5, 0.5)  ) + vec2(0.5, 0.5); // top left
-	vec2 q10 = floor ( sampleTexel  + vec2( 0.5, -0.5)  ) + vec2(0.5, 0.5); // bottom right
-	vec2 q11 = floor ( sampleTexel  + vec2( 0.5, 0.5)   ) + vec2(0.5, 0.5); // top right
+	vec2 q01 = floor ( sampleTexel + vec2( -0.5,  0.5 ) ) + vec2(0.5, 0.5); // top left
+	vec2 q10 = floor ( sampleTexel + vec2(  0.5, -0.5 ) ) + vec2(0.5, 0.5); // bottom right
+	vec2 q11 = floor ( sampleTexel + vec2(  0.5,  0.5 ) ) + vec2(0.5, 0.5); // top right
 	
 	float x = sampleTexel.x - q00.x;// position in interpolation coordinates
-	float y = sampleTexel.y - q00.y;
+	float y = sampleTexel.y - q00.y;// x = 0..1 y = 0..1
 		
 	// retrieve texture values
 	vec4 f00 = texture( uniformRSMLowResIndirectLightMap, q00 * texelSize ); 
@@ -124,7 +134,8 @@ void main()
 
 	// check sample thresholds
 	if ( distance( worldPos00, pixelWorldPosition )  >= uniformDistanceThreshold 
-			|| dot( worldNormal00, pixelWorldNormal ) <= uniformNormalThreshold )
+			|| dot( worldNormal00, pixelWorldNormal ) <= uniformNormalThreshold 
+			|| worldNormal00 == vec4(0.0,0.0,0.0,0.0) )
 	{
 		bias =  1.0 / ( 1.0 - i00 );
 		i00 = 0.0;
@@ -132,7 +143,8 @@ void main()
 	}
 	
 	if ( distance( worldPos01, pixelWorldPosition )  >= uniformDistanceThreshold 
-			|| dot( worldNormal01, pixelWorldNormal ) <= uniformNormalThreshold )
+			|| dot( worldNormal01, pixelWorldNormal ) <= uniformNormalThreshold 
+			|| worldNormal01 == vec4(0.0,0.0,0.0,0.0) )
 	{
 		bias =  1.0 / ( 1.0 - i01 );
 		i01 = 0.0;
@@ -140,7 +152,8 @@ void main()
 	}
 	
 	if ( distance( worldPos10, pixelWorldPosition )  >= uniformDistanceThreshold 
-			|| dot( worldNormal10, pixelWorldNormal ) <= uniformNormalThreshold )
+			|| dot( worldNormal10, pixelWorldNormal ) <= uniformNormalThreshold 
+			|| worldNormal10 == vec4(0.0,0.0,0.0,0.0) )
 	{
 		bias =  1.0 / ( 1.0 - i10 );
 		i10 = 0.0;
@@ -148,7 +161,8 @@ void main()
 	}
 	
 	if ( distance( worldPos11, pixelWorldPosition )  >= uniformDistanceThreshold 
-			|| dot( worldNormal11, pixelWorldNormal ) <= uniformNormalThreshold )
+			|| dot( worldNormal11, pixelWorldNormal ) <= uniformNormalThreshold 
+			|| worldNormal11 == vec4(0.0,0.0,0.0,0.0) )
 	{
 		bias =  1.0 / ( 1.0 - i11 );
 		i11 = 0.0;
@@ -161,10 +175,9 @@ void main()
 		// dont even try
 		discard;
 	}
-
 	// interpolate
 	vec4 fxy = ( f00 * i00 + f01 * i01 + f10 * i10 + f11 * i11 ) * bias;
-	
+		
 	// save interpolated value
 	indirectLight = fxy;
 }

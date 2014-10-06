@@ -28,6 +28,9 @@ public:
 	static GLenum static_type;
 
 	FramebufferObject(int width = 800, int height = 600);
+
+	FramebufferObject(GLuint texture);
+
 	~FramebufferObject();
 
 	void createDepthTexture();

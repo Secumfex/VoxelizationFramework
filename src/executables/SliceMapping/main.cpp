@@ -55,7 +55,7 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Loading test room dae file");
 			DEBUGLOG->indent();
-				std::vector< Object* > testRoom=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/testRoom.dae" );
+				std::vector< Object* > testRoom=  m_resourceManager.loadObjectsFromFile( RESOURCES_PATH "/ground.dae" );
 			DEBUGLOG->outdent();
 
 //			DEBUGLOG->log("Loading overlapping geometry file");
@@ -104,10 +104,10 @@ class ObjectLoadingApp : public Application
 				rotatingNode->setAngle(0.01f);
 
 				DEBUGLOG->log("Adding updatable rotation nodes to scene");
-				scene->addUpdatable(yAxisRotationNode);
-				scene->addUpdatable(rotatingNode);
+//				scene->addUpdatable(yAxisRotationNode);
+//				scene->addUpdatable(rotatingNode);
 
-//				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
+				DEBUGLOG->log("Creating renderable node for overlapping geometry attached to rotating node");
 //				RenderableNode* overlappingGeometryNode = new RenderableNode(rotatingNode);
 //				overlappingGeometryNode->setObject(overlappingGeometry[0]);
 
@@ -126,6 +126,7 @@ class ObjectLoadingApp : public Application
 				DEBUGLOG->log("Creating renderable node for test room");
 				RenderableNode* testRoomNode = new RenderableNode(scene->getSceneGraph()->getRootNode());
 				testRoomNode->scale( glm::vec3(0.75f, 0.75f, 0.75f) );
+				testRoomNode->translate( glm::vec3(0.0f, -1.5f, 0.0f) );
 				testRoomNode->setObject(testRoom[0]);
 
 			DEBUGLOG->outdent();
@@ -172,7 +173,12 @@ class ObjectLoadingApp : public Application
 
 			DEBUGLOG->log("Creating slice map renderpass");
 			DEBUGLOG->indent();
-				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(10.0f,10.0f,10.0f, 512, 512, 4, SliceMap::BITMASK_MULTIPLETARGETS);
+			FramebufferObject::static_useTexStorage2D = true;
+			FramebufferObject::static_internalFormat = GL_RGBA8;
+				SliceMap::SliceMapRenderPass* sliceMapRenderPass = SliceMap::getSliceMapRenderPass(9.0f,9.0f,6.0f, 512, 512, 4, SliceMap::BITMASK_MULTIPLETARGETS);
+			FramebufferObject::static_internalFormat = GL_RGBA8;
+			FramebufferObject::static_useTexStorage2D = false;
+
 				sliceMapRenderPass->getCamera()->setPosition(0.0f,0.0f,5.00f);
 				sliceMapRenderPass->getCamera()->setCenter( glm::vec3( 0.0f, 0.0f, 0.0f ));
 			DEBUGLOG->outdent();
@@ -188,8 +194,8 @@ class ObjectLoadingApp : public Application
 //			phongOrthoRenderPass->addRenderable(backgroundNode);
 //			phongOrthoRenderPass->addRenderable(cubeNode_2);
 //			phongOrthoRenderPass->addRenderable(overlappingGeometryNode);
-			phongOrthoRenderPass->addRenderable(bunnyNode);
-			phongOrthoRenderPass->addRenderable(testRoomNode);
+//			phongOrthoRenderPass->addRenderable(bunnyNode);
+//			phongOrthoRenderPass->addRenderable(testRoomNode);
 
 			DEBUGLOG->log("Adding objects to slice map render pass");
 //			sliceMapRenderPass->addRenderable(cubeNode1);

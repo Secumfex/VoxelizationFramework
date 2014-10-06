@@ -135,14 +135,14 @@ void ResourceManager::saveFacesList(Model* model, const aiMesh* mesh)
 /* load a single model object from an assimp mesh*/
 Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 {
-	if ( checkModel(mesh) )
-	{
-		DEBUGLOG->indent();
-		DEBUGLOG->log("Mesh already exists... ");
-		return m_loadedModels[mesh];
-	}
-	else{
-		DEBUGLOG->indent();
+//	if ( checkModel(mesh) )
+//	{
+//		DEBUGLOG->indent();
+//		DEBUGLOG->log("Mesh already exists... ");
+//		return m_loadedModels[mesh];
+//	}
+//	else{
+//		DEBUGLOG->indent();
 		DEBUGLOG->log("Mesh does NOT exist and will be buffered... ");
 		Model* model = AssimpTools::createModelFromMesh( mesh );
 		m_loadedModels[mesh] = model;
@@ -152,7 +152,7 @@ Model* ResourceManager::loadModel( const aiScene* scene, const aiMesh* mesh )
 
 		DEBUGLOG->outdent();
 		return model;
-	}
+//	}
 }
 
 const std::vector<glm::vec4>& ResourceManager::getAssimpMeshForModel(Model* model)

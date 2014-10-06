@@ -31,6 +31,15 @@ public:
 	void call();
 };
 
+class SubjectListener : public Listener, public Subject
+{
+public:
+	SubjectListener();
+	virtual ~SubjectListener();
+	void addListener(Listener* listener);
+	void call();
+};
+
 class DebugPrintListener : public Listener
 {
 private:

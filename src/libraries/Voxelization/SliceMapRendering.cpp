@@ -255,3 +255,48 @@ SliceMap::SliceMapRenderPass* SliceMap::getSliceMapRenderPass(float width, float
 
 	return sliceMapRenderPass;
 }
+
+SliceMap::SliceMapRenderPass* SliceMap::getSliceMapRenderPassR32UI( FramebufferObject* fbo, glm::mat4 perspective, ShaderType shaderType, std::string vertexShader)
+{
+	/*Init shader & FBO*/
+	DEBUGLOG->log("Creating Shader to construct Slice Map");
+
+	std::string fragmentShader;
+
+	switch (shaderType)
+	{
+	case BITMASK_SINGLETARGET:
+		fragmentShader = std::string ( SHADERS_PATH "/slicemap/sliceMapR32UI.frag" );
+		break;
+	case BITMASK_MULTIPLETARGETS:
+		fragmentShader = std::string ( SHADERS_PATH "/slicemap/sliceMapMultipleTargets.frag" );
+		break;
+	case COMPUTATION:
+		fragmentShader = std::string ( SHADERS_PATH "/slicemap/sliceMapWithComputation.frag" );
+		break;
+	}
+	DEBUGLOG->indent();
+	Shader* sliceMapShader = new Shader( vertexShader, fragmentShader);
+	DEBUGLOG->outdent();
+
+	/*Init Renderpass*/
+	SliceMapRenderPass* sliceMapRenderPass = new SliceMapRenderPass(sliceMapShader, fbo);
+	sliceMapRenderPass->setViewport(0,0,fbo->getWidth(),fbo->getHeight());
+
+	sliceMapRenderPass->setClearColor(0.0f, 0.0f, 0.0f, 0.0f);	// clear every channel to 0
+	sliceMapRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);		// enable clearing of color bits
+	sliceMapRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);		// enable clearing of depth bits
+	sliceMapRenderPass->addDisable(GL_DEPTH_TEST);				// disable depth testing to prevent fragments from being discarded
+	sliceMapRenderPass->addEnable(GL_COLOR_LOGIC_OP);			// enable logic operations to be able to use OR operations
+
+	/*init bit mask*/
+	Texture* bitMask = get32BitUintMask();
+	sliceMapRenderPass->setBitMask(bitMask);
+
+	/*Init Camera*/
+	Camera* orthocam = new Camera();
+	orthocam->setProjectionMatrix(perspective);
+	sliceMapRenderPass->setCamera(orthocam);
+
+	return sliceMapRenderPass;
+}

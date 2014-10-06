@@ -34,7 +34,8 @@ vec4 computeDirectLight( vec3 rsmPosition )
 	if ( rsmPosition.x < 1.0 && rsmPosition.y < 1.0 && rsmPosition.x > 0.0 && rsmPosition.y > 0.0)
 	{
 		float rsmDepth = texture( uniformRSMDepthMap, rsmPosition.xy ).x;
-		directLightIntensity = texture( uniformRSMFluxMap , rsmPosition.xy);
+		vec4 flux = texture( uniformRSMFluxMap , rsmPosition.xy);
+		directLightIntensity = vec4( flux.rgb * flux.a, flux.a);
 		
 		float epsilon = 0.0005;
 		if ( uniformOrthoLightSource )

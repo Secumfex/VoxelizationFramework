@@ -6,6 +6,7 @@ uniform sampler2D uniformPositionMap;
 uniform sampler2D uniformNormalMap;
 uniform sampler2D uniformColorMap;
 
+uniform sampler2D uniformSliceMap;
 uniform sampler2D uniformShadowMap;
 
 uniform mat4 uniformProjectorView;
@@ -40,63 +41,79 @@ void main() {
 	
 	vec2 shadowMapLookup   = LightPerspPos.xy ;
 	
-	// read pixel
-	vec4 shadowMapVal = texture( uniformShadowMap, shadowMapLookup ) * 255.0;
+	float lightIntensity = 1.0;
 	
-	// actual depth of fragment in shadow map
-	int depthBit = max( 0, min ( 31, int( LightPerspPos.z  * 31.0 ) ) );		
-	
-	// amount of slices which where set in direction to light source
-	int fullSlices = 0;					
-	
-	// for every slice from fragment depth to light source
-	for (int i = depthBit; i >= 0; i-- )
+	// first look up trunk shadow map
+	vec4 shadowMapVal = texture( uniformShadowMap, shadowMapLookup);
+	LightPerspPos.z = max( 0.0, min( 1.0, LightPerspPos.z ) );
+	if ( LightPerspPos.z > shadowMapVal.x + 0.03) // invisible
 	{
-		// bitmask at this depth
-		float currentDepth  = float(i) / 31.0;
-		vec4 currentBitMask = texture(uniformBitMask, currentDepth) * 255.0;
-
-		//determine r, g, b, or a channel to read	
-		if ( i < 8)	// compare values of r channel
+			lightIntensity = 0.1;	
+	}
+	else // visible
+	{
+		// if visible, look up transmittance shadow map
+		
+		// read pixel
+		shadowMapVal = texture( uniformSliceMap, shadowMapLookup ) * 255.0;
+		
+		// actual depth of fragment in shadow map
+		int depthBit = max( 0, min ( 31, int( LightPerspPos.z  * 32.0) ) );		
+		
+		// amount of slices which where set in direction to light source
+		int fullSlices = 0;					
+		
+		// for every slice from fragment depth to light source
+		for (int i = depthBit; i >= 0; i-- )
 		{
-			// if both bits are set
-			if ( shadowMapVal.r / currentBitMask.r >= 1.0)
+			// bitmask at this depth
+			float currentDepth  = ( float(i)+ 0.5) / 32.0;
+			vec4 currentBitMask = texture(uniformBitMask, currentDepth) * 255.0;
+	
+			//determine r, g, b, or a channel to read	
+			if ( i < 8)	// compare values of r channel
 			{
-				// write remainder
-				shadowMapVal.r = int(shadowMapVal.r) % int(currentBitMask.r);
-				fullSlices ++;
+				// if both bits are set
+				if ( shadowMapVal.r / currentBitMask.r >= 1.0)
+				{
+					// write remainder
+					shadowMapVal.r = int(shadowMapVal.r) % int(currentBitMask.r);
+					fullSlices ++;
+				}
+			}
+			if ( i >= 8 && i < 16) // compare values of g channel
+			{
+				// if both bits are set
+				if ( shadowMapVal.g / currentBitMask.g >= 1.0 )
+				{
+					shadowMapVal.g = int(shadowMapVal.g) % int(currentBitMask.g);
+					fullSlices ++;
+				}
+			}
+			if ( i >= 16 && i < 24) // compare values of b channel
+			{
+				// if both bits are set
+				if ( shadowMapVal.b / currentBitMask.b >= 1.0 )
+				{
+					shadowMapVal.b = int(shadowMapVal.b) % int(currentBitMask.b);
+					fullSlices ++;
+				}
+			}
+			if ( i >= 24 && i < 32) // compare values of a channel
+			{
+				// if both bits are set
+				if ( shadowMapVal.a / currentBitMask.a >= 1.0 )
+				{
+					shadowMapVal.a = int(shadowMapVal.a) % int(currentBitMask.a);
+					fullSlices++;
+				}
 			}
 		}
-		if ( i >= 8 && i < 16) // compare values of g channel
-		{
-			// if both bits are set
-			if ( shadowMapVal.g / currentBitMask.g >= 1.0 )
-			{
-				shadowMapVal.g = int(shadowMapVal.g) % int(currentBitMask.g);
-				fullSlices ++;
-			}
-		}
-		if ( i >= 16 && i < 24) // compare values of b channel
-		{
-			// if both bits are set
-			if ( shadowMapVal.b / currentBitMask.b >= 1.0 )
-			{
-				shadowMapVal.b = int(shadowMapVal.b) % int(currentBitMask.b);
-				fullSlices ++;
-			}
-		}
-		if ( i >= 24 && i < 32) // compare values of a channel
-		{
-			// if both bits are set
-			if ( shadowMapVal.a / currentBitMask.a >= 1.0 )
-			{
-				shadowMapVal.a = int(shadowMapVal.a) % int(currentBitMask.a);
-				fullSlices++;
-			}
-		}
+		
+		float sigma = 0.3;
+		
+		lightIntensity = pow( 1.0 - sigma, float(fullSlices) ); 
 	}
 	
-	float opacityPerSlice = 1.0 / 16.0;
-	
-	fragmentLightFactor = vec4 ( vec3(1.0,1.0,1.0) * ( 1.0 - ( fullSlices * opacityPerSlice ) ), 1.0 );
+	fragmentLightFactor = vec4 ( vec3(1.0,1.0,1.0) * lightIntensity, 1.0 );
 }

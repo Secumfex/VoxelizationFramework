@@ -3,11 +3,21 @@
 // local work group size
 layout (local_size_x = 1024) in;
 
-// format of vertex information in vertex buffer
-struct Vertex{float x; float y; float z;};
+// struct type of values accessed through vertex buffer
+struct Vertex{
+	float x;
+	float y;
+	float z;
+};
+
+// vertex buffer access
+layout( std430, binding = 0 ) buffer Vert { Vertex vertices[ ]; } ;
+
+// index buffer access
+layout( std430, binding = 1 ) buffer Ind { uint indices[ ]; };
 
 // vertex buffer access, voxel grid access and bitmask LUT access
-layout(std140, binding = 0) buffer vertBuffer {Vertex v[];} vertices;
+//layout(std140, binding = 0) buffer vertBuffer {Vertex v[];} vertices;
 layout(r32ui, binding = 0) uniform uimage2D uniformVoxelGrid;
 layout(r32ui, binding = 1) uniform readonly uimage1D uniformBitmask;
 
@@ -18,8 +28,13 @@ uniform mat4      uniformWorldToVoxel;
 
 void main()
 {
-	// read vertex
-	Vertex vert = vertices.v[gl_GlobalInvocationID.x];
+	// determine which indices to read from
+	uint gid = gl_GlobalInvocationID.x;
+	
+	// read indices of face; gid : current face, * 3 : first index of face, + N : offset to first index
+	uint indexV0 = indices[ gid ];
+	// read vertices of face
+	Vertex vert = vertices[ indexV0 ];
 	
 	// read world position from texture atlas
 	vec4 pos = texture(uniformTextureAtlas, vec2(vert.x, vert.y));

@@ -17,7 +17,7 @@
 #include <Misc/SimpleSceneTools.h>
 #include <Utility/Timer.h>
 
-static bool rotatingBunny			= true;
+static bool rotatingBunny			= false;
 
 static int textureAtlasResolution   = 256;
 static int voxelGridResolution		= 128;
@@ -38,7 +38,7 @@ private:
 
 			CameraRenderPass* uvRenderPass = new CameraRenderPass(uvShader, fbo);
 			uvRenderPass->setViewport(0,0,512,512);
-			uvRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 0.0f );
+			uvRenderPass->setClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
 			uvRenderPass->addEnable(GL_DEPTH_TEST);
 			uvRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 			uvRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
@@ -64,7 +64,7 @@ private:
 
 		CameraRenderPass* phongPerspectiveRenderPass = new CameraRenderPass(phongPersp, fbo);
 		phongPerspectiveRenderPass->setViewport(0,0,512,512);
-		phongPerspectiveRenderPass->setClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
+		phongPerspectiveRenderPass->setClearColor( 1.0f, 1.0f, 1.0f, 1.0f );
 		phongPerspectiveRenderPass->addEnable(GL_DEPTH_TEST);
 		phongPerspectiveRenderPass->addClearBit(GL_DEPTH_BUFFER_BIT);
 		phongPerspectiveRenderPass->addClearBit(GL_COLOR_BUFFER_BIT);
@@ -191,11 +191,11 @@ public:
 			DEBUGLOG->log("Creating perspective phong renderpass");
 			CameraRenderPass* phongPerspectiveRenderPass = createPhongRenderPass( );
 
-			DEBUGLOG->log("Adding objects to perspective phong render pass");
-			for (unsigned int i = 0; i < renderables.size(); i++)
-			{
-				phongPerspectiveRenderPass->addRenderable( renderables[i] );
-			}
+//			DEBUGLOG->log("Adding objects to perspective phong render pass");
+//			for (unsigned int i = 0; i < renderables.size(); i++)
+//			{
+//				phongPerspectiveRenderPass->addRenderable( renderables[i] );
+//			}
 
 			DEBUGLOG->log("Creating presentation render passes");
 			DEBUGLOG->indent();
@@ -283,7 +283,7 @@ public:
 			std::string vertexShader( SHADERS_PATH "/textureAtlas/textureAtlasWorldPosition.vert" );
 
 			// create slice map renderpass
-			SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 5.0f, 5.0f, 5.0f, voxelGridResolution, voxelGridResolution, 4, SliceMap::BITMASK_MULTIPLETARGETS, vertexShader);
+			SliceMap::SliceMapRenderPass* voxelizeWithTextureAtlas = SliceMap::getSliceMapRenderPass( 5.0f, 5.0f, 5.0f, voxelGridResolution, voxelGridResolution, 1, SliceMap::BITMASK_MULTIPLETARGETS, vertexShader);
 
 			DEBUGLOG->log("Configuring slice map render pass");
 			// configure slice map render pass
@@ -291,7 +291,7 @@ public:
 
 			DEBUGLOG->log("Adding Texture Atlas vertices to slice map render pass");
 			// add texture atlas vertices
-			voxelizeWithTextureAtlas->addRenderable( verticesNode );
+			voxelizeWithTextureAtlas->addRenderable( verticesNode->getObject() );
 
 			// add voxelization renderpass
 			m_renderManager.addRenderPass( voxelizeWithTextureAtlas );
@@ -333,6 +333,7 @@ public:
 
 			showComposedImage->setViewport(512,0,512,512);
 			showComposedImage->addUniformTexture(composedImageTexture, "uniformTexture");
+//			showComposedImage->addUniformTexture(textureAtlasRenderPass->getTextureAtlas(), "uniformTexture");
 
 			m_renderManager.addRenderPass(showComposedImage);
 		DEBUGLOG->outdent();

@@ -40,6 +40,15 @@ uniform float uniformMaxMipMapLevel;
 uniform float uniformNormalOffset;
 uniform int   uniformMaxTestIterations;
 
+uniform bool uniformCountRays;
+uniform int  uniformPixelCounter;
+
+// ray counter
+layout(binding = 0) uniform atomic_uint rayCounter;
+layout(binding = 0, offset = 4) uniform atomic_uint pixelCounter1;
+layout(binding = 0, offset = 8) uniform atomic_uint pixelCounter2;
+uniform sampler2D uniformInterpolationDepthMap;
+
 // output
 layout(location = 0) out vec4 indirectLight;
 
@@ -386,7 +395,7 @@ bool testOcclusion( vec3 from, vec3 fromNormal, vec3 to , vec3 toNormal)
 /****************** ***************** ****************/
 /******************   INDIRECT LIGHT  ****************/
 /****************** ***************** ****************/
-vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal )
+vec3 computeIndirectLight( vec2 centerUV, vec3 surfacePosition, vec3 surfaceNormal )
 { 
 	vec3 irradiance = vec3( 0.0, 0.0, 0.0 );
 	float totalWeight = 0.0;
@@ -395,7 +404,7 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 		// retrieve sampling properties for next sample
 		vec4 samplingProperties= texture( uniformSamplingPattern, float( i ) / float( uniformNumSamples ) );
 			
-		vec2 sampleUV		   = center + samplingProperties.xy;
+		vec2 sampleUV		   = centerUV + samplingProperties.st;
 		float sampleWeight     = samplingProperties.z;
 
 		// retrieve sample point light information
@@ -406,11 +415,17 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 		// test for occlusion
 		if ( uniformEnableOcclusionTesting )
 		{
+			// increment ray counter
+			if (uniformCountRays) 
+			{		
+				if ( uniformPixelCounter == 1 || texture( uniformInterpolationDepthMap, passUV).z == 1.0 )
+				{	
+					atomicCounterIncrement( rayCounter );
+				}
+			}
+			
 			if ( testOcclusion( surfacePosition, surfaceNormal, rsmSamplePosition, rsmSampleNormal ) )
 			{
-				
-				totalWeight += sampleWeight;
-				
 				// skip this light source
 				continue;
 			}
@@ -429,7 +444,7 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 		// compute irradiance at surface point due to sample point light
 		vec3 sampleIrradiance = 
 				rsmSampleFlux.xyz  // sample point light color
-			  * rsmSampleFlux.w    // sample point light flux
+			  * rsmSampleFlux.w    // sample point light intensity
 			  *	radiantIntensitySampleToSurface // radiant intensity from sample point light to surface 
 			  * radiantIntensitySurfaceToSample // radiant intensity from surface to sample point light
 			  / pow( length( sampleToSurface ), 4 ); // distance to the power of 4
@@ -440,13 +455,13 @@ vec3 computeIndirectLight( vec2 center, vec3 surfacePosition, vec3 surfaceNormal
 		// add to total irradiance
 		irradiance += sampleIrradiance;
 		
-		// add to total weight
-		totalWeight += sampleWeight;
+//		// add to total weight
+//		totalWeight += sampleWeight;
 	}
 		
 	// normalize
 //	irradiance *= 1.0 / float( uniformNumSamples );
-	irradiance *= 1.0 / totalWeight;
+//	irradiance *= 1.0 / totalWeight;
 		
 	return irradiance;
 }
@@ -477,5 +492,20 @@ void main()
 	vec3 irradiance = computeIndirectLight( center, surfacePosition, surfaceNormal );
 	
 	// save indirect light intensity
-	indirectLight = vec4( irradiance * 25.0, 1.0 );
+	indirectLight = vec4( irradiance * 50.0, 1.0 );
+	if ( uniformCountRays)
+	{
+		// erster pass --> alles zählen zweiter pass --> tiefentest machen
+		if ( uniformPixelCounter == 1 || texture( uniformInterpolationDepthMap, passUV).r == 1.0 )
+		{
+			if ( uniformPixelCounter == 1)
+			{
+				atomicCounterIncrement(pixelCounter1);
+			}
+			if ( uniformPixelCounter == 2)
+			{
+				atomicCounterIncrement(pixelCounter2);
+			}
+		}
+	}
 }

@@ -24,14 +24,19 @@ void main() {
     
 	vec3 reflection = normalize( reflect( - posToLight, passNormal ) );
 	
-    float specular = pow( max( dot( reflection, - normalize( passPosition ) ),0), 50.0);
+//    float specular = pow( max( dot( reflection, - normalize( passPosition ) ),0), 50.0);
 	
-    float attenuation = 1.0 - min( max ( pow( posToLight.length() / 10.0f, 2.0) , 0.0 ), 1.0); 
-	
-	float ambient = 0.1;
+//    float attenuation = 1.0 - min( max ( pow( posToLight.length() / 10.0f, 2.0) , 0.0 ), 1.0); 
+    float attenuation = 1.0;
+
+    float ambient = 0.1;
 	
     float diffuse = max( dot( passNormal, posToLight ), 0 );
-	
-	fragColor = ( diffuse * attenuation ) * diffuseColor + ambient * diffuseColor + specular * vec4( 1.0, 1.0, 1.0, 1.0 );
+    
+//    float diffuse = 1.0;
+  	
+	fragColor = ( diffuse * attenuation ) * diffuseColor + ambient * diffuseColor 
+//			+ specular * vec4( 1.0, 1.0, 1.0, 1.0 )
+			;
 
 }

@@ -19,7 +19,7 @@ layout(location = 3) out vec4 slice94_127;
  
 void main() { 
 	// determine depth from distance to camera 
-	float z = ( passDistanceToCam + 1.0 ) * 0.5;
+	float z = ( passDistanceToCam );
 	
 	int sliceMapTarget = int ( float(uniformNumSliceMaps) * z );	// slice map to write into
 	z = ( z * float( uniformNumSliceMaps ) ) - float( sliceMapTarget); // map from z to [0..1] in slice map target
